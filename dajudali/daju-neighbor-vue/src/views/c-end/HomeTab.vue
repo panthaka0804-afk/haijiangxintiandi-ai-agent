@@ -116,6 +116,26 @@
       </div>
     </div>
 
+    <div class="biz-modules">
+      <div class="biz-hero" @click="go('/activities')">
+        <div class="biz-hero-bg"></div>
+        <div class="biz-hero-content">
+          <div class="biz-hero-title">社区聚乐部</div>
+          <div class="biz-hero-desc">活动报名 · 邻里社群 · 精彩生活</div>
+          <span class="biz-hero-btn">立即查看</span>
+        </div>
+      </div>
+      <div class="biz-grid">
+        <div class="biz-card" v-for="m in bizModules" :key="m.label" @click="go(m.route)">
+          <div class="biz-card-icon" :style="{background: m.grad}">
+            <svg v-html="m.icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></svg>
+          </div>
+          <div class="biz-card-title">{{ m.label }}</div>
+          <div class="biz-card-desc">{{ m.desc }}</div>
+        </div>
+      </div>
+    </div>
+
     <div class="section-label">推荐商铺</div>
     <div class="shop-list">
       <div v-for="s in shops" :key="s.id" class="shop-card" @click="go('/shop/' + s.id)">
@@ -304,6 +324,37 @@ function onAvatarFile(e) {
   reader.readAsDataURL(file)
 }
 
+const bizModules = [
+  {
+    label: '美食天地',
+    desc: 'B1美食广场',
+    route: '/shops',
+    grad: 'linear-gradient(135deg, #E85D04, #FF7B2C)',
+    icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>'
+  },
+  {
+    label: '亲子乐园',
+    desc: '3F儿童游乐',
+    route: '/shops?floor=3',
+    grad: 'linear-gradient(135deg, #7C3AED, #A78BFA)',
+    icon: '<circle cx="12" cy="10" r="3"/><path d="M8 17l1.5-4h5L16 17"/><circle cx="12" cy="8" r="4"/><path d="M8 21v-1a6 6 0 0112 0v1"/>'
+  },
+  {
+    label: '生活服务',
+    desc: '洗衣美甲维修',
+    route: '/shops?floor=2',
+    grad: 'linear-gradient(135deg, #059669, #34D399)',
+    icon: '<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>'
+  },
+  {
+    label: '停车缴费',
+    desc: '在线缴费出场',
+    route: '#',
+    grad: 'linear-gradient(135deg, #2563EB, #60A5FA)',
+    icon: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2"/><circle cx="16" cy="15" r="1.5"/><circle cx="8" cy="15" r="1.5"/>'
+  }
+]
+
 const entries = [
   { label: '导航地图', route: 'nav', icon: '<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/>', active: false },
   { label: '优惠促销', route: 'offers', icon: '<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/><line x1="12" y1="11" x2="12" y2="21"/><polyline points="4 7 12 11 20 7"/>', active: false },
@@ -415,4 +466,22 @@ function go(route) {
 .shop-name { font-size: 15px; font-weight: 600; color: #F0F0F0; }
 .shop-meta { font-size: 12px; color: #888; margin-top: 2px; }
 .spacer { height: 20px; }
+
+/* ── 业务版块 ── */
+.biz-modules { padding: 0 16px; margin-top: 16px; }
+.biz-hero { position: relative; border-radius: 16px; overflow: hidden; height: 180px; cursor: pointer; margin-bottom: 10px; }
+.biz-hero:active { opacity: 0.9; }
+.biz-hero-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #FF7B2C 0%, #E85D04 40%, #FFB347 100%); }
+.biz-hero-bg::after { content: ''; position: absolute; top: -40px; right: -30px; width: 160px; height: 160px; border-radius: 50%; background: rgba(255,255,255,0.08); }
+.biz-hero-bg::before { content: ''; position: absolute; bottom: -50px; left: -20px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.05); }
+.biz-hero-content { position: relative; z-index: 1; padding: 24px; display: flex; flex-direction: column; height: 100%; }
+.biz-hero-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 6px; letter-spacing: 1px; }
+.biz-hero-desc { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: auto; }
+.biz-hero-btn { display: inline-block; margin-top: 12px; padding: 6px 20px; background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4); border-radius: 20px; font-size: 13px; font-weight: 600; color: #fff; align-self: flex-start; }
+.biz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.biz-card { background: #252525; border-radius: 14px; padding: 18px 16px; cursor: pointer; transition: transform 0.15s; }
+.biz-card:active { transform: scale(0.97); }
+.biz-card-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+.biz-card-title { font-size: 16px; font-weight: 700; color: #F0F0F0; margin-bottom: 4px; }
+.biz-card-desc { font-size: 12px; color: #888; }
 </style>
