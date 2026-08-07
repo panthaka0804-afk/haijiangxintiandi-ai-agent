@@ -1,2 +1,0 @@
-(function(){System.register([`./css-legacy-BqpLhUAE.js`,`./css-legacy-Bly7ub1H.js`],function(e,t){var n;return{setters:[function(e){},function(e){}],execute:function(){n=document.createElement(`style`),n.textContent=`
-/*$vite$:1*/`,document.head.appendChild(n)}}})})();
