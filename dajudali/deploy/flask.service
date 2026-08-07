@@ -1,0 +1,19 @@
+[Unit]
+Description=海江新天地 小江AI Flask 后端
+After=network.target
+
+[Service]
+# 运行用户：按服务器实际情况调整（通常建一个专用低权限用户，如 www-data）
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/haijiang/dajudali
+# 用 python3 直接跑 server.py（server.py 内部已绑定 0.0.0.0:8765）
+ExecStart=/usr/bin/python3 /opt/haijiang/dajudali/server.py
+Restart=always
+RestartSec=5
+# 后端需要的密钥/环境变量可在此注入（不要写进代码仓库）
+Environment=PYTHONUNBUFFERED=1
+# Environment=DEEPSEEK_API_KEY=xxxx
+
+[Install]
+WantedBy=multi-user.target
