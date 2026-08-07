@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""大橘大利系统 - 社区商业AI客服"""
+"""海江新天地系统 - 社区商业AI客服"""
 import os, sys, json, sqlite3, hashlib, secrets, re, time, io, base64, subprocess, tempfile
 from datetime import datetime
 from functools import wraps
@@ -1459,7 +1459,7 @@ def api_member_redeem():
         5: {'name': '蜀大侠100元券', 'cost': 3000, 'code_prefix': 'SDX', 'desc': '蜀大侠消费抵用100元'},
         6: {'name': '亲子乐园门票', 'cost': 5000, 'code_prefix': 'PARK', 'desc': '3F儿童乐园门票一张'},
         7: {'name': '棒约翰双人餐', 'cost': 8000, 'code_prefix': 'PAPA', 'desc': '棒约翰双人套餐券'},
-        8: {'name': '200元购物卡', 'cost': 10000, 'code_prefix': 'CARD', 'desc': '大橘邻里全场通用购物卡'},
+        8: {'name': '200元购物卡', 'cost': 10000, 'code_prefix': 'CARD', 'desc': '海江新天地全场通用购物卡'},
         9: {'name': '蜀大侠4人火锅', 'cost': 15000, 'code_prefix': 'SDX4', 'desc': '蜀大侠4人火锅套餐券'},
     }
 
