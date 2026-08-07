@@ -14,10 +14,10 @@
 
     <div class="sd-body">
       <div class="sd-info-card">
-        <div class="sd-row" v-if="shop.desc">
+        <div class="sd-row" v-if="shop.desc || shop.description">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           <span class="sd-info-label">简介</span>
-          <span class="sd-info-val">{{ shop.desc }}</span>
+          <span class="sd-info-val">{{ shop.desc || shop.description }}</span>
         </div>
         <div class="sd-row">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -62,16 +62,36 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import shops from '@/data/shops.js'
+import { getShops } from '@/api'
+import localShops from '@/data/shops.js'
 
 const router = useRouter()
 const route = useRoute()
+const allShops = ref([])
+
+onMounted(async () => {
+  try {
+    const resp = await getShops()
+    if (resp.ok && resp.data && resp.data.length) {
+      allShops.value = resp.data.map(s => ({
+        ...s,
+        tags: Array.isArray(s.tags) ? s.tags : (s.tags || '').split(',').filter(Boolean),
+        features: Array.isArray(s.features) ? s.features : (s.features || '').split(',').filter(Boolean),
+        desc: s.description || s.desc,
+      }))
+    } else {
+      allShops.value = localShops
+    }
+  } catch {
+    allShops.value = localShops
+  }
+})
 
 const shop = computed(() => {
-  const s = shops.find(s => s.id === route.params.id)
-  return s || { id: route.params.id, name: '商铺', floor: 1, color: '#999', tags: [], hours: '--', zone: '--', phone: '--', desc: '', features: [], has_coupon: false }
+  const s = allShops.value.find(s => s.id === route.params.id)
+  return s || localShops.find(s => s.id === route.params.id) || { id: route.params.id, name: '商铺', floor: 1, color: '#999', tags: [], hours: '--', zone: '--', phone: '--', desc: '', features: [], has_coupon: false }
 })
 
 function goNav() {

@@ -410,6 +410,8 @@ def api_public_chat():
     """C端公开聊天 — 不需要登录，用 session cookie 做 key"""
     data = request.get_json()
     user_input = data.get('message', '').strip()
+    if len(user_input) > 500:
+        return jsonify(ok=False, error='消息太长了，请精简到500字以内')
     # 使用 session cookie 作为匿名 key
     sid = request.cookies.get('session', 'anonymous')
     # tenant 固定为 1
@@ -2222,4 +2224,225 @@ def admin_registrations():
     cols = ['id','registration_no','activity_id','session_id','user_phone','user_name','people_count','amount','pay_method','points_used','status','ticket_code','created_at','updated_at','activity_title','session_date','session_time']
     conn.close()
     return jsonify(ok=True, data=[dict(zip(cols, r)) for r in rows])
+
+
+# ========== 安全响应头 ==========
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    if request.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+# ========== 数据表初始化 ==========
+def _ensure_tables(conn):
+    """确保 shops / offers / redeem_goods / parking_records 表存在并填充初始数据"""
+    # --- shops ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS shops (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, floor TEXT, zone TEXT,
+        category TEXT, tags TEXT, color TEXT, hours TEXT, phone TEXT,
+        description TEXT, has_coupon INTEGER DEFAULT 0,
+        coupon_condition INTEGER DEFAULT 0, coupon_amount INTEGER DEFAULT 0,
+        coupon_expire TEXT, features TEXT
+    )''')
+    if conn.execute('SELECT COUNT(*) FROM shops').fetchone()[0] == 0:
+        shops_data = [
+            ('s1','星巴克','1','A区','餐饮','咖啡,轻食','#00704A','07:00 - 22:00','021-6598 5001','全球知名咖啡品牌，精选阿拉比卡咖啡豆，手工调制每一杯。',1,60,15,'2026-12-31','免费WiFi,户外座位,可带宠物'),
+            ('s2','蜀大侠火锅','4','B区','餐饮','火锅,川菜','#C41E3A','11:00 - 23:00','021-6598 5002','正宗成都火锅，牛油锅底浓郁鲜香。',1,200,50,'2026-12-31','包间可预订,独家蘸料,夜宵营业'),
+            ('s3','棒约翰','B1','A区','餐饮','披萨,亲子','#FFB347','10:00 - 21:30','021-6598 5003','全球三大披萨品牌之一，手工现做。',1,100,20,'2026-11-30','亲子套餐,外卖配送,会员日特惠'),
+            ('s4','UNIQLO','1','A区','零售','服饰,日系','#E60012','10:00 - 22:00','021-6598 5004','日本快时尚品牌，简约优质、价格亲民。',1,299,30,'2026-11-30','免费改裤长,线上线下同价,每周三上新'),
+            ('s5','名创优品','2','B区','零售','百货,生活','#E8809E','10:00 - 22:00','021-6598 5005','年轻人都爱逛的生活好物集合店。',1,50,10,'2026-12-31','全球IP联名,盲盒专区,会员积分'),
+            ('s6','万达影城','5','C区','娱乐','电影,IMAX','#E85D04','09:00 - 02:00','021-6598 5006','万达院线旗舰影城，IMAX巨幕厅。',1,80,20,'2026-12-31','IMAX厅,杜比全景声,情侣座'),
+            ('s7','玩具反斗城','3','B区','亲子','玩具,儿童','#FFB347','10:00 - 21:00','021-6598 5007','全球最大玩具零售商。',1,200,40,'2026-12-31','免费试玩区,亲子活动,生日派对'),
+            ('s8','海底捞','4','A区','餐饮','火锅,服务','#D32F2F','11:00 - 03:00','021-6598 5008','以极致服务闻名的火锅品牌。',1,300,80,'2026-12-31','免费美甲,等位小食,生日惊喜,深夜食堂'),
+            ('s9','全家便利店','1','C区','生活服务','24h,便利店','#4A90D9','24小时营业','021-6598 5009','24小时不打烊的便利好邻居。',1,20,5,'2026-12-31','24小时,代收快递,交通卡充值'),
+            ('s10','喜茶','1','A区','餐饮','奶茶,果茶','#3E8E41','10:00 - 22:00','021-6598 5010','新茶饮开创者，真奶真果真茶。',1,30,8,'2026-12-31','线上点单,季节限定,会员买一送一'),
+            ('s11','大疆体验店','2','B区','零售','科技,无人机','#000000','10:00 - 21:30','021-6598 5011','全球无人机领导者。',0,0,0,'','飞行体验,以旧换新,免费培训'),
+            ('s12','李宁','2','A区','零售','运动,国潮','#C41E3A','10:00 - 22:00','021-6598 5012','中国领先运动品牌。',1,399,50,'2026-12-31','会员折扣,限量发售,运动社区'),
+            ('s13','金宝贝早教','3','C区','亲子','早教,启蒙','#4A90D9','09:00 - 18:30','021-6598 5013','全球早教领导品牌。',1,500,100,'2026-12-31','免费体验课,小班教学,双语环境'),
+            ('s14','瑞幸咖啡','B1','C区','餐饮','咖啡,快取','#0051A8','07:00 - 21:00','021-6598 5014','新零售咖啡品牌。',1,25,7,'2026-12-31','线上点单,外卖配送,企业团购'),
+            ('s15','屈臣氏','1','B区','零售','美妆,健康','#00A651','10:00 - 22:00','021-6598 5015','亚洲领先的保健与美妆零售商。',1,100,15,'2026-12-31','会员积分,品牌试用,健康咨询'),
+            ('s16','超级猩猩','5','B区','娱乐','健身,团课','#FFD700','07:00 - 23:00','021-6598 5016','不办年卡的健身品牌，按次付费。',1,0,50,'2026-12-31','按次付费,线上约课,淋浴储物'),
+            ('s17','汉堡王','B1','B区','餐饮','快餐,汉堡','#FF6B00','10:00 - 22:00','021-6598 5017','皇堡美味火烤。',1,40,10,'2026-12-31','儿童套餐,外卖配送,自助点餐'),
+            ('s18','西西弗书店','3','A区','零售','书店,文创','#2B6040','10:00 - 21:30','021-6598 5018','一家有人情味的书店。',1,100,20,'2026-12-31','矢量咖啡,文创商品,阅读区'),
+            ('s19','小米之家','2','C区','零售','电子,智能','#FF6900','10:00 - 22:00','021-6598 5019','小米官方直营店。',0,0,0,'','以旧换新,现场体验,售后维修'),
+            ('s20','KKV','2','A区','零售','彩妆,零食','#FFC0CB','10:00 - 22:00','021-6598 5020','网红美妆集合店。',1,80,15,'2026-12-31','网红打卡,面膜墙,会员精选'),
+        ]
+        conn.executemany('INSERT INTO shops VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', shops_data)
+
+    # --- offers ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS offers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, shop_name TEXT NOT NULL,
+        label TEXT NOT NULL, expire TEXT, amount INTEGER DEFAULT 0,
+        category TEXT DEFAULT 'food', color TEXT DEFAULT '#FF7B2C',
+        status TEXT DEFAULT 'active', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    if conn.execute('SELECT COUNT(*) FROM offers').fetchone()[0] == 0:
+        offers_data = [
+            ('蜀大侠','满200减50','2026-12-31',50,'food','#C41E3A'),
+            ('星巴克','买一赠一券','2026-10-31',35,'food','#00704A'),
+            ('海底捞','满300减80','2026-09-30',80,'food','#D32F2F'),
+            ('UNIQLO','满299减30','2026-11-30',30,'retail','#E60012'),
+            ('万达影城','双人票立减20','2026-10-15',20,'fun','#E85D04'),
+            ('棒约翰','亲子套餐88折','2026-12-01',25,'food','#FFB347'),
+            ('停车场','免费停车2小时','2026-09-15',10,'parking','#4A90D9'),
+            ('名创优品','全场9折','2026-11-20',15,'retail','#E8809E'),
+        ]
+        conn.executemany('INSERT INTO offers (shop_name,label,expire,amount,category,color) VALUES (?,?,?,?,?,?)', offers_data)
+
+    # --- redeem_goods ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS redeem_goods (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, points INTEGER NOT NULL,
+        category TEXT DEFAULT '餐饮', gradient TEXT,
+        status TEXT DEFAULT 'active', stock INTEGER DEFAULT -1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    if conn.execute('SELECT COUNT(*) FROM redeem_goods').fetchone()[0] == 0:
+        goods_data = [
+            ('g1','星巴克中杯券',1000,'餐饮','linear-gradient(135deg, #00704A, #00A85A)'),
+            ('g2','蜀大侠50元代金券',3000,'餐饮','linear-gradient(135deg, #C41E3A, #E8809E)'),
+            ('g3','UNIQLO 30元券',2500,'购物','linear-gradient(135deg, #E60012, #FF5A60)'),
+            ('g4','万达影城电影票',2000,'娱乐','linear-gradient(135deg, #E85D04, #FFB347)'),
+            ('g5','停车券 10元',500,'停车','linear-gradient(135deg, #4A90D9, #7DB8F0)'),
+            ('g6','棒约翰双人餐券',5000,'餐饮','linear-gradient(135deg, #FFB347, #FF7B2C)'),
+            ('g7','名创优品礼品卡',1500,'购物','linear-gradient(135deg, #E8809E, #F0AAC0)'),
+            ('g8','亲子乐园门票',5000,'娱乐','linear-gradient(135deg, #4CAF50, #81C784)'),
+        ]
+        conn.executemany('INSERT INTO redeem_goods (id,name,points,category,gradient) VALUES (?,?,?,?,?)', goods_data)
+
+    # --- parking_records ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS parking_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plate TEXT NOT NULL, entry_time TEXT, exit_time TEXT,
+        duration_minutes INTEGER DEFAULT 0, fee REAL DEFAULT 0,
+        status TEXT DEFAULT 'parked',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    conn.commit()
+
+
+# ========== API - Shops ==========
+@app.route('/api/shops')
+def api_shops():
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute('SELECT * FROM shops ORDER BY CAST(floor AS INTEGER), zone, name').fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        d = dict(r)
+        d['tags'] = d['tags'].split(',') if d.get('tags') else []
+        d['features'] = d['features'].split(',') if d.get('features') else []
+        d['has_coupon'] = bool(d.get('has_coupon'))
+        result.append(d)
+    return jsonify(ok=True, data=result)
+
+
+# ========== API - Offers ==========
+@app.route('/api/offers')
+def api_offers():
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute("SELECT * FROM offers WHERE status='active' ORDER BY id").fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(r) for r in rows])
+
+
+# ========== API - Redeem Goods ==========
+@app.route('/api/redeem')
+def api_redeem_goods():
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute("SELECT * FROM redeem_goods WHERE status='active' ORDER BY points").fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(r) for r in rows])
+
+
+# ========== API - Parking ==========
+@app.route('/api/parking/query', methods=['POST'])
+def api_parking_query():
+    plate = request.json.get('plate', '').strip().upper()
+    if not plate:
+        return jsonify(ok=False, error='请输入车牌号')
+    conn = get_db()
+    _ensure_tables(conn)
+    record = conn.execute(
+        "SELECT * FROM parking_records WHERE plate=? AND status='parked' ORDER BY id DESC LIMIT 1",
+        (plate,)
+    ).fetchone()
+    if not record:
+        conn.close()
+        return jsonify(ok=False, error=f'未查询到车牌 {plate} 的在场停车记录')
+    entry = datetime.fromisoformat(record['entry_time']) if record['entry_time'] else datetime.now()
+    now = datetime.now()
+    duration = now - entry
+    hours = duration.total_seconds() / 3600
+    # 计费规则：首小时5元，之后每小时3元，封顶50元
+    if hours <= 1:
+        fee = 5.0
+    else:
+        fee = 5.0 + (hours - 1) * 3.0
+    fee = min(fee, 50.0)
+    fee = round(fee, 2)
+    h = int(duration.total_seconds() // 3600)
+    m = int((duration.total_seconds() % 3600) // 60)
+    conn.close()
+    return jsonify(ok=True, data={
+        'plate': plate,
+        'entry_time': entry.strftime('%Y-%m-%d %H:%M'),
+        'duration': f'{h} 小时 {m} 分钟',
+        'duration_minutes': int(duration.total_seconds() / 60),
+        'fee': fee,
+    })
+
+
+@app.route('/api/parking/pay', methods=['POST'])
+def api_parking_pay():
+    plate = request.json.get('plate', '').strip().upper()
+    if not plate:
+        return jsonify(ok=False, error='请输入车牌号')
+    conn = get_db()
+    _ensure_tables(conn)
+    record = conn.execute(
+        "SELECT * FROM parking_records WHERE plate=? AND status='parked' ORDER BY id DESC LIMIT 1",
+        (plate,)
+    ).fetchone()
+    if not record:
+        conn.close()
+        return jsonify(ok=False, error=f'未查询到车牌 {plate} 的待缴费记录')
+    entry = datetime.fromisoformat(record['entry_time']) if record['entry_time'] else datetime.now()
+    now = datetime.now()
+    duration = now - entry
+    hours = duration.total_seconds() / 3600
+    if hours <= 1:
+        fee = 5.0
+    else:
+        fee = 5.0 + (hours - 1) * 3.0
+    fee = min(fee, 50.0)
+    fee = round(fee, 2)
+    conn.execute(
+        "UPDATE parking_records SET status='paid', exit_time=?, fee=? WHERE id=?",
+        (now.isoformat(), fee, record['id'])
+    )
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={
+        'plate': plate,
+        'fee': fee,
+        'paid_at': now.strftime('%Y-%m-%d %H:%M'),
+        'message': f'缴费成功！车牌 {plate}，金额 ¥{fee:.2f}',
+    })
+
+
+# ========== robots.txt ==========
+@app.route('/robots.txt')
+def robots_txt():
+    return app.response_class(
+        'User-agent: *\nDisallow: /api/\nDisallow: /admin\nDisallow: /manage\n',
+        mimetype='text/plain'
+    )
 

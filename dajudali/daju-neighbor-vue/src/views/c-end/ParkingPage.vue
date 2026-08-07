@@ -21,39 +21,102 @@
       </div>
     </div>
 
-    <button class="pp-query-btn" :disabled="!plate">查询停车费</button>
+    <button class="pp-query-btn" :disabled="!plate || querying" @click="doQuery">
+      {{ querying ? '查询中...' : '查询停车费' }}
+    </button>
+
+    <!-- 错误提示 -->
+    <div v-if="errorMsg" class="pp-error">{{ errorMsg }}</div>
 
     <!-- 停车状态卡片 -->
-    <div class="pp-status-card" v-if="queried">
+    <div class="pp-status-card" v-if="queried && parkingData">
       <div class="pps-row">
         <span class="pps-label">车牌号</span>
-        <span class="pps-val">{{ plate }}</span>
+        <span class="pps-val">{{ parkingData.plate }}</span>
       </div>
       <div class="pps-row">
         <span class="pps-label">入场时间</span>
-        <span class="pps-val">2026-08-06 18:30</span>
+        <span class="pps-val">{{ parkingData.entry_time }}</span>
       </div>
       <div class="pps-row">
         <span class="pps-label">已停时长</span>
-        <span class="pps-val">3 小时 5 分钟</span>
+        <span class="pps-val">{{ parkingData.duration }}</span>
       </div>
       <div class="pps-divider"></div>
       <div class="pps-fee">
         <span class="pps-fee-label">应付金额</span>
-        <span class="pps-fee-val">¥15.00</span>
+        <span class="pps-fee-val">¥{{ parkingData.fee?.toFixed(2) }}</span>
       </div>
     </div>
 
-    <button class="pp-pay-btn" v-if="queried">立即支付 ¥15.00</button>
+    <button class="pp-pay-btn" v-if="queried && parkingData && !paid" :disabled="paying" @click="doPay">
+      {{ paying ? '支付中...' : `立即支付 ¥${parkingData.fee?.toFixed(2)}` }}
+    </button>
+
+    <!-- 支付成功 -->
+    <div v-if="paid" class="pp-paid-card">
+      <div class="pp-paid-icon">✓</div>
+      <div class="pp-paid-text">缴费成功</div>
+      <div class="pp-paid-detail">{{ payResult?.message }}</div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { queryParking, payParking } from '@/api'
 
-const plate = ref('沪A·12345')
-const presets = ['沪A·12345', '沪B·67890', '沪C·11111']
-const queried = ref(true)
+const plate = ref('')
+const presets = ref(['沪A·12345', '沪B·67890', '沪C·11111'])
+const queried = ref(false)
+const querying = ref(false)
+const paying = ref(false)
+const paid = ref(false)
+const errorMsg = ref('')
+const parkingData = ref(null)
+const payResult = ref(null)
+
+async function doQuery() {
+  if (!plate.value.trim()) return
+  querying.value = true
+  errorMsg.value = ''
+  paid.value = false
+  try {
+    const resp = await queryParking({ plate: plate.value.trim() })
+    if (resp.ok && resp.data) {
+      parkingData.value = resp.data
+      queried.value = true
+    } else {
+      errorMsg.value = resp.error || '查询失败，请稍后重试'
+      queried.value = false
+      parkingData.value = null
+    }
+  } catch (e) {
+    errorMsg.value = '网络错误，请稍后重试'
+    queried.value = false
+    parkingData.value = null
+  } finally {
+    querying.value = false
+  }
+}
+
+async function doPay() {
+  if (!plate.value.trim()) return
+  paying.value = true
+  try {
+    const resp = await payParking({ plate: plate.value.trim() })
+    if (resp.ok) {
+      paid.value = true
+      payResult.value = resp.data
+    } else {
+      errorMsg.value = resp.error || '支付失败，请稍后重试'
+    }
+  } catch (e) {
+    errorMsg.value = '网络错误，请稍后重试'
+  } finally {
+    paying.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -91,6 +154,13 @@ const queried = ref(true)
 }
 .pp-query-btn:not(:disabled) { background: #FF7B2C; color: #fff; }
 .pp-query-btn:not(:disabled):active { opacity: 0.8; }
+.pp-query-btn:disabled { opacity: 0.5; }
+
+.pp-error {
+  background: rgba(244,67,54,0.1); border: 1px solid rgba(244,67,54,0.3);
+  color: #EF5350; font-size: 13px; padding: 10px 14px; border-radius: 10px;
+  margin-bottom: 16px; text-align: center;
+}
 
 .pp-status-card {
   background: #222222; border-radius: 12px; padding: 4px 0; margin-bottom: 16px;
@@ -110,4 +180,18 @@ const queried = ref(true)
   cursor: pointer; font-family: inherit; transition: opacity 0.15s;
 }
 .pp-pay-btn:active { opacity: 0.8; }
+.pp-pay-btn:disabled { opacity: 0.5; }
+
+.pp-paid-card {
+  background: #222222; border-radius: 12px; padding: 32px 20px;
+  text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.pp-paid-icon {
+  width: 48px; height: 48px; border-radius: 50%; background: #4CAF50;
+  color: #fff; font-size: 24px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px;
+}
+.pp-paid-text { font-size: 18px; font-weight: 700; color: #4CAF50; margin-bottom: 8px; }
+.pp-paid-detail { font-size: 13px; color: #999; }
 </style>

@@ -195,6 +195,25 @@ export function getBarcode(text) {
   })
 }
 
+// ========== 商户 ==========
+export function getShops() {
+  return request('/api/shops')
+}
+
+export function getShopDetail(id) {
+  return request('/api/shops/' + id)
+}
+
+// ========== 优惠券 ==========
+export function getOffers() {
+  return request('/api/offers')
+}
+
+// ========== 积分商城 ==========
+export function getRedeemGoods() {
+  return request('/api/redeem')
+}
+
 // ========== 停车 ==========
 export function queryParking(data) {
   return request('/api/parking/query', {

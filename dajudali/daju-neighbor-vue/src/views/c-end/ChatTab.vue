@@ -514,6 +514,10 @@ function getLocalReply(text) {
 async function sendMsg() {
   const text = inputText.value.trim()
   if (!text || chatStore.loading.value) return
+  if (text.length > 500) {
+    showToast('消息太长了，请精简到500字以内')
+    return
+  }
 
   chatStore.addMessage({ role: 'user', content: text, time: now() })
   inputText.value = ''

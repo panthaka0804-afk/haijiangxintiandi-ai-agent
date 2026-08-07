@@ -9,29 +9,54 @@
       <button v-for="c in cats" :key="c" class="sl-cat-btn" :class="{ active: activeCat === c }" @click="activeCat = c">{{ c }}</button>
     </div>
 
-    <div class="sl-list">
+    <div v-if="loading" class="loading-state">加载中...</div>
+
+    <div class="sl-list" v-else>
       <div v-for="s in filteredShops" :key="s.id" class="sl-card" @click="$router.push(`/shops/${s.id}`)">
         <div class="slc-avatar" :style="{background: s.color}">{{ s.name[0] }}</div>
         <div class="slc-info">
           <div class="slc-name">{{ s.name }}</div>
-          <div class="slc-meta">{{ s.floor }}F · {{ s.category }} {{ s.tags ? '· ' + s.tags.join(' · ') : '' }}</div>
+          <div class="slc-meta">{{ s.floor }}F · {{ s.category }} {{ s.tags ? '· ' + (Array.isArray(s.tags) ? s.tags.join(' · ') : s.tags) : '' }}</div>
         </div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
+      <div v-if="!filteredShops.length" class="empty-state">暂无商铺</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import shops from '@/data/shops.js'
+import { ref, computed, onMounted } from 'vue'
+import { getShops } from '@/api'
+import localShops from '@/data/shops.js'
 
 const searchText = ref('')
 const activeCat = ref('全部')
 const cats = ['全部', '餐饮', '零售', '亲子', '娱乐', '生活服务']
+const loading = ref(true)
+const shops = ref([])
+
+onMounted(async () => {
+  try {
+    const resp = await getShops()
+    if (resp.ok && resp.data && resp.data.length) {
+      shops.value = resp.data.map(s => ({
+        ...s,
+        tags: Array.isArray(s.tags) ? s.tags : (s.tags || '').split(',').filter(Boolean),
+        features: Array.isArray(s.features) ? s.features : (s.features || '').split(',').filter(Boolean),
+      }))
+    } else {
+      shops.value = localShops
+    }
+  } catch {
+    shops.value = localShops
+  } finally {
+    loading.value = false
+  }
+})
 
 const filteredShops = computed(() => {
-  let list = shops
+  let list = shops.value
   if (activeCat.value !== '全部') list = list.filter(s => s.category === activeCat.value)
   if (searchText.value) list = list.filter(s => s.name.includes(searchText.value))
   return list
@@ -40,6 +65,10 @@ const filteredShops = computed(() => {
 
 <style scoped>
 .shops-list { padding: 8px 12px; min-height: 100vh; background: #1A1A1A; }
+
+.loading-state, .empty-state {
+  text-align: center; padding: 40px 20px; color: #666; font-size: 14px;
+}
 
 .sl-search {
   display: flex; align-items: center; gap: 10px; padding: 10px 16px;

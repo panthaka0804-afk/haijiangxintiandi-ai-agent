@@ -3,8 +3,8 @@
     <div class="rp-pts-card">
       <div class="rp-pts-shine"></div>
       <div class="rp-pts-ring"></div>
-      <div class="rp-pts-level">钻石会员 · 88折</div>
-      <div class="rp-pts-num">22,000</div>
+      <div class="rp-pts-level">{{ memberInfo.level || '会员' }} · {{ memberInfo.discount || '' }}</div>
+      <div class="rp-pts-num">{{ memberInfo.points || '--' }}</div>
       <div class="rp-pts-label">可用积分</div>
     </div>
 
@@ -12,7 +12,10 @@
       <button v-for="c in cats" :key="c" class="rp-cat-btn" :class="{ active: activeCat === c }" @click="activeCat = c">{{ c }}</button>
     </div>
 
-    <div class="rp-grid">
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-state">加载中...</div>
+
+    <div class="rp-grid" v-else>
       <div v-for="g in filtered" :key="g.id" class="rp-item" @click="$router.push(`/redeem/${g.id}`)">
         <div class="rp-item-img" :style="{background: g.gradient}">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="M22 7H2v5h20z"/></svg>
@@ -23,33 +26,58 @@
         </div>
         <button class="rp-item-btn">兑换</button>
       </div>
+      <div v-if="!filtered.length" class="empty-state">暂无商品</div>
     </div>
     <div class="spacer"></div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { getRedeemGoods, lookupMember } from '@/api'
 
 const activeCat = ref('全部')
 const cats = ['全部', '餐饮', '购物', '娱乐', '停车']
+const loading = ref(true)
+const goods = ref([])
+const memberInfo = ref({ points: null, level: '', discount: '' })
 
-const goods = ref([
-  { id: 'g1', name: '星巴克中杯券', points: 1000, cat: '餐饮', gradient: 'linear-gradient(135deg, #00704A, #00A85A)' },
-  { id: 'g2', name: '蜀大侠50元代金券', points: 3000, cat: '餐饮', gradient: 'linear-gradient(135deg, #C41E3A, #E8809E)' },
-  { id: 'g3', name: 'UNIQLO 30元券', points: 2500, cat: '购物', gradient: 'linear-gradient(135deg, #E60012, #FF5A60)' },
-  { id: 'g4', name: '万达影城电影票', points: 2000, cat: '娱乐', gradient: 'linear-gradient(135deg, #E85D04, #FFB347)' },
-  { id: 'g5', name: '停车券 10元', points: 500, cat: '停车', gradient: 'linear-gradient(135deg, #4A90D9, #7DB8F0)' },
-  { id: 'g6', name: '棒约翰双人餐券', points: 5000, cat: '餐饮', gradient: 'linear-gradient(135deg, #FFB347, #FF7B2C)' },
-  { id: 'g7', name: '名创优品礼品卡', points: 1500, cat: '购物', gradient: 'linear-gradient(135deg, #E8809E, #F0AAC0)' },
-  { id: 'g8', name: '亲子乐园门票', points: 5000, cat: '娱乐', gradient: 'linear-gradient(135deg, #4CAF50, #81C784)' },
-])
+onMounted(async () => {
+  try {
+    const resp = await getRedeemGoods()
+    if (resp.ok && resp.data) {
+      goods.value = resp.data
+    }
+  } catch (e) {
+    console.error('Failed to load redeem goods:', e)
+  } finally {
+    loading.value = false
+  }
+  // 尝试获取会员积分（如果 localStorage 有手机号）
+  const phone = localStorage.getItem('member_phone')
+  if (phone) {
+    try {
+      const mResp = await lookupMember(phone)
+      if (mResp.ok && mResp.member) {
+        memberInfo.value = {
+          points: mResp.member.points?.toLocaleString(),
+          level: mResp.member.membership_level,
+          discount: mResp.member.discount,
+        }
+      }
+    } catch {}
+  }
+})
 
-const filtered = computed(() => activeCat.value === '全部' ? goods.value : goods.value.filter(g => g.cat === activeCat.value))
+const filtered = computed(() => activeCat.value === '全部' ? goods.value : goods.value.filter(g => g.category === activeCat.value))
 </script>
 
 <style scoped>
 .rp-page { padding: 8px 12px; min-height: 100vh; background: #1A1A1A; }
+
+.loading-state, .empty-state {
+  text-align: center; padding: 40px 20px; color: #666; font-size: 14px;
+}
 
 .rp-pts-card {
   background: linear-gradient(135deg, #FF7B2C, #E85D04);

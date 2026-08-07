@@ -8,14 +8,17 @@
       </button>
     </div>
 
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-state">加载中...</div>
+
     <!-- 优惠券列表 -->
-    <div class="coupon-list">
+    <div class="coupon-list" v-else>
       <div v-for="c in filteredCoupons" :key="c.id" class="coupon-card"
         :class="{ claimed: c.claimed }">
         <div class="c-left">
-          <div class="c-icon" :style="{background: c.color}">{{ c.name[0] }}</div>
+          <div class="c-icon" :style="{background: c.color}">{{ (c.shop_name || c.name || '')[0] }}</div>
           <div class="c-info">
-            <div class="c-name">{{ c.name }}</div>
+            <div class="c-name">{{ c.shop_name || c.name }}</div>
             <div class="c-desc">{{ c.label }}</div>
             <div class="c-expire">有效期至 {{ c.expire }}</div>
           </div>
@@ -26,6 +29,7 @@
             @click="claim(c.id)">{{ c.claimed ? '已领取' : '立即领取' }}</button>
         </div>
       </div>
+      <div v-if="!filteredCoupons.length" class="empty-state">暂无优惠券</div>
     </div>
 
     <div class="spacer"></div>
@@ -33,9 +37,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { getOffers } from '@/api'
 
 const activeCat = ref('all')
+const loading = ref(true)
 const cats = [
   { key: 'all', label: '全部' },
   { key: 'food', label: '餐饮券' },
@@ -44,16 +50,29 @@ const cats = [
   { key: 'fun', label: '娱乐券' },
 ]
 
-const coupons = ref([
-  { id: 1, name: '蜀大侠', label: '满200减50', expire: '2026-12-31', amount: 50, cat: 'food', color: '#C41E3A', claimed: false },
-  { id: 2, name: '星巴克', label: '买一赠一券', expire: '2026-10-31', amount: 35, cat: 'food', color: '#00704A', claimed: false },
-  { id: 3, name: '海底捞', label: '满300减80', expire: '2026-09-30', amount: 80, cat: 'food', color: '#D32F2F', claimed: false },
-  { id: 4, name: 'UNIQLO', label: '满299减30', expire: '2026-11-30', amount: 30, cat: 'retail', color: '#E60012', claimed: false },
-  { id: 5, name: '万达影城', label: '双人票立减20', expire: '2026-10-15', amount: 20, cat: 'fun', color: '#E85D04', claimed: false },
-  { id: 6, name: '棒约翰', label: '亲子套餐88折', expire: '2026-12-01', amount: 25, cat: 'food', color: '#FFB347', claimed: false },
-  { id: 7, name: '停车场', label: '免费停车2小时', expire: '2026-09-15', amount: 10, cat: 'parking', color: '#4A90D9', claimed: true },
-  { id: 8, name: '名创优品', label: '全场9折', expire: '2026-11-20', amount: 15, cat: 'retail', color: '#E8809E', claimed: false },
-])
+const coupons = ref([])
+
+onMounted(async () => {
+  try {
+    const resp = await getOffers()
+    if (resp.ok && resp.data) {
+      coupons.value = resp.data.map(c => ({
+        id: c.id,
+        name: c.shop_name,
+        label: c.label,
+        expire: c.expire,
+        amount: c.amount,
+        cat: c.category,
+        color: c.color,
+        claimed: false,
+      }))
+    }
+  } catch (e) {
+    console.error('Failed to load offers:', e)
+  } finally {
+    loading.value = false
+  }
+})
 
 const filteredCoupons = computed(() =>
   activeCat.value === 'all' ? coupons.value : coupons.value.filter(c => c.cat === activeCat.value)
@@ -67,6 +86,10 @@ function claim(id) {
 
 <style scoped>
 .offers-tab { padding: 8px 12px; }
+
+.loading-state, .empty-state {
+  text-align: center; padding: 40px 20px; color: #666; font-size: 14px;
+}
 
 /* 分类标签 */
 .cat-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; }
