@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title> - AI</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F5F5;height:100vh;display:flex;flex-direction:column}
+/* Top Bar */
+.topbar{background:linear-gradient(135deg,#FF7B2C,#FF5722);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+.topbar .brand{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:700}
+.topbar .brand .icon{font-size:28px}
+.topbar .actions{display:flex;gap:8px;align-items:center}
+.topbar .actions button, .topbar .actions a{background:rgba(255,255,255,0.2);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;text-decoration:none}
+/* Quick Entries */
+.quick{background:#fff;padding:10px 16px;display:flex;gap:8px;overflow-x:auto;border-bottom:1px solid #eee;flex-shrink:0}
+.quick button{flex-shrink:0;padding:8px 14px;border:1.5px solid #FFCC80;border-radius:20px;background:#FFF8F0;color:#E65100;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .2s;box-shadow:0 2px 4px rgba(255,123,44,0.1)}.quick button:hover{background:#FFF3E0;border-color:#FF9800;transform:translateY(-1px);box-shadow:0 3px 10px rgba(255,123,44,0.25)}
+.tb-btn{flex-shrink:0;padding:6px 12px;border:1px solid #e0e0e0;border-radius:16px;background:#fafafa;color:#757575;font-size:12px;cursor:pointer;white-space:nowrap;transition:all .15s}.tb-btn:hover{background:#f5f5f5;color:#424242}
+.quick button:active{background:#FFE0C0}
+/* Chat */
+.chat{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:85%;padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.6;word-break:break-word;animation:fadeIn .3s}
+.msg.user{align-self:flex-end;background:linear-gradient(135deg,#FF7B2C,#FF5722);color:#fff;border-bottom-right-radius:4px}
+.msg.ai{align-self:flex-start;background:#fff;color:#333;border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.msg .time{font-size:10px;opacity:0.6;margin-top:4px}
+.msg .actions{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+.msg .actions button{font-size:11px;padding:4px 10px;border:1px solid #ddd;border-radius:12px;background:#fff;color:#666;cursor:pointer}
+.msg.ai .actions button{border-color:#FFE0C0;color:#FF7B2C;background:#FFF8F0}
+.typing{display:none;align-self:flex-start;background:#fff;padding:16px;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.typing .dots{display:flex;gap:4px}
+.typing .dots span{width:8px;height:8px;border-radius:50%;background:#FFB080;animation:bounce 1.4s infinite}
+.typing .dots span:nth-child(2){animation-delay:.2s}
+.typing .dots span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-8px)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@keyframes glow{0%,100%{box-shadow:0 4px 15px rgba(230,81,0,0.4)}50%{box-shadow:0 4px 25px rgba(230,81,0,0.7)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* Input */
+.input-area{background:#fff;padding:10px 16px;display:flex;gap:8px;align-items:flex-end;border-top:1px solid #eee;flex-shrink:0}
+.input-area textarea{flex:1;border:none;background:#F5F5F5;border-radius:16px;padding:12px 16px;font-size:14px;resize:none;max-height:100px;font-family:inherit;line-height:1.4}
+.input-area textarea:focus{outline:none;background:#FFF0E0}
+.input-area button{flex-shrink:0;width:44px;height:44px;border:none;border-radius:50%;background:linear-gradient(135deg,#FF7B2C,#FF5722);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.input-area button:active{transform:scale(0.95)}
+/* Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:10;align-items:flex-end;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:500px;max-height:70vh;overflow-y:auto}
+.modal h3{font-size:18px;margin-bottom:16px;color:#333}
+.modal .fg{margin-bottom:14px}
+.modal .fg label{display:block;font-weight:600;font-size:13px;color:#555;margin-bottom:4px}
+.modal .fg input,.modal .fg select,.modal .fg textarea{width:100%;padding:10px 12px;border:2px solid #eee;border-radius:10px;font-size:14px;font-family:inherit}
+.modal .fg textarea{min-height:80px;resize:vertical}
+.modal .fg select{background:#fff}
+.modal .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.modal .btns button{padding:10px 24px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+.modal .btns .cancel{background:#eee;color:#666}
+.modal .btns .submit{background:#FF7B2C;color:#fff}
+/* Toast */
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:20px;color:#fff;font-size:13px;z-index:99;display:none}
+.toast.show{display:block;animation:fadeIn .3s}
+.toast-success{background:#4CAF50}
+.toast-error{background:#F44336}
+/* Welcome Cards */
+.welcome-cards{padding:0 4px 8px}
+.wc-row{display:flex;gap:8px;margin-bottom:8px}
+.wc-card{flex:1;background:#fff;border-radius:14px;padding:14px 12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);cursor:pointer;text-align:center;transition:transform .15s}
+.wc-card:active{transform:scale(0.96);background:#FFF8F0}
+.wc-icon{font-size:28px;margin-bottom:4px}
+.wc-text{font-size:14px;font-weight:700;color:#333}
+.wc-sub{font-size:11px;color:#999;margin-top:2px}
+/* Coupon Modal */
+.coupon-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:999;display:none;justify-content:center;align-items:center}
+.coupon-modal.show{display:flex}
+.coupon-sheet{background:#fff;border-radius:20px;width:340px;max-width:90vw;max-height:75vh;overflow-y:auto;padding:20px}
+.coupon-sheet h3{text-align:center;margin:0 0 16px 0;font-size:18px}
+.coupon-card{position:relative;background:linear-gradient(135deg,#FF7B2C,#FF9A4D);color:#fff;border-radius:14px;padding:16px;margin-bottom:12px;overflow:hidden}
+.coupon-card.used{opacity:.5;pointer-events:none}
+.coupon-card .cc-top{display:flex;align-items:center;margin-bottom:10px}
+.coupon-card .cc-amount{font-size:36px;font-weight:800;line-height:1;margin-right:8px}
+.coupon-card .cc-amount small{font-size:18px}
+.coupon-card .cc-detail{font-size:12px;opacity:.9}
+.coupon-card .cc-meta{font-size:11px;opacity:.8;line-height:1.6}
+.coupon-card .cc-btn{display:inline-block;background:#fff;color:#FF7B2C;border-radius:20px;padding:6px 20px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;border:none}
+.coupon-card .cc-btn:active{transform:scale(.95)}
+.coupon-card .cc-watermark{position:absolute;right:-10px;bottom:-10px;font-size:60px;opacity:.1}
+.coupon-close{display:block;width:100%;padding:10px;background:#eee;border:none;border-radius:10px;margin-top:12px;color:#666;font-size:14px;cursor:pointer}
+/* Coupon Banner */
+.coupon-banner{display:flex;align-items:center;background:linear-gradient(135deg,#FF7B2C,#FF5722);border-radius:16px;padding:14px;margin:0 4px 10px;cursor:pointer;box-shadow:0 4px 16px rgba(255,87,34,.3);animation:cbPulse 2s infinite;position:relative;overflow:hidden}
+.coupon-banner::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent 40%,rgba(255,255,255,.15) 50%,transparent 60%);animation:cbShine 3s infinite}
+@keyframes cbPulse{0%,100%{box-shadow:0 4px 16px rgba(255,87,34,.3)}50%{box-shadow:0 4px 24px rgba(255,87,34,.5)}}
+@keyframes cbShine{0%{transform:translateX(-100%) translateY(-100%)}100%{transform:translateX(100%) translateY(100%)}}
+.cb-left{margin-right:12px;position:relative;z-index:1}
+.cb-icon{font-size:36px;animation:cbBounce .6s infinite alternate}
+@keyframes cbBounce{0%{transform:scale(1)}100%{transform:scale(1.15)}}
+.cb-mid{flex:1;color:#fff;position:relative;z-index:1}
+.cb-title{font-size:16px;font-weight:800;text-shadow:0 1px 3px rgba(0,0,0,.2)}
+.cb-sub{font-size:11px;opacity:.9;margin-top:3px}
+.cb-right{position:relative;z-index:1}
+.cb-arrow{font-size:28px;color:#fff;opacity:.8;animation:cbArrow 1s infinite alternate}
+@keyframes cbArrow{0%{transform:translateX(0)}100%{transform:translateX(4px)}}
+/* Barcode Card */
+.barcode-card{background:#fff;border-radius:16px;padding:20px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.08);margin:8px 0;border:2px dashed #FF7B2C}
+.barcode-card .bc-header{font-size:13px;color:#999;margin-bottom:8px}
+.barcode-card .bc-amount{font-size:28px;color:#FF5722;margin-bottom:4px}
+.barcode-card .bc-amount b{font-size:44px}
+.barcode-card .bc-name{font-size:16px;font-weight:700;color:#333;margin-bottom:12px}
+.barcode-card .bc-barcode{margin:10px auto;display:inline-block;padding:8px 12px;background:#fafafa;border-radius:8px}
+.barcode-card .bc-code{font-size:18px;font-weight:700;color:#333;letter-spacing:2px;margin:8px 0;font-family:monospace}
+.barcode-card .bc-meta{font-size:11px;color:#999;margin-bottom:8px}
+.barcode-card .bc-hint{font-size:11px;color:#FF7B2C;font-weight:600}
+
+/* Member Panel */
+.member-bar{display:none;background:linear-gradient(135deg,#FFF8F0,#FFF3E0);padding:14px 16px;border-radius:16px;margin:4px 4px 10px;box-shadow:0 2px 12px rgba(255,107,0,.12)}
+.member-bar.show{display:flex;align-items:center;gap:10px}
+.mb-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#FF6B00,#E65100);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0}
+.mb-info{flex:1;min-width:0}
+.mb-name{font-size:15px;font-weight:700;color:#333;line-height:1.3}
+.mb-meta{font-size:11px;color:#888;margin-top:2px}
+.mb-actions{display:flex;gap:4px;flex-shrink:0}
+.mb-actions button{padding:6px 10px;border:none;border-radius:16px;font-size:11px;font-weight:600;cursor:pointer;background:#fff;color:#E65100;border:1px solid #FFE0B2}
+.mb-actions button:active{background:#FFF3E0}
+/* Auth overlay */
+.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9998;display:none;align-items:flex-end;justify-content:center}
+.auth-overlay.show{display:flex}
+.auth-sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:500px;padding:24px 20px 32px;box-shadow:0 -8px 40px rgba(0,0,0,.15)}
+.auth-sheet h2{font-size:22px;font-weight:800;color:#333;margin:0 0 4px}
+.auth-sheet .auth-sub{font-size:12px;color:#999;margin-bottom:20px}
+.auth-tabs{display:flex;gap:0;margin-bottom:20px;background:#F5F5F5;border-radius:12px;padding:3px}
+.auth-tab{flex:1;text-align:center;padding:10px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:#999;transition:all .2s}
+.auth-tab.active{background:#fff;color:#E65100;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.auth-input{width:100%;padding:12px 16px;border:2px solid #eee;border-radius:12px;font-size:15px;margin-bottom:12px;outline:none;font-family:inherit}
+.auth-input:focus{border-color:#FFB74D}
+.auth-btn{width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#FF6B00,#E65100);color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-top:4px}
+.auth-btn:active{transform:scale(.98);opacity:.9}
+.auth-close{display:block;width:100%;padding:12px;background:none;border:none;color:#999;font-size:14px;margin-top:8px;cursor:pointer}
+/* Coupons panel */
+.cpn-panel{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9998;display:none;align-items:flex-end;justify-content:center}
+.cpn-panel.show{display:flex}
+.cpn-sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:500px;max-height:70vh;overflow-y:auto;padding:24px 20px 16px}
+.cpn-sheet h2{font-size:20px;font-weight:800;color:#333;margin:0 0 16px}
+.cpn-item{display:flex;align-items:center;gap:12px;padding:12px;background:#FFF8F0;border-radius:12px;margin-bottom:8px}
+.cpn-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#FF6B00,#E65100);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0}
+.cpn-code{font-size:15px;font-weight:700;color:#333;word-break:break-all}
+.cpn-date{font-size:11px;color:#999;margin-top:2px}
+.cpn-close{display:block;width:100%;padding:12px;background:#eee;border:none;border-radius:12px;color:#666;font-size:14px;cursor:pointer;margin-top:8px}
+/* Points panel */
+.pts-section{margin-bottom:16px}
+.pts-header{background:linear-gradient(135deg,#FFF8F0,#FFF3E0);border-radius:16px;padding:16px;margin-bottom:12px;text-align:center}
+.pts-value{font-size:32px;font-weight:800;color:#E65100;line-height:1}
+.pts-label{font-size:12px;color:#999;margin-top:4px}
+.pts-gift{display:flex;align-items:center;justify-content:space-between;padding:14px;border:1px solid #eee;border-radius:12px;margin-bottom:8px}
+.pts-gift-name{font-size:14px;font-weight:600;color:#333}
+.pts-gift-cost{font-size:13px;color:#E65100;font-weight:700}
+.pts-gift-value{font-size:11px;color:#999}
+.pts-gift-btn{padding:8px 16px;border:none;border-radius:16px;background:linear-gradient(135deg,#FF6B00,#E65100);color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.pts-gift-btn:disabled{background:#ccc;cursor:default}
+/* Four search buttons */
+.search-btns{display:flex;gap:6px;overflow-x:auto;padding:4px 0;flex-shrink:0}
+.search-btns button{flex-shrink:0;padding:10px 18px;border:none;border-radius:22px;background:linear-gradient(135deg,#FF6B00,#E65100);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(230,81,0,.25)}
+.search-btns button:active{transform:scale(.96)}
+/* Nav overlay */
+.nav-overlay{position:fixed;inset:0;z-index:9999;background:#F2EFE9;display:none;flex-direction:column}
+.nav-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,.08)}
+.nav-header h2{font-size:18px;font-weight:700;color:#333;margin:0}
+.nav-close-btn{width:36px;height:36px;border:none;background:rgba(0,0,0,.05);border-radius:50%;font-size:20px;cursor:pointer;color:#666}
+.nav-floors{display:flex;gap:8px;padding:12px 16px 8px}
+.nav-floors button{border:none;padding:8px 20px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;background:rgba(0,0,0,.05);color:#666}
+.nav-floors button.active{background:#E65100;color:#fff}
+.nav-search-box{padding:0 16px 12px}
+.nav-search-box input{width:100%;padding:10px 16px;border:1px solid #ddd;border-radius:24px;font-size:15px;outline:none;background:#fff}
+.nav-results{display:none;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);max-height:180px;overflow-y:auto;margin-top:4px}
+.nav-result-item{padding:10px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f0f0f0}
+.nav-result-item:active{background:#f5f5f5}
+.nav-map{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:8px}
+/* Quick replies under bot messages */
+.qr-btns{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.qr-btns button{padding:5px 12px;border:1.5px solid #FFCC80;border-radius:14px;background:#FFF8F0;color:#E65100;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap}
+.qr-btns button:active{background:#FFE0C0}
+
+</style>
+</head>
+<body>
+<div class="topbar">
+<div class="brand"><span class="icon">[]</span></div>
+<div class="actions"><span style="font-size:11px;opacity:0.8">{{tenant_name}}</span><a href="#" onclick="showCoupons()">[] </a><a href="#" onclick="clearChat()"></a></div>
+</div>
+<div class="quick">
+<div class="coupon-dir-banner" onclick="showCouponMenu()" style="cursor:pointer;background:linear-gradient(135deg,#FF6F00,#E65100);padding:14px 16px;border-radius:14px;margin-bottom:6px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(230,81,0,0.4);position:relative;overflow:hidden"><div style="font-size:32px;animation:pulse 1.5s ease-in-out infinite">[]</div><div style="flex:1"><div style="font-size:16px;font-weight:bold;color:#fff"></div><div style="font-size:12px;color:#FFE0B2;margin-top:2px"> ·  ·  ·  </div></div><div style="font-size:20px;color:#FFE0B2;transition:transform .3s" id="cdArrow"></div><div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:50%"></div></div>
+<div id="couponMenu" style="display:none;flex-wrap:wrap;gap:8px;padding:12px;background:#FFF8E1;border-radius:14px;margin-bottom:6px;border:2px solid #FFE0B2">
+<div style="width:100%;font-size:12px;color:#E65100;font-weight:bold;margin-bottom:2px">[] </div>
+<button onclick="quickSend('')"> </button>
+<button onclick="quickSend('')"> </button>
+<button onclick="quickSend('B1')"> </button>
+<button onclick="quickSend('')"> </button>
+<div style="width:100%;font-size:12px;color:#E65100;font-weight:bold;margin-top:6px"> </div>
+<button onclick="quickSend('')"> </button>
+<button onclick="quickSend('')"> </button>
+<button onclick="quickSend('')"> </button>
+<button onclick="quickSend('')"> </button>
+<div style="width:100%;font-size:12px;color:#E65100;font-weight:bold;margin-top:6px"> </div>
+<button onclick="quickSend('')"> </button>
+<button onclick="quickSend('')"> </button>
+<button onclick="quickSend('')"> </button>
+<button onclick="quickSend('')"> </button>
+</div>
+</div>
+
+<div class="member-bar" id="memberBar">
+  <div class="mb-avatar" id="mbAvatar">M</div>
+  <div class="mb-info">
+    <div class="mb-name" id="mbName">--</div>
+    <div class="mb-meta" id="mbMeta">--</div>
+  </div>
+  <div class="mb-actions">
+    <button onclick="showMyCoupons()">[]</button>
+    <button onclick="showMyPoints()">[]</button>
+    <button onclick="doLogout()">[]</button>
+  </div>
+</div>
+<div class="search-btns">
+  <button onclick="quickSend('')"></button>
+  <button onclick="quickSend('')"></button>
+  <button onclick="quickSend('')"></button>
+  <button onclick="quickSend('')"></button>
+</div>
+<div class="nav-entry" onclick="initNavMap()" style="background:linear-gradient(135deg,#FF6F00,#E65100);padding:12px 16px;border-radius:14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin:6px 0;box-shadow:0 4px 15px rgba(230,81,0,.35)">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+  <div style="flex:1"><div style="font-size:15px;font-weight:700;color:#fff"></div><div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:2px">A ·  · </div></div>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+</div>
+
+<div class="toolbar" style="display:flex;gap:6px;flex-wrap:wrap;padding:6px 0;border-top:1px solid #f0f0f0">
+<button onclick="quickSend('')" class="tb-btn"> </button>
+<button onclick="quickSend('')" class="tb-btn">[P] </button>
+<button onclick="openRegister()" class="tb-btn">[] </button>
+<button onclick="quickSend('')" class="tb-btn">[] </button>
+<button onclick="quickSend('')" class="tb-btn">[] </button>
+</div>
+<div class="chat" id="chatBox">
+<div class="msg ai"> AI</div>
+<div class="coupon-banner" onclick="showCoupons()">
+  <div class="cb-left"><div class="cb-icon">[]</div></div>
+  <div class="cb-mid"><div class="cb-title"> · 50</div><div class="cb-sub"> |  |  |  </div></div>
+  <div class="cb-right"><div class="cb-arrow">›</div></div>
+</div>
+<div class="welcome-cards">
+<div class="wc-row">
+<div class="wc-card" onclick="quickSend('')"><div class="wc-icon">[]</div><div class="wc-text"></div><div class="wc-sub">//</div></div>
+<div class="wc-card" onclick="quickSend('')"><div class="wc-icon">[]</div><div class="wc-text"></div><div class="wc-sub">//</div></div>
+</div>
+<div class="wc-row">
+<div class="wc-card" onclick="quickSend('')"><div class="wc-icon">[]</div><div class="wc-text"></div><div class="wc-sub">//</div></div>
+<div class="wc-card" onclick="quickSend('')"><div class="wc-icon">[P]</div><div class="wc-text"></div><div class="wc-sub">//</div></div>
+</div>
+</div>
+</div>
+<div class="typing" id="typing"><div class="dots"><span></span><span></span><span></span></div></div>
+<div class="input-area">
+<textarea id="userInput" rows="1" placeholder="..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"></textarea>
+<button onclick="sendMsg()"></button>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- Order Modal -->
+<div class="modal-overlay" id="orderModal">
+<div class="modal"><h3>[] </h3>
+<div class="fg"><label></label><select id="orderType"><option value=""></option><option value=""></option><option value=""></option><option value=""></option></select></div>
+<div class="fg"><label></label><input id="orderTitle" placeholder=""></div>
+<div class="fg"><label></label><textarea id="orderDesc" placeholder=""></textarea></div>
+<div class="fg"><label></label><input id="orderContact" placeholder=""></div>
+<div class="btns"><button class="cancel" onclick="document.getElementById('orderModal').classList.remove('show')"></button><button class="submit" onclick="submitOrder()"></button></div></div>
+</div>
+
+<!-- Register Modal (inline) -->
+<div class="modal-overlay" id="registerModal">
+<div class="modal"><h3>[] </h3>
+<div class="fg"><label></label><select id="regEvent"><option> 14:00</option><option> 19:00</option><option> 19:00</option><option></option></select></div>
+<div class="fg"><label></label><input id="regName" placeholder=""></div>
+<div class="fg"><label></label><input id="regPhone" type="tel" placeholder=""></div>
+<div class="fg"><label></label><select id="regCount"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+<div class="fg"><label></label><textarea id="regNote" placeholder=""></textarea></div>
+<div class="btns"><button class="cancel" onclick="document.getElementById('registerModal').classList.remove('show')"></button><button class="submit" onclick="submitRegister()"></button></div></div>
+</div>
+
+<script>
+var welcomeCardsHTML='<div class="welcome-cards"><div class="wc-row"><div class="wc-card" onclick="quickSend(\''+'\')"><div class="wc-icon">[]</div><div class="wc-text"></div><div class="wc-sub">//</div></div><div class="wc-card" onclick="quickSend(\'\')"><div class="wc-icon">[]</div><div class="wc-text"></div><div class="wc-sub">//</div></div></div><div class="wc-row"><div class="wc-card" onclick="quickSend(\'\')"><div class="wc-icon">[]</div><div class="wc-text"></div><div class="wc-sub">//</div></div><div class="wc-card" onclick="quickSend(\'\')"><div class="wc-icon">[P]</div><div class="wc-text"></div><div class="wc-sub">//</div></div></div></div>';
+function toast(m,t){var e=document.getElementById('toast');e.textContent=m;e.className='toast toast-'+t+' show';setTimeout(function(){e.classList.remove('show')},2500)}
+
+async function clearChat(){
+if(!confirm(''))return;
+try{await fetch('/api/chat/clear',{method:'POST'})}catch(e){}
+document.getElementById('chatBox').innerHTML='<div class="msg ai">[] </div><div class="coupon-banner" onclick="showCoupons()"><div class="cb-left"><div class="cb-icon">[]</div></div><div class="cb-mid"><div class="cb-title"> · 50</div><div class="cb-sub"> |  |  |  </div></div><div class="cb-right"><div class="cb-arrow">›</div></div></div>'+welcomeCardsHTML;
+toast('','success')
+}
+
+function addMsg(text,type,actions){
+var d=document.createElement('div');d.className='msg '+type;
+// Sanitize: strip script tags
+if(type=='ai') text=text.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/on\w+=/gi,'');
+// Make links clickable
+if(type=='ai'){
+text=text.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" style="color:#FF7B2C">$1</a>');
+text=text.replace(/(#[^\s]*:\/\/[^\s]+)/g,'<a href="$1" style="color:#FF7B2C">$1</a>');
+}
+d.innerHTML=text+'<div class="time">'+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+'</div>';
+if(actions){d.innerHTML+='<div class="actions">'+actions+'</div>'}
+document.getElementById('chatBox').appendChild(d);
+document.getElementById('chatBox').scrollTop=document.getElementById('chatBox').scrollHeight;
+}
+
+function showCouponMenu(){var m=document.getElementById('couponMenu');var a=document.getElementById('cdArrow');var b=document.querySelector('.coupon-dir-banner');if(m.style.display==='flex'){m.style.display='none';a.style.transform='rotate(0deg)';b.style.boxShadow='0 4px 15px rgba(230,81,0,0.4)'}else{m.style.display='flex';a.style.transform='rotate(180deg)';b.style.animation='glow 2s ease-in-out infinite'}}
+function quickSend(text){
+document.getElementById('userInput').value=text;sendMsg();
+}
+
+async function sendMsg(){
+var input=document.getElementById('userInput'),msg=input.value.trim();
+if(!msg)return;
+input.value='';input.focus();
+addMsg(msg,'user');
+// Intercept: keywords trigger inline forms
+var kw=msg.toLowerCase();
+if(kw.includes('')||kw===''||kw.includes('')||kw.includes('')){
+document.getElementById('typing').style.display='none';
+openRegister();
+return;
+}
+if(kw.includes('')||kw.includes('')||kw.includes('')||kw.includes('')){
+document.getElementById('typing').style.display='none';
+openOrder('');
+return;
+}
+if(kw.includes('')){
+document.getElementById('typing').style.display='none';
+openOrder('');
+return;
+}
+document.getElementById('typing').style.display='block';
+document.getElementById('chatBox').scrollTop=document.getElementById('chatBox').scrollHeight;
+try{
+var r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+var j=await r.json();
+document.getElementById('typing').style.display='none';
+if(j.ok){
+var actions='';
+if(j.reply.includes('')||msg.includes('')){
+actions='<button onclick="openOrder(\'\')">[] </button>';
+}
+if(msg.includes(''))actions='<button onclick="openOrder(\'\')">[] </button>';
+if(msg.includes('')||msg.includes('')||msg.includes(''))actions='<button onclick="openOrder(\'\')">[] </button>';
+addMsg(j.reply,'ai',actions);
+}else{addMsg('~','ai')}
+}catch(e){document.getElementById('typing').style.display='none';addMsg('','ai')}
+}
+
+function openOrder(type){
+document.getElementById('orderType').value=type;
+document.getElementById('orderTitle').value='';
+document.getElementById('orderDesc').value='';
+document.getElementById('orderContact').value='';
+document.getElementById('orderModal').classList.add('show');
+}
+
+async function submitOrder(){
+var data={
+type:document.getElementById('orderType').value,
+title:document.getElementById('orderTitle').value||'',
+description:document.getElementById('orderDesc').value,
+reporter_contact:document.getElementById('orderContact').value
+};
+try{
+var r=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+var j=await r.json();
+if(j.ok){toast('','success');document.getElementById('orderModal').classList.remove('show')}
+else toast(j.error,'error')
+}catch(e){toast('','error')}
+}
+
+document.getElementById('userInput').addEventListener('input',function(){
+this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px';
+});
+
+// Register functions
+function openRegister(){
+document.getElementById('regName').value='';
+document.getElementById('regPhone').value='';
+document.getElementById('regNote').value='';
+document.getElementById('registerModal').classList.add('show');
+}
+function submitRegister(){
+var name=document.getElementById('regName').value.trim();
+var phone=document.getElementById('regPhone').value.trim();
+if(!name){toast('','error');return}
+if(!phone||!/^\d{11}$/.test(phone)){toast('11','error');return}
+var data={type:'',title:''+document.getElementById('regEvent').value,
+description:''+name+' '+phone+' '+document.getElementById('regCount').value+(document.getElementById('regNote').value?' '+document.getElementById('regNote').value:''),
+reporter_contact:phone};
+fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:document.getElementById('regEvent').value,name:name,phone:phone,count:document.getElementById('regCount').value,note:document.getElementById('regNote').value})}).then(function(r){return r.json()}).then(function(j){
+if(j.ok){toast('','success');document.getElementById('registerModal').classList.remove('show');addMsg(''+document.getElementById('regEvent').value+'~','ai')}
+else toast(j.error||'','error')
+}).catch(function(){toast('','error')})
+}
+
+var couponData = [
+{id:1,amount:20,min:100,title:'',desc:'',expire:'2026-08-31',code:'DJ0820'},
+{id:2,amount:50,min:300,title:'',desc:'//',expire:'2026-09-15',code:'DJ0850'},
+{id:3,amount:10,min:50,title:'',desc:'B1',expire:'2026-08-31',code:'DJ0810'},
+{id:4,amount:15,min:0,title:'',desc:'',expire:'2026-08-15',code:'DJ0815'},
+{id:5,amount:2,min:0,title:'',desc:'2',expire:'2026-12-31',code:'PARK02'}
+];
+var claimedCoupons = {};
+
+function showCoupons(){
+var h='<h3>[] </h3>';
+couponData.forEach(function(c){
+var claimed=claimedCoupons[c.id];
+h+='<div class="coupon-card'+(claimed?' used':'')+'">';
+h+='<div class="cc-watermark">[]</div>';
+h+='<div class="cc-top"><div class="cc-amount"><small>¥</small>'+c.amount+'</div>';
+h+='<div class="cc-detail"><div style="font-weight:700;font-size:14px">'+c.title+'</div><div>'+c.desc+'</div></div></div>';
+h+='<div class="cc-meta">'+c.min+' |  '+c.expire+' | '+c.code+'</div>';
+if(!claimed)h+='<button class="cc-btn" onclick="claimCoupon('+c.id+')"></button>';
+else h+='<div style="font-size:11px;opacity:.7;margin-top:8px">  · </div>';
+h+='</div>';
+});
+h+='<button class="coupon-close" onclick="closeCoupons()"></button>';
+document.getElementById('ccSheet').innerHTML=h;
+document.getElementById('couponModal').classList.add('show');
+}
+function claimCoupon(id){
+var c=couponData.find(function(x){return x.id===id});
+claimedCoupons[id]=true;
+toast('','success');
+var barcodeHTML = generateBarcode(c);
+addMsg('[]  ¥'+c.amount+' '+c.title,'user');
+document.getElementById('chatBox').insertAdjacentHTML('beforeend',barcodeHTML);
+document.getElementById('chatBox').scrollTop=document.getElementById('chatBox').scrollHeight;
+setTimeout(function(){closeCoupons()},600);
+}
+function generateBarcode(c){
+var id='bc-'+Date.now();
+var h='<div class="msg ai"><div class="barcode-card">';
+h+='<div class="bc-header">  · </div>';
+h+='<div class="bc-amount">¥<b>'+c.amount+'</b></div>';
+h+='<div class="bc-name">'+c.title+'</div>';
+h+='<div class="bc-barcode"><canvas id="'+id+'" width="400" height="100"></canvas></div>';
+h+='<div class="bc-code">'+c.code+'</div>';
+h+='<div class="bc-meta">'+c.min+' |  '+c.expire+'</div>';
+h+='<div class="bc-hint"></div>';
+h+='</div></div>';
+setTimeout(function(){drawCode128(id,c.code)},100);
+return h;
+}
+// Code128B barcode encoder
+function drawCode128(canvasId,text){
+var canvas=document.getElementById(canvasId);
+if(!canvas)return;
+var ctx=canvas.getContext('2d');
+ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+// Encode to Code128B pattern
+var patterns=code128Patterns();
+var bars=[patterns.START_B];
+var checksum=104; // START_B value
+for(var i=0;i<text.length;i++){
+var c=text.charCodeAt(i);
+if(c<32||c>126)c=32;
+var val=c-32;
+bars.push(patterns[val]);
+checksum+=val*(i+1);
+}
+checksum=checksum%103;
+bars.push(patterns[checksum]);
+bars.push(patterns.STOP);
+// Draw bars
+var totalWidth=bars.reduce(function(s,p){return s+patternWidth(p)},0);
+var x=(canvas.width-totalWidth)/2;
+var y=4;
+var h=50;
+for(var b=0;b<bars.length;b++){
+var p=bars[b];
+for(var j=0;j<p.length;j++){
+var w=p.charCodeAt(j)-48; // '0'=thin, '1'=thick
+ctx.fillStyle=(j%2==0)?'#000':'#fff';
+ctx.fillRect(x,y,(w+1)*1.5,h);
+x+=(w+1)*1.5;
+}
+}
+// Draw text below
+ctx.fillStyle='#333';
+ctx.font='bold 14px monospace';
+ctx.textAlign='center';
+ctx.fillText(text,canvas.width/2,68);
+}
+function patternWidth(p){var w=0;for(var i=0;i<p.length;i++)w+=(p.charCodeAt(i)-48+1)*1.5;return w}
+function code128Patterns(){
+// Code128B bar patterns: '0'=thin bar/space, '1'=thick, alternating bar/space
+return {
+0:'11011001100',1:'11001101100',2:'11001100110',3:'10010011000',4:'10010001100',
+5:'10001001100',6:'10011001000',7:'10011000100',8:'10001100100',9:'11001001000',
+10:'11001000100',11:'11000100100',12:'10110011100',13:'10011011100',14:'10011001110',
+15:'10111001100',16:'10011101100',17:'10011100110',18:'11001110010',19:'11001011100',
+20:'11001001110',21:'11011100100',22:'11001110100',23:'11101101110',24:'11101001100',
+25:'11100101100',26:'11100100110',27:'11101100100',28:'11100110100',29:'11100110010',
+30:'11011011000',31:'11011000110',32:'11000110110',33:'10100011000',34:'10001011000',
+35:'10001000110',36:'10110001000',37:'10001101000',38:'10001100010',39:'11010001000',
+40:'11000101000',41:'11000100010',42:'10110111000',43:'10110001110',44:'10001101110',
+45:'10111011000',46:'10111000110',47:'10001110110',48:'11101110110',49:'11010001110',
+50:'11000101110',51:'11011101000',52:'11011100010',53:'11011101110',54:'11101011000',
+55:'11101000110',56:'11100010110',57:'11101101000',58:'11101100010',59:'11100011010',
+60:'11101111010',61:'11001000010',62:'11110001010',63:'10100110000',64:'10100001100',
+65:'10010110000',66:'10010000110',67:'10000101100',68:'10000100110',69:'10110010000',
+70:'10110000100',71:'10011010000',72:'10011000010',73:'10000110100',74:'10000110010',
+75:'11000010010',76:'11001010000',77:'11110111010',78:'11000010100',79:'10001111010',
+80:'10100111100',81:'10010111100',82:'10010011110',83:'10111100100',84:'10011110100',
+85:'10011110010',86:'11110100100',87:'11110010100',88:'11110010010',89:'11011011110',
+90:'11011110110',91:'11110110110',92:'10101111000',93:'10100011110',94:'10001011110',
+START_B:'11010010000',STOP:'1100011101011'
+}
+}
+function closeCoupons(){document.getElementById('couponModal').classList.remove('show')}
+
+
+// ============ Member Auth ============
+var _authTab = 'login';
+function showAuth() { document.getElementById('authOverlay').classList.add('show'); }
+function closeAuth() { document.getElementById('authOverlay').classList.remove('show'); }
+function switchAuthTab(tab) {
+  _authTab = tab;
+  var tabs = document.querySelectorAll('.auth-tab');
+  tabs[0].className = tab === 'login' ? 'auth-tab active' : 'auth-tab';
+  tabs[1].className = tab === 'register' ? 'auth-tab active' : 'auth-tab';
+  document.getElementById('authLoginForm').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('authRegForm').style.display = tab === 'register' ? 'block' : 'none';
+}
+
+function doLogin() {
+  var phone = document.getElementById('authPhone').value.trim();
+  if (!phone || phone.length < 11) { toast('','error'); return; }
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/member/portal');
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onload = function() {
+    var j = JSON.parse(xhr.responseText);
+    if (j.ok) {
+      _memberData = j.member;
+      if (window.sessionStorage) sessionStorage.setItem('__dj_member', JSON.stringify(_memberData));
+      updateMemberBar();
+      closeAuth();
+      toast(', '+j.member.display_name,'success');
+    } else {
+      toast(j.error || '','error');
+    }
+  };
+  xhr.send(JSON.stringify({phone: phone}));
+}
+
+function doRegister() {
+  var name = document.getElementById('regDisplayName').value.trim();
+  var phone = document.getElementById('regPhone').value.trim();
+  if (!name) { toast('','error'); return; }
+  if (!phone || phone.length < 11) { toast('','error'); return; }
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/member/register');
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onload = function() {
+    var j = JSON.parse(xhr.responseText);
+    if (j.ok) {
+      _memberData = j.user;
+      _memberData.membership_level = '';
+      _memberData.discount = '98';
+      _memberData.desc = '1=1';
+      _memberData.points = 500;
+      if (window.sessionStorage) sessionStorage.setItem('__dj_member', JSON.stringify(_memberData));
+      updateMemberBar();
+      closeAuth();
+      toast('! 500','success');
+    } else {
+      toast(j.error || '','error');
+    }
+  };
+  xhr.send(JSON.stringify({display_name: name, phone: phone}));
+}
+
+function doLogout() {
+  _memberData = null;
+  if (window.sessionStorage) sessionStorage.removeItem('__dj_member');
+  document.getElementById('memberBar').classList.remove('show');
+  toast('','success');
+}
+
+function updateMemberBar() {
+  if (!_memberData) return;
+  var bar = document.getElementById('memberBar');
+  bar.classList.add('show');
+  var name = _memberData.display_name || '';
+  document.getElementById('mbAvatar').textContent = name.charAt(0);
+  document.getElementById('mbName').textContent = name;
+  var lv = _memberData.membership_level || '';
+  var pts = _memberData.points || 0;
+  var disc = _memberData.discount || '98';
+  document.getElementById('mbMeta').textContent = lv + ' · ' + disc + ' · ' + pts + '';
+}
+
+// ============ Coupons Panel ============
+function showMyCoupons() {
+  if (!_memberData || !_memberData.phone) { toast('','error'); showAuth(); return; }
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/member/coupons');
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onload = function() {
+    var j = JSON.parse(xhr.responseText);
+    var list = document.getElementById('cpnList');
+    if (!j.ok || !j.coupons || !j.coupons.length) {
+      list.innerHTML = '<div style="text-align:center;color:#999;padding:20px"></div>';
+    } else {
+      var h = '';
+      for (var i = 0; i < j.coupons.length; i++) {
+        var c = j.coupons[i];
+        h += '<div class="cpn-item"><div class="cpn-icon"></div><div><div class="cpn-code">' + c.code + '</div><div class="cpn-date">' + c.item + ' · ' + c.time + '</div></div></div>';
+      }
+      list.innerHTML = h;
+    }
+    document.getElementById('cpnPanel').classList.add('show');
+  };
+  xhr.send(JSON.stringify({phone: _memberData.phone}));
+}
+
+function closeCpnPanel() { document.getElementById('cpnPanel').classList.remove('show'); }
+
+// ============ Points Panel ============
+function showMyPoints() {
+  if (!_memberData || !_memberData.phone) { toast('','error'); showAuth(); return; }
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/member/portal');
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onload = function() {
+    var j = JSON.parse(xhr.responseText);
+    var el = document.getElementById('ptsContent');
+    if (!j.ok) { el.innerHTML = '<div style="text-align:center;color:#999;padding:20px"></div>'; }
+    else {
+      var m = j.member;
+      var h = '<div class="pts-section"><div class="pts-header"><div class="pts-value">' + m.points + '</div><div class="pts-label">' + m.membership_level + ' · ' + m.discount + '</div></div>';
+      if (m.upgrade) {
+        h += '<div style="padding:12px;background:#FFF3E0;border-radius:12px;margin-bottom:12px;font-size:13px;color:#E65100">' + m.upgrade.next_level + ' ' + m.upgrade.points_needed + ' ' + m.upgrade.progress_percent + '%</div>';
+      }
+      h += '<div style="font-size:14px;font-weight:700;color:#333;margin-bottom:8px"></div>';
+      if (m.affordable_gifts && m.affordable_gifts.length) {
+        for (var i = 0; i < m.affordable_gifts.length; i++) {
+          var g = m.affordable_gifts[i];
+          h += '<div class="pts-gift"><div><div class="pts-gift-name">' + g.name + '</div><div class="pts-gift-value">' + g.value + '</div></div><div style="text-align:right"><div class="pts-gift-cost">' + g.cost + '</div><button class="pts-gift-btn" onclick="redeemGift(' + g.id + ')"></button></div></div>';
+        }
+      } else {
+        h += '<div style="text-align:center;color:#999;padding:10px"></div>';
+      }
+      if (m.closest_gift) {
+        h += '<div style="font-size:12px;color:#999;text-align:center;margin-top:8px">' + m.closest_gift.points_short + ' ' + m.closest_gift.name + '</div>';
+      }
+      h += '</div>';
+      el.innerHTML = h;
+    }
+    document.getElementById('ptsPanel').classList.add('show');
+  };
+  xhr.send(JSON.stringify({phone: _memberData.phone}));
+}
+
+function closePtsPanel() { document.getElementById('ptsPanel').classList.remove('show'); }
+
+function redeemGift(gid) {
+  if (!_memberData || !_memberData.phone) return;
+  if (!confirm('')) return;
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/member/redeem');
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onload = function() {
+    var j = JSON.parse(xhr.responseText);
+    if (j.ok) {
+      toast('!','success');
+      closePtsPanel();
+      // Refresh member data
+      var xhr2 = new XMLHttpRequest();
+      xhr2.open('POST', '/api/member/portal');
+      xhr2.setRequestHeader('Content-Type', 'application/json');
+      xhr2.onload = function() {
+        var j2 = JSON.parse(xhr2.responseText);
+        if (j2.ok) { _memberData = j2.member; updateMemberBar(); }
+      };
+      xhr2.send(JSON.stringify({phone: _memberData.phone}));
+    } else {
+      toast(j.error || '','error');
+    }
+  };
+  xhr.send(JSON.stringify({phone: _memberData.phone, redeem_id: gid}));
+}
+
+// ============ Nav Map ============
+window._nr = {"1F":[{x:120,y:245,w:200,h:140,name:"",type:"cafe",color:"#2D5A27"},{x:120,y:400,w:200,h:140,name:"",type:"retail",color:"#B8860B"},{x:120,y:555,w:200,h:140,name:"",type:"retail",color:"#8B4513"},{x:120,y:720,w:200,h:70,name:"",type:"wc",color:"#6B8E9B"},{x:350,y:520,w:200,h:220,name:"B1",type:"food",color:"#E65100"},{x:580,y:350,w:220,h:390,name:"",type:"service",color:"#F5F0E8"},{x:840,y:245,w:200,h:140,name:"",type:"food",color:"#C62828"},{x:1070,y:245,w:200,h:140,name:"",type:"food",color:"#FF8F00"},{x:1300,y:245,w:220,h:140,name:"",type:"kids",color:"#4DB6AC"},{x:840,y:400,w:200,h:140,name:"",type:"retail",color:"#5D4037"},{x:1070,y:400,w:200,h:140,name:"",type:"retail",color:"#37474F"},{x:1300,y:400,w:220,h:140,name:"",type:"service",color:"#795548"},{x:1550,y:245,w:200,h:140,name:"",type:"sport",color:"#00838F"},{x:1550,y:400,w:200,h:140,name:"",type:"sport",color:"#00695C"},{x:580,y:760,w:200,h:100,name:"",type:"wc",color:"#E91E63"},{x:840,y:555,w:430,h:305,name:"",type:"open",color:"#A5D6A7"},{x:840,y:880,w:200,h:100,name:"",type:"parking",color:"#26A69A"},{x:1070,y:880,w:200,h:100,name:"",type:"service",color:"#78909C"},{x:1300,y:560,w:470,h:420,name:"",type:"parking",color:"#90A4AE"},{x:365,y:280,w:30,h:30,name:"",type:"elevator",color:"#455A64"},{x:830,y:775,w:30,h:30,name:"",type:"elevator",color:"#455A64"},{x:1520,y:280,w:30,h:30,name:"",type:"elevator",color:"#455A64"}],"2F":[{x:120,y:240,w:280,h:180,name:"()",type:"classroom",color:"#1565C0"},{x:120,y:435,w:280,h:140,name:"()",type:"classroom",color:"#1976D2"},{x:120,y:590,w:280,h:140,name:"",type:"meeting",color:"#00897B"},{x:120,y:745,w:280,h:70,name:"",type:"wc",color:"#6B8E9B"},{x:440,y:240,w:350,h:280,name:"",type:"kids",color:"#7B1FA2"},{x:440,y:535,w:350,h:220,name:"",type:"retail",color:"#AD1457"},{x:830,y:240,w:300,h:200,name:"",type:"cinema",color:"#D32F2F"},{x:830,y:455,w:300,h:160,name:"",type:"cinema",color:"#C62828"},{x:1160,y:240,w:250,h:200,name:"",type:"kids",color:"#4A148C"},{x:1160,y:455,w:250,h:160,name:"",type:"classroom",color:"#6A1B9A"},{x:830,y:630,w:250,h:100,name:"",type:"wc",color:"#E91E63"},{x:1100,y:630,w:310,h:100,name:"VIP",type:"meeting",color:"#3E2723"},{x:830,y:745,w:580,h:135,name:"",type:"classroom",color:"#283593"},{x:430,y:260,w:30,h:30,name:"",type:"elevator",color:"#455A64"},{x:820,y:260,w:30,h:30,name:"",type:"elevator",color:"#455A64"},{x:1150,y:260,w:30,h:30,name:"",type:"elevator",color:"#455A64"}],"3F":[{x:120,y:240,w:350,h:350,name:"",type:"cinema",color:"#B71C1C"},{x:120,y:605,w:350,h:150,name:"",type:"cinema",color:"#E53935"},{x:120,y:770,w:350,h:70,name:"",type:"wc",color:"#6B8E9B"},{x:510,y:240,w:400,h:300,name:"",type:"sport",color:"#006064"},{x:510,y:555,w:400,h:200,name:"",type:"sport",color:"#00838F"},{x:950,y:240,w:350,h:280,name:"",type:"classroom",color:"#311B92"},{x:950,y:535,w:350,h:140,name:"",type:"classroom",color:"#4527A0"},{x:1340,y:240,w:280,h:280,name:"",type:"sport",color:"#1B5E20"},{x:1340,y:535,w:280,h:140,name:"",type:"sport",color:"#2E7D32"},{x:950,y:690,w:350,h:100,name:"",type:"meeting",color:"#BF360C"},{x:1340,y:690,w:280,h:100,name:"",type:"meeting",color:"#E65100"},{x:500,y:260,w:30,h:30,name:"",type:"elevator",color:"#455A64"},{x:940,y:260,w:30,h:30,name:"",type:"elevator",color:"#455A64"},{x:1330,y:260,w:30,h:30,name:"",type:"elevator",color:"#455A64"}]};
+window._nfloor = '1F';
+
+function initNavMap() {
+  var ov = document.getElementById('navOverlay');
+  ov.style.display = 'flex';
+  var tabs = document.getElementById('navFloorBtns');
+  if (!tabs.children.length) {
+    for (var f in window._nr) {
+      (function(fl) {
+        var b = document.createElement('button');
+        b.appendChild(document.createTextNode(fl));
+        b.className = fl === '1F' ? 'active' : '';
+        b.onclick = function() { window._nfloor = fl; _renderNav(); };
+        tabs.appendChild(b);
+      })(f);
+    }
+    document.getElementById('navSearchInput').oninput = _navSearch;
+  }
+  _renderNav();
+}
+
+function hideNavMap() { document.getElementById('navOverlay').style.display = 'none'; }
+
+function _renderNav() {
+  var rooms = window._nr[window._nfloor];
+  if (!rooms) return;
+  var tabs = document.getElementById('navFloorBtns');
+  var btns = tabs.getElementsByTagName('button');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].className = btns[i].textContent === window._nfloor ? 'active' : '';
+  }
+  var svg = '<svg viewBox="0 0 2384 1684" style="width:100%;height:auto"><defs><filter id="ns"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity=".12"/></filter></defs><rect width="2384" height="1684" fill="#F2EFE9"/><text x="20" y="36" font-size="20" font-weight="700" fill="#333">A ' + window._nfloor + '</text><rect x="120" y="140" width="2220" height="10" rx="5" fill="#E0E0E0" opacity=".4"/><rect x="120" y="855" width="2220" height="10" rx="5" fill="#E0E0E0" opacity=".4"/><rect x="395" y="140" width="10" height="725" rx="5" fill="#E0E0E0" opacity=".4"/><rect x="810" y="140" width="10" height="725" rx="5" fill="#E0E0E0" opacity=".4"/>';
+  for (var i = 0; i < rooms.length; i++) {
+    var r = rooms[i], cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    var fs = r.name.length > 6 ? 11 : 13;
+    svg += '<g><rect x="' + r.x + '" y="' + r.y + '" width="' + r.w + '" height="' + r.h + '" rx="8" fill="' + r.color + '" fill-opacity=".12" stroke="' + r.color + '" stroke-width="1.5" filter="url(#ns)"/><text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="' + fs + '" font-weight="600" fill="#333">' + r.name + '</text></g>';
+  }
+  svg += '</svg>';
+  document.getElementById('navMapArea').innerHTML = svg;
+}
+
+function _navSearch() {
+  var q = document.getElementById('navSearchInput').value;
+  var res = document.getElementById('navSearchResults');
+  if (!q) { res.style.display = 'none'; return; }
+  var items = [];
+  for (var f in window._nr) {
+    for (var i = 0; i < window._nr[f].length; i++) {
+      var r = window._nr[f][i];
+      if (r.name.indexOf(q) >= 0 || r.type.indexOf(q) >= 0) {
+        items.push({f: f, n: r.name});
+      }
+    }
+  }
+  if (!items.length) { res.style.display = 'none'; return; }
+  var h = '';
+  for (var j = 0; j < Math.min(items.length, 10); j++) {
+    var it = items[j];
+    h += '<div class="nav-result-item" onclick="window._nfloor=\'' + it.f + '\';_renderNav();document.getElementById(\'navSearchInput\').value=\'' + it.n + '\'">' + it.n + ' · ' + it.f + '</div>';
+  }
+  res.innerHTML = h;
+  res.style.display = 'block';
+}
+
+// ============ Session restore ============
+var _memberData = null;
+(function() {
+  try {
+    var stored = window.sessionStorage && sessionStorage.getItem('__dj_member');
+    if (stored) { _memberData = JSON.parse(stored); updateMemberBar(); }
+  } catch(e) {}
+})();
+
+// ============ Quick reply detection ============
+var _origSendMsg = sendMsg;
+sendMsg = function() {
+  _origSendMsg();
+  // After sending, wait for AI response then check for quick replies
+  setTimeout(function() {
+    var msgs = document.querySelectorAll('.msg.ai');
+    if (msgs.length) {
+      var last = msgs[msgs.length - 1];
+      checkQuickReplies(last);
+    }
+  }, 1500);
+};
+
+function checkQuickReplies(msgEl) {
+  var txt = msgEl.textContent || '';
+  var btns = [];
+  // Category buttons based on content
+  if (txt.indexOf('') >= 0 || txt.indexOf('') >= 0 || txt.indexOf('') >= 0) {
+    btns.push('[]', '[]', '[]', '[]');
+  }
+  if (txt.indexOf('') >= 0 || txt.indexOf('') >= 0 || txt.indexOf('') >= 0) {
+    btns.push('[]', '[]', '[DIY]', '[]');
+  }
+  if (txt.indexOf('') >= 0 || txt.indexOf('') >= 0) {
+    btns.push('[]', '[]', '[]');
+  }
+  if (btns.length) {
+    var h = '<div class="qr-btns">';
+    for (var i = 0; i < btns.length; i++) {
+      h += '<button onclick="quickSend(\'' + btns[i] + '\')">' + btns[i] + '</button>';
+    }
+    h += '</div>';
+    msgEl.innerHTML += h;
+  }
+}
+
+</script>
+
+<div class="coupon-modal" id="couponModal"><div class="coupon-sheet" id="ccSheet"></div></div>
+
+
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-sheet">
+    <h2></h2>
+    <div class="auth-sub"></div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')"></button>
+      <button class="auth-tab" onclick="switchAuthTab('register')"></button>
+    </div>
+    <div id="authLoginForm">
+      <input type="tel" class="auth-input" id="authPhone" placeholder="" maxlength="11">
+      <button class="auth-btn" onclick="doLogin()"> / </button>
+    </div>
+    <div id="authRegForm" style="display:none">
+      <input class="auth-input" id="regDisplayName" placeholder="" maxlength="20">
+      <input type="tel" class="auth-input" id="regPhone" placeholder="" maxlength="11">
+      <button class="auth-btn" onclick="doRegister()"></button>
+    </div>
+    <button class="auth-close" onclick="closeAuth()"></button>
+  </div>
+</div>
+
+<div class="cpn-panel" id="cpnPanel">
+  <div class="cpn-sheet">
+    <h2></h2>
+    <div id="cpnList"></div>
+    <button class="cpn-close" onclick="closeCpnPanel()"></button>
+  </div>
+</div>
+
+<div class="cpn-panel" id="ptsPanel">
+  <div class="cpn-sheet">
+    <h2></h2>
+    <div id="ptsContent"></div>
+    <button class="cpn-close" onclick="closePtsPanel()"></button>
+  </div>
+</div>
+
+<div class="nav-overlay" id="navOverlay">
+  <div class="nav-header">
+    <h2></h2>
+    <button class="nav-close-btn" onclick="hideNavMap()">&#10005;</button>
+  </div>
+  <div class="nav-floors" id="navFloorBtns"></div>
+  <div class="nav-search-box">
+    <input type="text" id="navSearchInput" placeholder="/..." autocomplete="off">
+    <div class="nav-results" id="navSearchResults"></div>
+  </div>
+  <div class="nav-map" id="navMapArea"></div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>大橘大利 · 平台管理</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F5F5}
+.topbar{background:linear-gradient(135deg,#FF7B2C,#FF5722);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+.topbar h2{font-size:18px}
+.topbar a{color:#fff;text-decoration:none;font-size:13px;opacity:0.8}
+.main{padding:20px;max-width:1200px;margin:0 auto}
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
+.card h3{font-size:16px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #eee}
+th{background:#FFF8F0;color:#FF7B2C;font-weight:600;font-size:12px}
+tr:hover{background:#FFFCF8}
+.btn-sm{padding:4px 10px;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600}
+.btn-orange{background:#FF7B2C;color:#fff}
+.btn-gray{background:#eee;color:#666}
+.flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.badge-active{background:#E8F5E9;color:#2E7D32}
+.badge-suspended{background:#FFF0F0;color:#C62828}
+input,select{padding:8px 10px;border:2px solid #eee;border-radius:8px;font-size:13px}
+input:focus,select:focus{outline:none;border-color:#FF7B2C}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;width:450px;max-width:90vw}
+.modal h3{font-size:18px;margin-bottom:16px}
+.modal .fg{margin-bottom:14px}
+.modal .fg label{display:block;font-weight:600;font-size:12px;color:#555;margin-bottom:4px}
+.modal .fg input,.modal .fg select{width:100%}
+.modal .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.modal .btns button{padding:10px 24px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:12px;color:#fff;font-size:13px;z-index:999;display:none}
+.toast.show{display:block}
+.toast-success{background:#4CAF50}
+.toast-error{background:#F44336}
+</style>
+</head>
+<body>
+<div class="topbar"><h2>🍊 大橘大利 · 平台管理</h2><div><a href="/">返回首页</a> <a href="/logout">退出</a></div></div>
+<div class="main">
+<div class="card"><h3>商户管理</h3>
+<div class="flex" style="margin-bottom:12px"><button class="btn-sm btn-orange" onclick="openTenantModal()">+ 新建商户</button></div>
+<table><thead><tr><th>ID</th><th>商户名称</th><th>套餐</th><th>用量</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="tenantTable"></tbody></table></div>
+</div>
+
+<div class="modal-overlay" id="tenantModal"><div class="modal"><h3>新建商户</h3>
+<div class="fg"><label>商户名称</label><input id="tenantName" placeholder="如：XX社区商业中心"></div>
+<div class="fg"><label>项目名称</label><input id="projectName" placeholder="如：XX社区MALL"></div>
+<div class="fg"><label>管理员用户名</label><input id="tenantAdminUser" placeholder="商户管理员账号"></div>
+<div class="fg"><label>管理员密码</label><input id="tenantAdminPw" type="password" value="123456"></div>
+<div class="fg"><label>套餐</label><select id="tenantPlan"><option value="trial">试用（100次/月）</option><option value="basic">基础（500次/月）</option><option value="pro">专业（2000次/月）</option><option value="enterprise">企业（10000次/月）</option></select></div>
+<div class="fg"><label>联系人</label><input id="tenantContact" placeholder="手机或微信"></div>
+<div class="btns"><button class="btn-gray" onclick="document.getElementById('tenantModal').classList.remove('show')">取消</button><button class="btn-orange" onclick="saveTenant()">创建</button></div></div></div>
+
+<div class="toast" id="toast"></div>
+<script>
+function toast(m,t){var e=document.getElementById('toast');e.textContent=m;e.className='toast toast-'+t+' show';setTimeout(function(){e.classList.remove('show')},2500)}
+
+async function loadTenants(){
+var r=await fetch('/api/tenants'),items=await r.json();
+document.getElementById('tenantTable').innerHTML=items.map(function(i){
+var planMap={trial:'试用',basic:'基础',pro:'专业',enterprise:'企业'};
+var pct=i.monthly_quota>0?Math.round(i.used_quota/i.monthly_quota*100):0;
+return '<tr><td>'+i.id+'</td><td><strong>'+i.name+'</strong></td><td>'+planMap[i.plan]+'</td><td>'+i.used_quota+'/'+i.monthly_quota+' ('+pct+'%)</td><td><span class="badge '+(i.status=='active'?'badge-active':'badge-suspended')+'">'+(i.status=='active'?'正常':'停用')+'</span></td><td style="font-size:11px;color:#999">'+new Date(i.created_at).toLocaleDateString('zh-CN')+'</td><td class="flex"><select onchange="updateTenant('+i.id+',this.value)" style="font-size:11px;padding:2px 4px"><option value="">操作</option><option value="active">启用</option><option value="suspended">停用</option></select></td></tr>'
+}).join('')
+}
+function openTenantModal(){document.getElementById('tenantModal').classList.add('show')}
+async function saveTenant(){
+var data={name:document.getElementById('tenantName').value,contact:document.getElementById('tenantContact').value,plan:document.getElementById('tenantPlan').value,monthly_quota:{trial:100,basic:500,pro:2000,enterprise:10000}[document.getElementById('tenantPlan').value],username:document.getElementById('tenantAdminUser').value,password:document.getElementById('tenantAdminPw').value,project_name:document.getElementById('projectName').value};
+var r=await fetch('/api/tenants',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),j=await r.json();
+if(j.ok){toast('创建成功','success');document.getElementById('tenantModal').classList.remove('show');loadTenants()}else toast(j.error,'error')
+}
+async function updateTenant(id,status){if(!status)return;var r=await fetch('/api/tenants/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})});if(r.ok){toast('更新成功','success');loadTenants()}}
+loadTenants();
+</script>
+</body>
+</html>

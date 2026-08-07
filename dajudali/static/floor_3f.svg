@@ -1,0 +1,43 @@
+<svg viewBox="0 0 2384 1684" style="width:100%;height:auto;font-family:-apple-system,SF Pro,sans-serif">
+<defs>
+  <filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.15"/></filter>
+  <filter id="shadow2"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.2"/></filter>
+</defs>
+<rect width="2384" height="1684" fill="#F2EFE9"/>
+<!-- Floor label -->
+<text x="20" y="40" font-size="24" font-weight="700" fill="#333">3F</text>
+<rect x="120" y="240" width="350" height="350" rx="8" fill="#B71C1C" fill-opacity="0.12" stroke="#B71C1C" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="295.0" y="407.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">电影院</text>
+<rect x="120" y="605" width="350" height="150" rx="8" fill="#E53935" fill-opacity="0.12" stroke="#E53935" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="295.0" y="672.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">影院休息厅</text>
+<rect x="120" y="770" width="350" height="70" rx="8" fill="#6B8E9B" fill-opacity="0.12" stroke="#6B8E9B" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="295.0" y="797.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">卫生间</text>
+<rect x="510" y="240" width="400" height="300" rx="8" fill="#006064" fill-opacity="0.12" stroke="#006064" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="710.0" y="382.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">健身房</text>
+<rect x="510" y="555" width="400" height="200" rx="8" fill="#00838F" fill-opacity="0.12" stroke="#00838F" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="710.0" y="647.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">瑜伽工作室</text>
+<rect x="950" y="240" width="350" height="280" rx="8" fill="#311B92" fill-opacity="0.12" stroke="#311B92" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1125.0" y="372.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">少儿培训中心</text>
+<rect x="950" y="535" width="350" height="140" rx="8" fill="#4527A0" fill-opacity="0.12" stroke="#4527A0" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1125.0" y="597.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">舞蹈教室</text>
+<rect x="1340" y="240" width="280" height="280" rx="8" fill="#1B5E20" fill-opacity="0.12" stroke="#1B5E20" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1480.0" y="372.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">网球场/运动场</text>
+<rect x="1340" y="535" width="280" height="140" rx="8" fill="#2E7D32" fill-opacity="0.12" stroke="#2E7D32" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1480.0" y="597.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">室内篮球</text>
+<rect x="950" y="690" width="350" height="100" rx="8" fill="#BF360C" fill-opacity="0.12" stroke="#BF360C" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1125.0" y="732.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">大会议室</text>
+<rect x="1340" y="690" width="280" height="100" rx="8" fill="#E65100" fill-opacity="0.12" stroke="#E65100" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1480.0" y="732.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">商务中心</text>
+<rect x="500" y="260" width="30" height="30" rx="8" fill="#455A64" fill-opacity="0.12" stroke="#455A64" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="515.0" y="267.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">电梯</text>
+<rect x="940" y="260" width="30" height="30" rx="8" fill="#455A64" fill-opacity="0.12" stroke="#455A64" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="955.0" y="267.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">电梯</text>
+<rect x="1330" y="260" width="30" height="30" rx="8" fill="#455A64" fill-opacity="0.12" stroke="#455A64" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1345.0" y="267.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">电梯</text>
+
+<!-- Corridors -->
+<rect x="120" y="150" width="2120" height="12" rx="6" fill="#E0E0E0" opacity="0.6"/>
+<rect x="120" y="855" width="2120" height="12" rx="6" fill="#E0E0E0" opacity="0.6"/>
+<rect x="395" y="150" width="12" height="717" rx="6" fill="#E0E0E0" opacity="0.6"/>
+<rect x="810" y="150" width="12" height="717" rx="6" fill="#E0E0E0" opacity="0.6"/>
+</svg>

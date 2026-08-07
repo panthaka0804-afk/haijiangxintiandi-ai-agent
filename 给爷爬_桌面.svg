@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <filter id="glitch">
+      <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="40" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="10" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <clipPath id="crack">
+      <path d="M0,540 L960,0 L1920,540 L960,1080 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1920" height="1080" fill="#000000"/>
+
+  <!-- 冲击波圆环 -->
+  <circle cx="960" cy="540" r="400" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.3"/>
+  <circle cx="960" cy="540" r="300" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.2"/>
+  <circle cx="960" cy="540" r="200" fill="none" stroke="#ffffff" stroke-width="8" opacity="0.15"/>
+  <circle cx="960" cy="540" r="100" fill="none" stroke="#ffffff" stroke-width="16" opacity="0.1"/>
+
+  <!-- 撕裂斜线 -->
+  <path d="M0,580 L1920,500" stroke="#ffffff" stroke-width="3" opacity="0.4" filter="url(#rough)"/>
+  <path d="M0,490 L1920,570" stroke="#ffffff" stroke-width="2" opacity="0.25" filter="url(#rough)"/>
+
+  <!-- 主文字：给 -->
+  <text x="960" y="420" font-family="Impact, 'Arial Black', sans-serif" font-size="200" font-weight="900" fill="#ffffff" text-anchor="middle" filter="url(#glitch)" letter-spacing="10">给</text>
+
+  <!-- 主文字：爷 -->
+  <text x="960" y="620" font-family="Impact, 'Arial Black', sans-serif" font-size="200" font-weight="900" fill="#ffffff" text-anchor="middle" filter="url(#glitch)" letter-spacing="10">爷</text>
+
+  <!-- 主文字：爬 -->
+  <text x="960" y="820" font-family="Impact, 'Arial Black', sans-serif" font-size="200" font-weight="900" fill="#ffffff" text-anchor="middle" filter="url(#glitch)" letter-spacing="10">爬</text>
+
+  <!-- 副标题 -->
+  <text x="960" y="1010" font-family="Arial, sans-serif" font-size="36" fill="#666666" text-anchor="middle" letter-spacing="20">— 黑白爆裂 给爷爬 —</text>
+
+  <!-- 随机噪点 -->
+  <rect width="1920" height="1080" fill="#ffffff" opacity="0.02" filter="url(#rough)"/>
+</svg>

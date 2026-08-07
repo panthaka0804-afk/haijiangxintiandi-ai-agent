@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>大橘邻里 · 活动报名</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(180deg,#FFF8F0 0%,#FFF 50%);min-height:100vh;padding:20px}
+.head{text-align:center;margin-bottom:24px}
+.head .icon{font-size:60px}
+.head h2{font-size:22px;color:#FF5722;margin-top:8px}
+.head p{font-size:13px;color:#999;margin-top:4px}
+.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.06);margin-bottom:16px}
+.card h3{font-size:16px;color:#333;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:4px}
+.fg input,.fg select,.fg textarea{width:100%;padding:12px;border:2px solid #eee;border-radius:10px;font-size:15px;font-family:inherit;background:#FAFAFA}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:#FF7B2C;background:#FFF}
+.fg textarea{resize:vertical;min-height:80px}
+.fg .hint{font-size:11px;color:#999;margin-top:3px}
+.btns{display:flex;gap:10px}
+.btns button{flex:1;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer}
+.btns .submit{background:linear-gradient(135deg,#FF7B2C,#FF5722);color:#fff}
+.btns .back{background:#F5F5F5;color:#666}
+.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:20px;color:#fff;font-size:14px;z-index:99;display:none}
+.toast.show{display:block;animation:fadeIn .3s}
+.toast-success{background:#4CAF50}
+.toast-error{background:#F44336}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.events{display:grid;gap:10px}
+.event-item{padding:12px 16px;background:#FFF8F0;border-radius:12px;border:1px solid #FFE0C0;cursor:pointer}
+.event-item:active{background:#FFE0C0}
+.event-item .title{font-size:15px;font-weight:600;color:#FF5722}
+.event-item .desc{font-size:12px;color:#999;margin-top:3px}
+</style>
+</head>
+<body>
+<div class="head"><div class="icon">🍊</div><h2>活动报名</h2><p>松江大橘邻里</p></div>
+
+<div class="card">
+<h3>🎉 选择活动</h3>
+<div class="events">
+<div class="event-item" onclick="selectEvent('亲子手作课堂','本周六 14:00-17:00，1层中庭')">
+<div class="title">亲子手作课堂</div><div class="desc">本周六 14:00-17:00 · 1层中庭 · 免费</div>
+</div>
+<div class="event-item" onclick="selectEvent('大橘夜巷民谣之夜','每周日 19:00-21:00，B1下沉广场')">
+<div class="title">大橘夜巷民谣之夜</div><div class="desc">每周日 19:00-21:00 · B1下沉广场 · 免费</div>
+</div>
+<div class="event-item" onclick="selectEvent('夜校课程','每晚 19:00-20:30，3层教室')">
+<div class="title">夜校课程</div><div class="desc">每晚 19:00-20:30 · 3层教室 · 瑜伽/摄影/烘焙/水彩</div>
+</div>
+<div class="event-item" onclick="selectEvent('其他活动','请联系服务台了解详情')">
+<div class="title">其他活动</div><div class="desc">联系服务台了解最新活动安排</div>
+</div>
+</div>
+</div>
+
+<div id="formCard" class="card" style="display:none">
+<h3>📝 填写信息</h3>
+<div class="fg"><label>活动名称</label><input id="eventName" readonly></div>
+<div class="fg"><label>您的姓名</label><input id="userName" placeholder="请输入姓名"></div>
+<div class="fg"><label>手机号码</label><input id="userPhone" type="tel" placeholder="请输入手机号"></div>
+<div class="fg"><label>参加人数</label><select id="userCount"><option>1人</option><option>2人</option><option>3人</option><option>4人</option><option>5人及以上</option></select></div>
+<div class="fg"><label>备注</label><textarea id="userNote" placeholder="有什么特别需求可以写在这里~"></textarea></div>
+<div class="btns"><button class="back" onclick="backToList()">返回</button><button class="submit" onclick="submitForm()">提交报名</button></div>
+</div>
+
+<div id="successCard" class="card" style="display:none;text-align:center">
+<div style="font-size:50px">🎉</div>
+<h3 style="margin-top:8px">报名成功！</h3>
+<p style="font-size:14px;color:#666;margin-top:6px">我们会短信通知您活动详情</p>
+<p style="font-size:12px;color:#999;margin-top:4px">如有疑问请拨打021-8888-0001</p>
+<button class="submit" style="margin-top:14px;padding:12px 32px;border:none;border-radius:12px;background:#FF7B2C;color:#fff;font-size:15px;font-weight:600;cursor:pointer" onclick="location.reload()">报名其他活动</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function toast(m,t){var e=document.getElementById('toast');e.textContent=m;e.className='toast toast-'+t+' show';setTimeout(function(){e.classList.remove('show')},2500)}
+function selectEvent(name,desc){
+document.getElementById('eventName').value=name;
+document.getElementById('formCard').style.display='block';
+document.getElementById('userName').focus();
+window.scrollTo({top:document.getElementById('formCard').offsetTop-20,behavior:'smooth'});
+}
+function backToList(){document.getElementById('formCard').style.display='none';window.scrollTo({top:0,behavior:'smooth'})}
+async function submitForm(){
+var name=document.getElementById('userName').value.trim(),phone=document.getElementById('userPhone').value.trim();
+if(!name){toast('请输入姓名','error');return}
+if(!phone||!phone.match(/^\d{11}$/)){toast('请输入正确的手机号','error');return}
+var data={type:'活动报名',title:'活动报名：'+document.getElementById('eventName').value,
+description:'姓名：'+name+'，手机：'+phone+'，人数：'+document.getElementById('userCount').value+(document.getElementById('userNote').value?'，备注：'+document.getElementById('userNote').value:''),
+reporter_contact:phone};
+try{
+var r=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+var j=await r.json();
+if(j.ok){document.getElementById('formCard').style.display='none';document.getElementById('successCard').style.display='block'}else toast(j.error||'提交失败','error')
+}catch(e){toast('网络错误','error')}
+}
+</script>
+</body>
+</html>

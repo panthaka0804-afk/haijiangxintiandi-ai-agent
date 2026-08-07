@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>大橘大利 - 管理后台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F5F5}
+.topbar{background:linear-gradient(135deg,#FF7B2C,#FF5722);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+.topbar h2{font-size:18px;display:flex;align-items:center;gap:8px}
+.topbar a{color:#fff;text-decoration:none;font-size:13px;opacity:0.8}
+.nav{background:#fff;padding:0 20px;display:flex;border-bottom:2px solid #eee}
+.nav button{padding:14px 20px;border:none;background:none;font-size:14px;color:#888;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-weight:500}
+.nav button.active{color:#FF7B2C;border-bottom-color:#FF7B2C}
+.main{padding:20px;max-width:1200px;margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
+.card h3{font-size:16px;margin-bottom:14px;color:#333}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.stat{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
+.stat .num{font-size:32px;font-weight:800;color:#FF7B2C}
+.stat .lbl{font-size:12px;color:#999;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #eee}
+th{background:#FFF8F0;color:#FF7B2C;font-weight:600;font-size:12px}
+tr:hover{background:#FFFCF8}
+.btn-sm{padding:4px 10px;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600}
+.btn-orange{background:#FF7B2C;color:#fff}
+.btn-outline{background:#FFF8F0;color:#FF7B2C;border:1px solid #FFE0C0}
+.btn-red{background:#F44336;color:#fff}
+.btn-green{background:#4CAF50;color:#fff}
+.btn-gray{background:#eee;color:#666}
+.flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.badge-pending{background:#FFF3E0;color:#E65100}
+.badge-progress{background:#E3F2FD;color:#1565C0}
+.badge-resolved{background:#E8F5E9;color:#2E7D32}
+.badge-closed{background:#F3F3F3;color:#666}
+input,select,textarea{padding:8px 10px;border:2px solid #eee;border-radius:8px;font-size:13px;font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#FF7B2C}
+textarea{resize:vertical;min-height:60px}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;width:450px;max-width:90vw;max-height:80vh;overflow-y:auto}
+.modal h3{font-size:18px;margin-bottom:16px}
+.modal .fg{margin-bottom:14px}
+.modal .fg label{display:block;font-weight:600;font-size:12px;color:#555;margin-bottom:4px}
+.modal .fg input,.modal .fg select,.modal .fg textarea{width:100%}
+.modal .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.modal .btns button{padding:10px 24px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:12px;color:#fff;font-size:13px;z-index:999;display:none}
+.toast.show{display:block}
+.toast-success{background:#4CAF50}
+.toast-error{background:#F44336}
+.progress-bar{height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-top:8px}
+.progress-bar .fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#FF9A4D,#FF7B2C);transition:width .5s}
+.agent-layout{display:flex;gap:16px;min-height:400px}
+.agent-left{flex:1;min-width:0}
+.agent-right{flex:1;background:#fafafa;border-radius:12px;padding:16px;min-width:0}
+.agent-right .chat-bubble{background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.agent-right .chat-bubble.user{border-left:3px solid #FF7B2C}
+.agent-right .chat-bubble.ai{border-left:3px solid #4CAF50;background:#f1f8f4}
+.agent-actions{margin-top:12px;display:flex;gap:8px}
+
+/* === Member Management === */
+.member-panel{display:none}
+.member-panel.show{display:block}
+.mp-header{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.mp-search{flex:1;min-width:180px;padding:10px 14px;border:2px solid #eee;border-radius:8px;font-size:14px}
+.mp-search:focus{outline:none;border-color:#FF6B00}
+.mp-btn{padding:10px 18px;border:none;border-radius:8px;font-size:13px;font-weight:590;cursor:pointer;white-space:nowrap}
+.mp-btn.primary{background:#FF6B00;color:#fff}
+.mp-btn.secondary{background:#f0f0f0;color:#333}
+.mp-btn.danger{background:#FF3B30;color:#fff}
+.member-table{width:100%;border-collapse:collapse;font-size:13px}
+.member-table th{background:#f8f8f8;padding:10px 12px;text-align:left;font-weight:590;border-bottom:2px solid #e0e0e0}
+.member-table td{padding:10px 12px;border-bottom:1px solid #eee}
+.member-table tr:hover{background:#FFF8F0}
+.member-table .level-badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:590}
+.level-普卡{background:#e8e8e8;color:#666}
+.level-银卡{background:#e0e8ff;color:#4A6CF7}
+.level-金卡{background:#fff0e0;color:#FF6B00}
+.level-钻石卡{background:#f0e0ff;color:#8B5CF6}
+.mp-stats{display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.mp-stat{background:#f8f8f8;padding:14px 18px;border-radius:10px;text-align:center;min-width:80px}
+.mp-stat .val{font-size:24px;font-weight:700;color:#FF6B00}
+.mp-stat .lbl{font-size:11px;color:#999;margin-top:2px}
+.mp-edit-panel{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);z-index:100;justify-content:center;align-items:center}
+.mp-edit-panel.show{display:flex}
+.mp-edit-card{background:#fff;border-radius:16px;padding:24px;width:360px;max-width:90vw;max-height:80vh;overflow-y:auto}
+.mp-edit-card h4{font-size:18px;font-weight:590;margin-bottom:16px}
+.mp-edit-card .fg{margin-bottom:12px}
+.mp-edit-card .fg label{display:block;font-size:12px;font-weight:590;color:#999;margin-bottom:4px}
+.mp-edit-card .fg input,.mp-edit-card .fg select{width:100%;padding:10px;border:2px solid #eee;border-radius:8px;font-size:14px}
+.mp-edit-card .btns{display:flex;gap:8px;margin-top:16px}
+.mp-edit-card .btns button{flex:1;padding:10px;border:none;border-radius:8px;font-size:14px;font-weight:590;cursor:pointer}
+
+</style>
+</head>
+<body>
+<div class="topbar"><h2>🍊 大橘大利 · 管理后台</h2><div><a href="/">返回首页</a> <a href="/logout">退出</a></div></div>
+<div class="nav">
+<button class="active" onclick="switchTab('dashboard')">📊 数据看板</button>
+<button onclick="switchTab('kb')">📚 知识库</button>
+<button onclick="switchTab('orders')">📋 工单管理</button>
+<button onclick="showMemberPanel()">👥 会员管理</button>
+<button onclick="switchTab('agent')">🎧 人工坐席</button>
+<button onclick="switchTab('users')">👥 成员管理</button>
+</div>
+<div class="main">
+
+<!-- Dashboard -->
+<div class="panel active" id="dashboard">
+<div class="stats" id="statCards"></div>
+<div class="card"><h3>本月用量</h3><div id="quotaInfo"></div></div>
+<div class="card"><h3>近期对话</h3><div id="recentConvs"></div></div>
+</div>
+
+<!-- Knowledge Base -->
+<div class="panel" id="kb">
+<div class="flex" style="margin-bottom:12px">
+<button class="btn-sm btn-orange" onclick="openKbModal()">+ 添加词条</button>
+<input id="kbSearch" placeholder="搜索词条..." oninput="loadKb()" style="width:200px">
+<select id="kbCat" onchange="loadKb()"><option value="">全部分类</option><option value="service">商场基础服务</option><option value="store">品牌商铺信息</option><option value="promo">优惠活动信息</option><option value="event">社区社群活动</option><option value="business">商务合作信息</option><option value="report">物业报修服务</option></select>
+</div>
+<table><thead><tr><th>分类</th><th>问题</th><th>答案</th><th>关键词</th><th>操作</th></tr></thead><tbody id="kbTable"></tbody></table>
+</div>
+
+<!-- Work Orders -->
+<div class="panel" id="orders">
+<div class="flex" style="margin-bottom:12px">
+<select id="orderFilter" onchange="loadOrders()"><option value="">全部状态</option><option value="pending">待处理</option><option value="in_progress">处理中</option><option value="resolved">已解决</option><option value="closed">已关闭</option></select>
+</div>
+<table><thead><tr><th>工单号</th><th>类型</th><th>标题</th><th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody id="orderTable"></tbody></table>
+</div>
+
+<!-- Agent Console -->
+<div class="panel" id="agent">
+<div class="agent-layout">
+<div class="agent-left">
+<h4 style="margin:0 0 12px 0;font-size:15px">待处理工单队列</h4>
+<table><thead><tr><th style="width:50px">#</th><th>标题</th><th style="width:60px">优先级</th><th style="width:100px">时间</th><th style="width:60px">操作</th></tr></thead><tbody id="agentQueue"></tbody></table>
+<div id="agentQueueEmpty" style="text-align:center;padding:32px;color:#999;display:none">✨ 暂无待处理工单</div>
+</div>
+<div class="agent-right" id="agentDetail">
+<div style="text-align:center;padding:48px;color:#999">← 点击左侧工单查看详情</div>
+</div>
+</div>
+<!-- Verification Panel -->
+<div style="margin-top:16px;background:#fff;border-radius:12px;padding:16px">
+<h4 style="margin:0 0 10px 0;font-size:15px">🧾 优惠券核销</h4>
+<div style="display:flex;gap:8px">
+<input id="verifyCode" placeholder="输入券码 / 扫码枪扫 / 点扫码" style="flex:1;padding:10px;border:2px solid #eee;border-radius:10px;font-size:14px" onkeydown="if(event.key==='Enter')verifyCoupon()">
+<button class="btn-sm" style="background:#666;padding:10px 14px;font-size:18px" onclick="scanBarcode()" title="手机扫码">📷</button>
+<button class="btn-sm" style="background:#4CAF50;padding:10px 20px" onclick="verifyCoupon()">核销</button>
+</div>
+<div id="verifyResult" style="margin-top:8px;font-size:13px"></div>
+<div style="margin-top:12px">
+<div style="font-size:12px;color:#999;margin-bottom:6px">核销记录</div>
+<div id="verifyLog" style="max-height:150px;overflow-y:auto;font-size:12px"></div>
+</div>
+</div>
+</div>
+
+<!-- Users -->
+<div class="panel" id="users">
+<button class="btn-sm btn-orange" onclick="openUserModal()" style="margin-bottom:12px">+ 添加成员</button>
+<table><thead><tr><th>用户名</th><th>显示名</th><th>角色</th><th>最近登录</th><th>操作</th></tr></thead><tbody id="userTable"></tbody></table>
+</div>
+
+<!-- KB Modal -->
+<div class="modal-overlay" id="kbModal"><div class="modal"><h3 id="kbModalTitle">添加词条</h3>
+<input type="hidden" id="kbEditId">
+<div class="fg"><label>分类</label><select id="kbFormCat"><option value="service">商场基础服务</option><option value="store">品牌商铺信息</option><option value="promo">优惠活动信息</option><option value="event">社区社群活动</option><option value="business">商务合作信息</option><option value="report">物业报修服务</option></select></div>
+<div class="fg"><label>常见问题</label><input id="kbFormQ" placeholder="用户可能怎么问？"></div>
+<div class="fg"><label>标准答案</label><textarea id="kbFormA" placeholder="AI和客服使用的标准答案"></textarea></div>
+<div class="fg"><label>关键词（空格分隔）</label><input id="kbFormK" placeholder="帮助AI更好匹配的关键词"></div>
+<div class="btns"><button class="btn-gray" onclick="document.getElementById('kbModal').classList.remove('show')">取消</button><button class="btn-orange" onclick="saveKb()">保存</button></div></div></div>
+
+<!-- User Modal -->
+<div class="modal-overlay" id="userModal"><div class="modal"><h3>添加成员</h3>
+<div class="fg"><label>用户名</label><input id="userFormUname"></div>
+<div class="fg"><label>显示名</label><input id="userFormName"></div>
+<div class="fg"><label>密码</label><input id="userFormPw" type="password" value="123456"></div>
+<div class="fg"><label>角色</label><select id="userFormRole"><option value="user">普通成员</option><option value="tenant_admin">管理员</option></select></div>
+<div class="btns"><button class="btn-gray" onclick="document.getElementById('userModal').classList.remove('show')">取消</button><button class="btn-orange" onclick="saveUser()">保存</button></div></div></div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+function toast(m,t){var e=document.getElementById('toast');e.textContent=m;e.className='toast toast-'+t+' show';setTimeout(function(){e.classList.remove('show')},2500)}
+function switchTab(n){document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active')});document.getElementById(n).classList.add('active');document.querySelectorAll('.nav button').forEach(function(b){b.classList.remove('active')});event.target.classList.add('active');if(n=='dashboard')loadDashboard();if(n=='kb')loadKb();if(n=='orders')loadOrders();if(n=='users')loadUsers()}
+
+// Dashboard
+async function loadDashboard(){
+var r=await fetch('/api/dashboard'),j=await r.json();
+document.getElementById('statCards').innerHTML='<div class="stat"><div class="num">'+(j.pending||0)+'</div><div class="lbl">待处理工单</div></div><div class="stat"><div class="num">'+(j.kb_count||j.kb_entries||0)+'</div><div class="lbl">知识库词条</div></div><div class="stat"><div class="num">'+(j.users||0)+'</div><div class="lbl">成员数量</div></div><div class="stat"><div class="num">'+(j.orders||0)+'</div><div class="lbl">工单总数</div></div>';
+document.getElementById('quotaInfo').innerHTML='<div style="font-size:13px;color:#999">最近10条对话记录</div>';
+var convs=j.recent_conversations.slice(0,10).map(function(c){return '<tr><td>'+c.user_input.substring(0,40)+'</td><td>'+c.ai_response.substring(0,50)+'</td><td style="font-size:11px;color:#999">'+new Date(c.created_at).toLocaleString('zh-CN')+'</td></tr>'}).join('');
+document.getElementById('recentConvs').innerHTML='<table><thead><tr><th>用户提问</th><th>AI回答</th><th>时间</th></tr></thead><tbody>'+convs+'</tbody></table>';
+}
+
+// Knowledge Base
+async function loadKb(){
+var cat=document.getElementById('kbCat').value,q=document.getElementById('kbSearch').value;
+var params=new URLSearchParams();if(cat)params.append('category',cat);if(q)params.append('q',q);
+var r=await fetch('/api/kb?'+params),items=await r.json();
+var cats={service:'商场基础服务',store:'品牌商铺信息',promo:'优惠活动信息',event:'社区社群活动',business:'商务合作信息',report:'物业报修服务'};
+document.getElementById('kbTable').innerHTML=items.map(function(i){return '<tr><td>'+cats[i.category]+'</td><td>'+i.question.substring(0,30)+'</td><td>'+i.answer.substring(0,40)+'</td><td style="font-size:11px;color:#999">'+(i.keywords||'').substring(0,30)+'</td><td class="flex"><button class="btn-sm btn-outline" onclick="editKb('+i.id+',\''+i.category+'\',\''+i.question.replace(/'/g,"'")+'\',\''+i.answer.replace(/'/g,"'")+'\',\''+(i.keywords||'').replace(/'/g,"'")+'\')">编辑</button><button class="btn-sm btn-red" onclick="delKb('+i.id+')">删</button></td></tr>'}).join('')
+}
+function openKbModal(){document.getElementById('kbEditId').value='';document.getElementById('kbModalTitle').textContent='添加词条';document.getElementById('kbFormCat').value='service';document.getElementById('kbFormQ').value='';document.getElementById('kbFormA').value='';document.getElementById('kbFormK').value='';document.getElementById('kbModal').classList.add('show')}
+function editKb(id,cat,q,a,k){document.getElementById('kbEditId').value=id;document.getElementById('kbModalTitle').textContent='编辑词条';document.getElementById('kbFormCat').value=cat;document.getElementById('kbFormQ').value=q;document.getElementById('kbFormA').value=a;document.getElementById('kbFormK').value=k;document.getElementById('kbModal').classList.add('show')}
+async function saveKb(){
+var id=document.getElementById('kbEditId').value,data={category:document.getElementById('kbFormCat').value,question:document.getElementById('kbFormQ').value,answer:document.getElementById('kbFormA').value,keywords:document.getElementById('kbFormK').value};
+var url=id?'/api/kb/'+id:'/api/kb',method=id?'PUT':'POST';
+var r=await fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),j=await r.json();
+if(j.ok){toast('保存成功','success');document.getElementById('kbModal').classList.remove('show');loadKb()}else toast(j.error,'error')
+}
+async function delKb(id){if(!confirm('确定删除该词条？'))return;var r=await fetch('/api/kb/'+id,{method:'DELETE'});if(r.ok){toast('已删除','success');loadKb()}}
+
+// Orders
+async function loadOrders(){
+var filter=document.getElementById('orderFilter').value;
+var r=await fetch('/api/orders'),items=await r.json();
+var statusMap={pending:'待处理',in_progress:'处理中',resolved:'已解决',closed:'已关闭'};
+var badgeClass={pending:'badge-pending',in_progress:'badge-progress',resolved:'badge-resolved',closed:'badge-closed'};
+if(filter)items=items.filter(function(i){return i.status==filter});
+document.getElementById('orderTable').innerHTML=items.map(function(i){return '<tr><td>#'+i.id+'</td><td>'+i.type+'</td><td>'+i.title.substring(0,30)+'</td><td><span class="badge '+badgeClass[i.status]+'">'+(statusMap[i.status]||i.status)+'</span></td><td style="font-size:11px;color:#999">'+new Date(i.created_at).toLocaleString('zh-CN')+'</td><td class="flex">'+'<select onchange="updateOrder('+i.id+',this.value)" style="font-size:11px;padding:2px 4px"><option value="">状态</option><option value="pending">待处理</option><option value="in_progress">处理中</option><option value="resolved">已解决</option><option value="closed">关闭</option></select>'+'</td></tr>'}).join('')
+}
+async function updateOrder(id,status){if(!status)return;var r=await fetch('/api/orders/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})});if(r.ok){toast('更新成功','success');loadOrders()}}
+
+// Users
+async function loadUsers(){var r=await fetch('/api/users'),items=await r.json();document.getElementById('userTable').innerHTML=items.map(function(i){return '<tr><td>'+i.username+'</td><td>'+i.display_name+'</td><td>'+(i.role=='tenant_admin'?'管理员':'成员')+'</td><td style="font-size:11px;color:#999">'+(i.last_login?new Date(i.last_login).toLocaleString('zh-CN'):'从未登录')+'</td><td>-</td></tr>'}).join('')}
+function openUserModal(){document.getElementById('userFormUname').value='';document.getElementById('userFormName').value='';document.getElementById('userFormPw').value='123456';document.getElementById('userFormRole').value='user';document.getElementById('userModal').classList.add('show')}
+async function saveUser(){var data={username:document.getElementById('userFormUname').value,display_name:document.getElementById('userFormName').value,password:document.getElementById('userFormPw').value,role:document.getElementById('userFormRole').value};var r=await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),j=await r.json();if(j.ok){toast('添加成功','success');document.getElementById('userModal').classList.remove('show');loadUsers()}else toast(j.error,'error')}
+
+async function takeOrder(id){var r=await fetch('/api/orders/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'in_progress'})});if(r.ok){loadAgentQueue();showOrderDetail(id)}}
+async function resolveOrder(id){var r=await fetch('/api/orders/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'resolved'})});if(r.ok){document.getElementById('agentDetail').innerHTML='<div style="text-align:center;padding:32px;color:#4CAF50">✅ 工单已处理完成</div>';setTimeout(function(){loadAgentQueue()},1500)}}
+async function closeOrder(id){if(!confirm('确定关闭该工单？'))return;var r=await fetch('/api/orders/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'closed'})});if(r.ok){document.getElementById('agentDetail').innerHTML='<div style="text-align:center;padding:32px;color:#999">已关闭工单</div>';setTimeout(function(){loadAgentQueue()},1000)}}
+
+var verifyLog = [];
+function scanBarcode(){
+toast('请将手机对准条形码拍照上传','info');
+// Try native BarcodeDetector first (Chrome/Edge)
+if('BarcodeDetector' in window){
+try{new BarcodeDetector({formats:['code_128','code_39','ean_13','ean_8','qr_code','upc_a','upc_e']});}catch(e){selectImageForScan();return}
+var formats=['code_128','code_39','ean_13','ean_8','qr_code','upc_a','upc_e','codabar','itf','pdf417','data_matrix'];
+var detector=new BarcodeDetector({formats:formats});
+var video=document.createElement('video');video.setAttribute('playsinline','');video.setAttribute('autoplay','');
+var canvas=document.createElement('canvas');var ctx=canvas.getContext('2d');
+navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(stream){
+video.srcObject=stream;video.play();
+var scanInterval=setInterval(function(){
+canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+if(canvas.width==0)return;
+ctx.drawImage(video,0,0);
+detector.detect(canvas).then(function(barcodes){
+if(barcodes.length>0){
+clearInterval(scanInterval);stream.getTracks().forEach(function(t){t.stop()});video.remove();
+document.getElementById('verifyCode').value=barcodes[0].rawValue;toast('已识别：'+barcodes[0].rawValue);verifyCoupon();
+}
+}).catch(function(){});
+},300);
+setTimeout(function(){clearInterval(scanInterval);stream.getTracks().forEach(function(t){t.stop()});video.remove();selectImageForScan();},15000);
+}).catch(function(){selectImageForScan()});
+}else{selectImageForScan()}
+}
+function selectImageForScan(){
+toast('正在打开相机...','info');
+try{
+var inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+inp.onchange=function(){
+toast('已选择文件，处理中...','info');
+try{
+if(!inp.files||!inp.files[0]){toast('未选择文件','error');return;}
+var file=inp.files[0];toast('文件: '+(file.name||'unknown')+' '+Math.round(file.size/1024)+'KB','info');
+var reader=new FileReader();
+reader.onload=function(e){
+toast('读取完成，解析中...','info');
+try{
+var img=new Image();
+img.onload=function(){
+toast('图片尺寸: '+img.width+'x'+img.height,'info');
+try{
+var w=img.width,h=img.height;var maxDim=2000;
+if(w>maxDim||h>maxDim){var s=Math.min(maxDim/w,maxDim/h);w=Math.floor(w*s);h=Math.floor(h*s)}
+var cv=document.createElement('canvas');cv.width=w;cv.height=h;
+cv.getContext('2d').drawImage(img,0,0,w,h);
+toast('压缩完成,上传解码...','info');
+var base64=cv.toDataURL('image/jpeg',0.85).split(',')[1];
+fetch('/api/barcode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:base64})})
+.then(function(r){return r.json()})
+.then(function(j){
+if(j.ok){document.getElementById('verifyCode').value=j.code;toast('已识别：'+j.code);verifyCoupon()}
+else toast(j.error||'未识别到条形码，请手动输入','error')
+}).catch(function(e){toast('请求失败: '+e.message,'error')})
+}catch(e2){toast('处理图片出错: '+e2.message,'error')}
+};
+img.onerror=function(){toast('图片加载失败','error')};
+img.src=e.target.result;
+}catch(e1){toast('读取文件出错: '+e1.message,'error')}
+};
+reader.onerror=function(){toast('文件读取失败','error')};
+reader.readAsDataURL(file);
+}catch(e0){toast('选择文件出错: '+e0.message,'error')}
+};
+inp.click();
+}catch(ex){toast('打开相机失败: '+ex.message,'error')}
+}
+
+function verifyCoupon(){
+var code = document.getElementById('verifyCode').value.trim().toUpperCase();
+if(!code){document.getElementById('verifyResult').innerHTML='<span style="color:#F44336">请输入券码</span>';return}
+var coupons=[{code:'DJ0820',name:'餐饮通用券 ¥20',min:100,expire:'2026-08-31'},{code:'DJ0850',name:'零售满减券 ¥50',min:300,expire:'2026-09-15'},{code:'DJ0810',name:'小吃饮品券 ¥10',min:50,expire:'2026-08-31'},{code:'DJ0815',name:'新人无门槛券 ¥15',min:0,expire:'2026-08-15'},{code:'PARK02',name:'停车券',min:0,expire:'2026-12-31'}];
+var match=coupons.find(function(c){return c.code==code});var now=new Date();var el=document.getElementById('verifyResult');
+if(!match){el.innerHTML='<span style="color:#F44336">❌ 无效券码，请核实</span>';return}
+var expire=new Date(match.expire+'T23:59:59');
+if(now>expire){el.innerHTML='<span style="color:#F44336">❌ 该券已于 '+match.expire+' 过期</span>';return}
+var used=verifyLog.find(function(v){return v.code==code&&!v.reversed});
+if(used){el.innerHTML='<span style="color:#F44336">⚠️ 该券已于 '+used.time+' 核销</span>';return}
+var t=new Date().toLocaleString('zh-CN');verifyLog.unshift({code:code,name:match.name,time:t,reversed:false});
+el.innerHTML='<span style="color:#4CAF50;font-weight:700">✅ 核销成功！'+match.name+' · '+t+'</span>';
+document.getElementById('verifyCode').value='';refreshVerifyLog();
+fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'verification',title:'优惠券核销: '+match.name+' ('+code+')',description:t,status:'resolved',priority:'normal'})})
+}
+function reverseVerify(idx){verifyLog[idx].reversed=true;document.getElementById('verifyResult').innerHTML='<span style="color:#FF7B2C">↩️ 已撤销：'+verifyLog[idx].name+' ('+verifyLog[idx].code+')</span>';refreshVerifyLog()}
+function refreshVerifyLog(){
+var el=document.getElementById('verifyLog');
+if(verifyLog.length==0){el.innerHTML='<div style="color:#ccc;text-align:center;padding:8px">暂无核销记录</div>';return}
+el.innerHTML=verifyLog.map(function(v,i){var c=v.reversed?'#999':'#333';var tag=v.reversed?'<span style="color:#999;font-size:10px">已撤销</span>':'<span style="color:#4CAF50;font-size:10px">✅</span>';return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0f0f0;color:'+c+'"><span>'+tag+' '+v.name+' ('+v.code+')</span><span style="font-size:11px">'+v.time+(v.reversed?'':' <a href="#" style="color:#F44336;font-size:10px" onclick="reverseVerify('+i+')">撤销</a>')+'</span></div>'}).join('')
+}
+
+async function loadAgentQueue(){var r=await fetch('/api/orders');var items=await r.json();items=items.filter(function(i){return i.status=='pending'||i.status=='in_progress'});items.sort(function(a,b){var pa=a.priority=='high'?0:1;var pb=b.priority=='high'?0:1;return pa-pb});var tbody=document.getElementById('agentQueue');var empty=document.getElementById('agentQueueEmpty');if(items.length==0){tbody.innerHTML='';empty.style.display='block'}else{empty.style.display='none';tbody.innerHTML=items.map(function(i){return '<tr style="cursor:pointer" onclick="showOrderDetail('+i.id+')"><td>#'+i.id+'</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+i.title.substring(0,25)+'</td><td>'+('<span style="color:'+(i.priority=='high'?'#F44336':'#999')+'">'+(i.priority=='high'?'🔥高':'普通')+'</span>')+'</td><td style="font-size:11px;color:#999">'+new Date(i.created_at).toLocaleString('zh-CN')+'</td><td><button class="btn-sm" onclick="event.stopPropagation();takeOrder('+i.id+')" style="font-size:11px;padding:3px 6px">'+ (i.status=='in_progress'?'处理中':'接单') +'</button></td></tr>'}).join('')}}
+async function showOrderDetail(id){var r=await fetch('/api/orders');var items=await r.json();var o=items.find(function(i){return i.id==id});if(!o)return;var statusMap={pending:'待处理',in_progress:'处理中',resolved:'已解决',closed:'已关闭'};var typeMap={repair:'🔧 维修',complaint:'😡 投诉',inquiry:'💡 咨询',business:'🏪 商务合作',escalation:'🚨 升级工单'};var h='<h4 style="margin:0 0 8px 0">工单 #'+o.id+'</h4>';h+='<div class="chat-bubble user"><div style="font-size:11px;color:#999;margin-bottom:4px">'+(typeMap[o.type]||o.type)+' | '+new Date(o.created_at).toLocaleString('zh-CN')+' | '+statusMap[o.status]+'</div><div>'+o.title.substring(0,60)+'</div><div style="font-size:12px;color:#666;margin-top:6px">'+(o.description||'').substring(0,200)+'</div></div>';if(o.contact_info)h+='<div style="font-size:11px;color:#999;margin:4px 0">会话ID: '+o.contact_info.replace('session:','')+'</div>';h+='<div class="agent-actions">';if(o.status=='pending')h+='<button class="btn-sm" onclick="takeOrder('+o.id+')">✋ 接单</button>';if(o.status=='in_progress')h+='<button class="btn-sm" style="background:#4CAF50" onclick="resolveOrder('+o.id+')">✅ 处理完成</button>';h+='<button class="btn-sm" style="background:#999" onclick="closeOrder('+o.id+')">关闭</button></div>';document.getElementById('agentDetail').innerHTML=h}
+
+loadDashboard();
+
+// === Member Management ===
+let _memberEditId = -1;
+
+function showMemberPanel() {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.member-panel').forEach(p => p.classList.remove('show'));
+  document.getElementById('memberPanel').classList.add('show');
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.querySelector('.nav button[onclick*="showMemberPanel"]')?.classList.add('active');
+  loadMembers();
+}
+
+function loadMembers() {
+  let search = document.getElementById('mpSearch')?.value || '';
+  let level = document.getElementById('mpLevelFilter')?.value || '';
+  fetch('/api/admin/members?search=' + encodeURIComponent(search) + '&level=' + encodeURIComponent(level))
+    .then(r => r.json())
+    .then(j => {
+      if (!j.ok) return;
+      // Stats
+      document.getElementById('mpTotal').textContent = j.stats.total;
+      document.getElementById('mpNewToday').textContent = j.stats.today;
+      document.getElementById('mpDiamond').textContent = j.stats.diamond;
+      document.getElementById('mpGold').textContent = j.stats.gold;
+      // Table
+      let html = '';
+      if (j.members.length === 0) {
+        html = '<tr><td colspan="7" style="text-align:center;color:#999;padding:20px">暂无数据</td></tr>';
+      } else {
+        j.members.forEach(m => {
+          html += '<tr>';
+          html += '<td>' + (m.display_name||'-') + '</td>';
+          html += '<td>' + (m.phone||'-') + '</td>';
+          html += '<td><span class="level-badge level-' + (m.membership_level||'普卡') + '">' + (m.membership_level||'普卡') + '</span></td>';
+          html += '<td>' + (m.points||0) + '</td>';
+          html += '<td>' + (m.coupon_count||0) + '张</td>';
+          html += '<td>' + (m.created_at||'-') + '</td>';
+          html += '<td><button class="mp-btn secondary" onclick="editMember(' + m.id + ',\'' + (m.display_name||'') + '\',\'' + (m.phone||'') + '\',\'' + (m.membership_level||'普卡') + '\',' + (m.points||0) + ')" style="padding:4px 10px;font-size:11px">编辑</button></td>';
+          html += '</tr>';
+        });
+      }
+      document.getElementById('mpTableBody').innerHTML = html;
+    });
+}
+
+function editMember(id, name, phone, level, points) {
+  _memberEditId = id;
+  document.getElementById('mpEditTitle').textContent = '编辑会员 #' + id;
+  document.getElementById('mpEditName').value = name;
+  document.getElementById('mpEditPhone').value = phone;
+  document.getElementById('mpEditLevel').value = level;
+  document.getElementById('mpEditPoints').value = points;
+  document.getElementById('mpEditPanel').classList.add('show');
+}
+
+function closeMemEdit() {
+  document.getElementById('mpEditPanel').classList.remove('show');
+  _memberEditId = -1;
+}
+
+async function saveMember() {
+  let data = {
+    display_name: document.getElementById('mpEditName').value,
+    phone: document.getElementById('mpEditPhone').value,
+    membership_level: document.getElementById('mpEditLevel').value,
+    points: parseInt(document.getElementById('mpEditPoints').value) || 0
+  };
+  try {
+    let r = await fetch('/api/admin/member/' + _memberEditId, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    let j = await r.json();
+    if (j.ok) { closeMemEdit(); loadMembers(); alert('保存成功'); }
+    else alert(j.error);
+  } catch(e) { alert('网络错误'); }
+}
+
+async function deleteMember() {
+  if (!confirm('确定删除该会员？此操作不可恢复！')) return;
+  try {
+    let r = await fetch('/api/admin/member/' + _memberEditId, {method:'DELETE'});
+    let j = await r.json();
+    if (j.ok) { closeMemEdit(); loadMembers(); alert('已删除'); }
+    else alert(j.error);
+  } catch(e) { alert('网络错误'); }
+}
+
+</script>
+</body>
+</html>
+<!-- ========== 会员管理 ========== -->
+<div class="member-panel" id="memberPanel">
+<div class="mp-stats" id="mpStats">
+  <div class="mp-stat"><div class="val" id="mpTotal">0</div><div class="lbl">总会员</div></div>
+  <div class="mp-stat"><div class="val" id="mpNewToday">0</div><div class="lbl">今日新增</div></div>
+  <div class="mp-stat"><div class="val" id="mpDiamond">0</div><div class="lbl">钻石卡</div></div>
+  <div class="mp-stat"><div class="val" id="mpGold">0</div><div class="lbl">金卡</div></div>
+</div>
+<div class="mp-header">
+  <input class="mp-search" id="mpSearch" placeholder="搜索手机号或姓名..." oninput="loadMembers()">
+  <select class="mp-search" style="max-width:100px" onchange="loadMembers()" id="mpLevelFilter">
+    <option value="">全部等级</option>
+    <option value="钻石卡">钻石卡</option>
+    <option value="金卡">金卡</option>
+    <option value="银卡">银卡</option>
+    <option value="普卡">普卡</option>
+  </select>
+  <button class="mp-btn secondary" onclick="document.getElementById('mpSearch').value='';document.getElementById('mpLevelFilter').value='';loadMembers()">刷新</button>
+</div>
+<table class="member-table">
+<thead><tr><th>姓名</th><th>手机号</th><th>等级</th><th>积分</th><th>券数</th><th>注册时间</th><th>操作</th></tr></thead>
+<tbody id="mpTableBody"><tr><td colspan="7" style="text-align:center;color:#999;padding:20px">加载中...</td></tr></tbody>
+</table>
+</div>
+
+<!-- Edit Member Modal -->
+<div class="mp-edit-panel" id="mpEditPanel" onclick="if(event.target===this)closeMemEdit()">
+<div class="mp-edit-card">
+<h4 id="mpEditTitle">编辑会员</h4>
+<div class="fg"><label>姓名</label><input id="mpEditName"></div>
+<div class="fg"><label>手机号</label><input id="mpEditPhone"></div>
+<div class="fg"><label>等级</label><select id="mpEditLevel"><option value="普卡">普卡</option><option value="银卡">银卡</option><option value="金卡">金卡</option><option value="钻石卡">钻石卡</option></select></div>
+<div class="fg"><label>积分</label><input id="mpEditPoints" type="number"></div>
+<div class="btns"><button class="mp-btn danger" onclick="deleteMember()">删除</button><button class="mp-btn primary" onclick="saveMember()">保存</button></div>
+<button class="mp-btn secondary" onclick="closeMemEdit()" style="width:100%;margin-top:8px">取消</button>
+</div>
+</div>
+
+

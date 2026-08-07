@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 400">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF7B2C"/>
+      <stop offset="100%" stop-color="#E85D04"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF3E6"/>
+      <stop offset="100%" stop-color="#FFE0C0"/>
+    </linearGradient>
+  </defs>
+  <rect width="750" height="400" fill="url(#sky)" rx="20"/>
+  <rect x="100" y="140" width="200" height="180" rx="8" fill="#FF7B2C" opacity="0.85"/>
+  <rect x="120" y="180" width="50" height="40" rx="4" fill="#FFF3E0" opacity="0.4"/>
+  <rect x="190" y="180" width="50" height="40" rx="4" fill="#FFF3E0" opacity="0.4"/>
+  <rect x="120" y="240" width="50" height="40" rx="4" fill="#FFF3E0" opacity="0.4"/>
+  <rect x="190" y="240" width="50" height="40" rx="4" fill="#FFF3E0" opacity="0.4"/>
+  <rect x="320" y="80" width="180" height="240" rx="10" fill="#E85D04" opacity="0.9"/>
+  <rect x="350" y="130" width="50" height="40" rx="4" fill="#FFF3E0" opacity="0.35"/>
+  <rect x="420" y="130" width="50" height="40" rx="4" fill="#FFF3E0" opacity="0.35"/>
+  <rect x="350" y="190" width="50" height="40" rx="4" fill="#FFF3E0" opacity="0.35"/>
+  <rect x="420" y="190" width="50" height="40" rx="4" fill="#FFF3E0" opacity="0.35"/>
+  <rect x="350" y="250" width="50" height="40" rx="4" fill="#FFF3E0" opacity="0.35"/>
+  <rect x="420" y="250" width="50" height="40" rx="4" fill="#FFF3E0" opacity="0.35"/>
+  <rect x="520" y="170" width="160" height="150" rx="8" fill="#FFB347" opacity="0.75"/>
+  <rect x="540" y="200" width="50" height="40" rx="4" fill="#FFF3E0" opacity="0.3"/>
+  <rect x="610" y="200" width="50" height="40" rx="4" fill="#FFF3E0" opacity="0.3"/>
+  <rect x="0" y="320" width="750" height="80" rx="0" fill="#F5E6D8" opacity="0.6"/>
+  <rect x="0" y="320" width="750" height="3" fill="#FF7B2C" opacity="0.3"/>
+  <text x="375" y="310" text-anchor="middle" font-size="22" font-weight="700" fill="#E85D04" font-family="sans-serif">海江新天地</text>
+  <text x="375" y="340" text-anchor="middle" font-size="14" fill="#B87840" font-family="sans-serif">一站式购物 · 餐饮 · 亲子 · 娱乐</text>
+</svg>

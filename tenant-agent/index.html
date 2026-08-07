@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>招商落位Agent · 商业综合体智能招商</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:#f0f2f5;color:#333}
+.container{max-width:1400px;margin:0 auto;padding:20px}
+h1{font-size:24px;margin-bottom:8px;color:#1a1a2e}
+.subtitle{color:#666;margin-bottom:20px;font-size:14px}
+
+.tabs{display:flex;gap:4px;margin-bottom:20px}
+.tab{padding:10px 20px;background:#fff;border:1px solid #ddd;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;transition:all .2s}
+.tab:hover{background:#e8f4fd}
+.tab.active{background:#1a73e8;color:#fff;border-color:#1a73e8}
+
+.panel{display:none;background:#fff;border-radius:0 8px 8px 8px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:20px}
+.panel.active{display:block}
+
+.row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.col{flex:1;min-width:280px}
+label{display:block;font-weight:600;margin-bottom:6px;font-size:13px;color:#555}
+select,input,textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;font-family:inherit}
+textarea{min-height:100px;resize:vertical}
+.btn{padding:10px 24px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-primary{background:#1a73e8;color:#fff}
+.btn-primary:hover{background:#1557b0}
+.btn-success{background:#0f9d58;color:#fff}
+.btn-success:hover{background:#0b8043}
+.btn-outline{background:#fff;color:#1a73e8;border:1px solid #1a73e8}
+.btn-outline:hover{background:#e8f4fd}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-row{display:flex;gap:8px;margin-top:16px}
+
+.card{background:#f8f9fa;border:1px solid #e8eaed;border-radius:8px;padding:16px;margin-bottom:12px}
+.card-title{font-weight:700;font-size:15px;margin-bottom:8px;color:#1a1a2e}
+.card-meta{font-size:12px;color:#888;margin-bottom:6px}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;margin:2px 4px 2px 0}
+.tag-red{background:#fce8e6;color:#c5221f}
+.tag-green{background:#e6f4ea;color:#137333}
+.tag-blue{background:#e8f0fe;color:#1967d2}
+.tag-yellow{background:#fef7e0;color:#b06000}
+
+.plan-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
+.plan-item{border:2px solid #e8eaed;border-radius:10px;padding:16px;background:#fff;transition:border-color .2s}
+.plan-item:hover{border-color:#1a73e8}
+.plan-item h4{font-size:15px;margin-bottom:10px}
+.plan-stats{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#666;margin-bottom:8px}
+.plan-stats span{background:#f1f3f4;padding:4px 8px;border-radius:4px}
+
+.floor-group{margin-bottom:12px}
+.floor-title{font-weight:700;font-size:13px;color:#1a73e8;margin-bottom:6px;border-bottom:1px solid #e8eaed;padding-bottom:4px}
+.brand-chip{display:inline-block;padding:4px 10px;background:#e8f0fe;border-radius:14px;font-size:12px;margin:2px 4px 2px 0;cursor:pointer;transition:all .15s}
+.brand-chip:hover{background:#d2e3fc}
+
+.warning-box{background:#fef7e0;border:1px solid #f9ab00;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:13px}
+.error-box{background:#fce8e6;border:1px solid #ea4335;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:13px;color:#c5221f}
+.info-box{background:#e8f0fe;border:1px solid #1a73e8;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:13px}
+
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #e8eaed}
+th{background:#f8f9fa;font-weight:600;color:#555;position:sticky;top:0}
+tr:hover{background:#f8f9fa}
+
+.progress-bar{height:6px;background:#e8eaed;border-radius:3px;overflow:hidden;margin:4px 0}
+.progress-fill{height:100%;border-radius:3px;transition:width .3s}
+.progress-green{background:#0f9d58}
+.progress-blue{background:#1a73e8}
+.progress-yellow{background:#f9ab00}
+.ai-result{max-height:500px;overflow-y:auto;line-height:1.8;font-size:14px}
+.ai-result p{margin-bottom:8px}
+.ai-result strong{color:#1a73e8}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🏬 招商落位Agent</h1>
+<div class="subtitle">商业综合体智能招商 · 品牌匹配 · 落位方案 · 动态调铺</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('setup')">⚙️ 项目设置</div>
+  <div class="tab" onclick="switchTab('plan')">📋 落位方案</div>
+  <div class="tab" onclick="switchTab('brands')">🏷️ 品牌库</div>
+  <div class="tab" onclick="switchTab('dashboard')">📊 招商看板</div>
+  <div class="tab" onclick="switchTab('ai')">🤖 AI分析</div>
+</div>
+
+<!-- 项目设置 -->
+<div id="panel-setup" class="panel active">
+  <h3 style="margin-bottom:16px">项目参数设置</h3>
+  <div class="row">
+    <div class="col">
+      <label>项目名称</label>
+      <input id="projectName" value="星耀城购物中心" placeholder="输入项目名称">
+    </div>
+    <div class="col">
+      <label>场子定位</label>
+      <select id="positioning">
+        <option value="community">社区MALL（日常消费+餐饮）</option>
+        <option value="premium" selected>中高端MALL（品质零售+体验）</option>
+        <option value="lifestyle">生活方式中心（潮流+社交）</option>
+        <option value="outlet">奥特莱斯（折扣零售）</option>
+        <option value="street">街区型MALL（开放街区+餐饮社交）</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <label>总楼层</label>
+      <select id="totalFloors">
+        <option value="4">4层（B1-3F）</option>
+        <option value="5" selected>5层（B1-4F）</option>
+        <option value="6">6层（B1-5F）</option>
+        <option value="7">7层（B2-5F）</option>
+      </select>
+    </div>
+    <div class="col">
+      <label>每层可租面积（㎡）</label>
+      <input id="floorArea" value="4000" type="number" placeholder="每层面积">
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <label>目标品牌清单（一行一个，留空则从品牌库匹配）</label>
+      <textarea id="targetBrands" rows="4" placeholder="留空则从品牌库智能推荐...&#10;也可手动指定：&#10;星巴克&#10;优衣库&#10;海底捞"></textarea>
+    </div>
+    <div class="col">
+      <label>排除业态/品牌（一行一个）</label>
+      <textarea id="excludeBrands" rows="4" placeholder="不想引入的品牌或业态：&#10;瑞幸咖啡&#10;快餐"></textarea>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="generatePlan()">🚀 生成落位方案</button>
+    <button class="btn btn-outline" onclick="resetAll()">🔄 重置</button>
+  </div>
+</div>
+
+<!-- 落位方案 -->
+<div id="panel-plan" class="panel">
+  <div id="planContent">
+    <div class="info-box">👈 请先在「项目设置」中配置参数，然后点击「生成落位方案」</div>
+  </div>
+</div>
+
+<!-- 品牌库 -->
+<div id="panel-brands" class="panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h3>品牌库（共 <span id="brandCount">0</span> 个品牌）</h3>
+    <div style="display:flex;gap:8px">
+      <select id="brandFilter" onchange="renderBrandTable()">
+        <option value="all">全部业态</option>
+        <option value="餐饮">餐饮</option>
+        <option value="零售">零售</option>
+        <option value="体验">体验</option>
+      </select>
+      <input id="brandSearch" placeholder="搜索品牌..." oninput="renderBrandTable()" style="width:200px">
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="brandTable">
+      <thead><tr><th>品牌</th><th>业态</th><th>子类</th><th>客单价</th><th>面积需求</th><th>引流力</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 招商看板 -->
+<div id="panel-dashboard" class="panel">
+  <h3 style="margin-bottom:16px">招商进度看板</h3>
+  <div id="dashboardContent">
+    <div class="info-box">📋 请先生成落位方案，然后在这里跟踪签约进度</div>
+  </div>
+</div>
+
+<!-- AI分析 -->
+<div id="panel-ai" class="panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h3>🤖 智能招商分析</h3>
+  </div>
+  <div class="row">
+    <div class="col" style="flex:1">
+      <div class="card">
+        <div class="card-title">📊 品牌组合分析</div>
+        <div class="card-meta">AI分析当前落位方案的业态合理性、竞品冲突、优化空间</div>
+        <button class="btn btn-primary btn-sm" onclick="aiAnalyzeBrands()" id="btnAnalyzeBrands">开始分析</button>
+        <div id="aiBrandResult" style="margin-top:12px"></div>
+      </div>
+    </div>
+    <div class="col" style="flex:1">
+      <div class="card">
+        <div class="card-title">🔍 品牌推荐</div>
+        <div class="card-meta">根据铺位特征AI推荐适合品牌</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <select id="aiFloor" style="flex:1"><option>B2</option><option>B1</option><option selected>1F</option><option>2F</option><option>3F</option><option>4F</option><option>5F</option></select>
+          <input id="aiArea" value="500" type="number" placeholder="面积" style="width:100px">
+          <button class="btn btn-primary btn-sm" onclick="aiRecommendBrands()" id="btnRecommend">推荐</button>
+        </div>
+        <div id="aiRecommendResult" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🎯 招商策略建议</div>
+    <div class="card-meta">根据签约进度，AI给出下一步行动建议</div>
+    <button class="btn btn-primary btn-sm" onclick="aiStrategyAdvice()" id="btnStrategy" style="margin-top:8px">获取策略建议</button>
+    <div id="aiStrategyResult" style="margin-top:12px"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ============ 全局状态 ============
+const BRANDS_DATA = [{"name":"星巴克","category":"餐饮","subcategory":"咖啡茶饮","priceLevel":"中","areaNeed":"100-200㎡","targetFloor":["B1","1F"],"drawPower":"高","avoid":["瑞幸","M Stand"]},{"name":"瑞幸咖啡","category":"餐饮","subcategory":"咖啡茶饮","priceLevel":"低","areaNeed":"30-80㎡","targetFloor":["B1","1F"],"drawPower":"中","avoid":["星巴克"]},{"name":"优衣库","category":"零售","subcategory":"快时尚","priceLevel":"中","areaNeed":"1000-2000㎡","targetFloor":["1F","2F"],"drawPower":"高","avoid":[]},{"name":"H&M","category":"零售","subcategory":"快时尚","priceLevel":"中低","areaNeed":"800-1500㎡","targetFloor":["1F","2F"],"drawPower":"中","avoid":[]},{"name":"ZARA","category":"零售","subcategory":"快时尚","priceLevel":"中","areaNeed":"800-1800㎡","targetFloor":["1F","2F"],"drawPower":"高","avoid":[]},{"name":"海底捞","category":"餐饮","subcategory":"火锅","priceLevel":"中高","areaNeed":"600-1200㎡","targetFloor":["3F","4F"],"drawPower":"极高","avoid":[]},{"name":"喜茶","category":"餐饮","subcategory":"茶饮","priceLevel":"中","areaNeed":"80-150㎡","targetFloor":["B1","1F"],"drawPower":"中","avoid":[]},{"name":"麦当劳","category":"餐饮","subcategory":"快餐","priceLevel":"低","areaNeed":"200-400㎡","targetFloor":["B1","1F"],"drawPower":"高","avoid":["肯德基","汉堡王"]},{"name":"肯德基","category":"餐饮","subcategory":"快餐","priceLevel":"低","areaNeed":"200-400㎡","targetFloor":["B1","1F"],"drawPower":"高","avoid":["麦当劳","汉堡王"]},{"name":"Apple Store","category":"零售","subcategory":"数码","priceLevel":"高","areaNeed":"300-800㎡","targetFloor":["1F"],"drawPower":"极高","avoid":[]},{"name":"小米之家","category":"零售","subcategory":"数码","priceLevel":"中","areaNeed":"200-500㎡","targetFloor":["1F","2F"],"drawPower":"中","avoid":[]},{"name":"华为体验店","category":"零售","subcategory":"数码","priceLevel":"中高","areaNeed":"200-600㎡","targetFloor":["1F","2F"],"drawPower":"高","avoid":[]},{"name":"盒马鲜生","category":"零售","subcategory":"超市","priceLevel":"中高","areaNeed":"3000-6000㎡","targetFloor":["B1"],"drawPower":"极高","avoid":[]},{"name":"耐克","category":"零售","subcategory":"运动","priceLevel":"中","areaNeed":"300-800㎡","targetFloor":["1F","2F","3F"],"drawPower":"高","avoid":[]},{"name":"阿迪达斯","category":"零售","subcategory":"运动","priceLevel":"中","areaNeed":"300-800㎡","targetFloor":["1F","2F","3F"],"drawPower":"高","avoid":[]},{"name":"西西弗书店","category":"体验","subcategory":"书店","priceLevel":"中","areaNeed":"400-800㎡","targetFloor":["2F","3F"],"drawPower":"中","avoid":[]},{"name":"电影院（万达影城）","category":"体验","subcategory":"影院","priceLevel":"中","areaNeed":"3000-5000㎡","targetFloor":["4F","5F"],"drawPower":"极高","avoid":[]},{"name":"乐高","category":"零售","subcategory":"玩具","priceLevel":"中高","areaNeed":"150-400㎡","targetFloor":["2F","3F"],"drawPower":"中","avoid":[]},{"name":"太二酸菜鱼","category":"餐饮","subcategory":"中式正餐","priceLevel":"中","areaNeed":"200-400㎡","targetFloor":["3F","4F"],"drawPower":"中","avoid":[]},{"name":"M Stand","category":"餐饮","subcategory":"咖啡茶饮","priceLevel":"中高","areaNeed":"50-120㎡","targetFloor":["B1","1F"],"drawPower":"中","avoid":["星巴克"]},{"name":"泡泡玛特","category":"零售","subcategory":"潮玩","priceLevel":"中","areaNeed":"100-250㎡","targetFloor":["B1","1F","2F"],"drawPower":"高","avoid":[]},{"name":"迪卡侬","category":"零售","subcategory":"运动","priceLevel":"低","areaNeed":"1500-3000㎡","targetFloor":["B1","1F"],"drawPower":"高","avoid":[]},{"name":"无印良品","category":"零售","subcategory":"生活方式","priceLevel":"中","areaNeed":"500-1200㎡","targetFloor":["1F","2F"],"drawPower":"中","avoid":[]},{"name":"奈雪的茶","category":"餐饮","subcategory":"茶饮","priceLevel":"中","areaNeed":"100-200㎡","targetFloor":["B1","1F"],"drawPower":"中","avoid":[]},{"name":"西贝莜面村","category":"餐饮","subcategory":"中式正餐","priceLevel":"中","areaNeed":"300-600㎡","targetFloor":["3F","4F"],"drawPower":"中","avoid":[]},{"name":"屈臣氏","category":"零售","subcategory":"个护美妆","priceLevel":"中","areaNeed":"200-500㎡","targetFloor":["B1","1F"],"drawPower":"中","avoid":[]},{"name":"丝芙兰","category":"零售","subcategory":"个护美妆","priceLevel":"中高","areaNeed":"200-500㎡","targetFloor":["1F"],"drawPower":"中","avoid":[]},{"name":"玩具反斗城","category":"零售","subcategory":"玩具","priceLevel":"中","areaNeed":"500-1000㎡","targetFloor":["3F"],"drawPower":"中","avoid":[]},{"name":"健身房（超级猩猩）","category":"体验","subcategory":"健身","priceLevel":"中","areaNeed":"300-800㎡","targetFloor":["3F","4F"],"drawPower":"中","avoid":[]},{"name":"大疆","category":"零售","subcategory":"数码","priceLevel":"中高","areaNeed":"100-300㎡","targetFloor":["1F","2F"],"drawPower":"中","avoid":[]},{"name":"MANNER","category":"餐饮","subcategory":"咖啡茶饮","priceLevel":"中低","areaNeed":"20-80㎡","targetFloor":["B1","1F"],"drawPower":"中","avoid":[]},{"name":"萨莉亚","category":"餐饮","subcategory":"快餐","priceLevel":"低","areaNeed":"200-400㎡","targetFloor":["3F","4F"],"drawPower":"中","avoid":[]},{"name":"Lululemon","category":"零售","subcategory":"运动","priceLevel":"中高","areaNeed":"150-350㎡","targetFloor":["1F","2F"],"drawPower":"中","avoid":[]},{"name":"UR","category":"零售","subcategory":"快时尚","priceLevel":"中","areaNeed":"800-1500㎡","targetFloor":["1F","2F"],"drawPower":"中","avoid":[]},{"name":"霸王茶姬","category":"餐饮","subcategory":"茶饮","priceLevel":"中","areaNeed":"80-150㎡","targetFloor":["B1","1F"],"drawPower":"中","avoid":[]}];
+
+let brands = BRANDS_DATA;
+let currentPlan = null;
+let signedBrands = new Set();
+
+// ============ 初始化品牌库 ============
+function loadBrands() {
+  document.getElementById('brandCount').textContent = brands.length;
+  renderBrandTable();
+}
+
+// ============ Tab切换 ============
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab:nth-child(${{setup:1,plan:2,brands:3,dashboard:4,ai:5}[name]})`).classList.add('active');
+  document.getElementById(`panel-${name}`).classList.add('active');
+}
+
+// ============ 业态配比基准 ============
+const ratioMap = {
+  community: {餐饮:0.35, 零售:0.35, 体验:0.20, 配套:0.10},
+  premium:   {餐饮:0.28, 零售:0.42, 体验:0.20, 配套:0.10},
+  lifestyle: {餐饮:0.32, 零售:0.33, 体验:0.25, 配套:0.10},
+  outlet:    {餐饮:0.20, 零售:0.60, 体验:0.10, 配套:0.10},
+  street:    {餐饮:0.40, 零售:0.25, 体验:0.25, 配套:0.10}
+};
+
+// ============ 楼层业态倾向 ============
+const floorTendency = {
+  'B2': {餐饮:0.4, 零售:0.3, 体验:0.1, 配套:0.2},
+  'B1': {餐饮:0.4, 零售:0.3, 体验:0.1, 配套:0.2},
+  '1F': {餐饮:0.1, 零售:0.7, 体验:0.1, 配套:0.1},
+  '2F': {餐饮:0.15, 零售:0.6, 体验:0.15, 配套:0.1},
+  '3F': {餐饮:0.3, 零售:0.25, 体验:0.35, 配套:0.1},
+  '4F': {餐饮:0.4, 零售:0.1, 体验:0.4, 配套:0.1},
+  '5F': {餐饮:0.35, 零售:0.1, 体验:0.45, 配套:0.1}
+};
+
+const floorNames = {'B2':'B2','B1':'B1','1F':'1F(首层)','2F':'2F','3F':'3F','4F':'4F','5F':'5F(顶层)'};
+
+// ============ 品牌匹配评分 ============
+function matchScore(brand, floor, positioning) {
+  let score = 50;
+  // 目标楼层匹配
+  if (brand.targetFloor.includes(floor)) score += 30;
+  else {
+    const floorNum = parseInt(floor);
+    const targets = brand.targetFloor.map(f => parseInt(f));
+    const minDist = Math.min(...targets.map(t => Math.abs(t-floorNum)));
+    if (minDist <= 1) score += 15;
+    else if (minDist <= 2) score += 5;
+  }
+  // 引流力加成
+  if (brand.drawPower === '极高') score += 20;
+  else if (brand.drawPower === '高') score += 10;
+  // 首层偏好高客单价
+  if (floor === '1F' && brand.priceLevel === '高') score += 10;
+  if (floor === '1F' && brand.priceLevel === '中高') score += 5;
+  // B1偏好快消
+  if ((floor === 'B1' || floor === 'B2') && brand.priceLevel === '低') score += 5;
+  return score;
+}
+
+// ============ 生成落位方案 ============
+function generatePlan() {
+  if (brands.length === 0) return alert('品牌库加载中，请稍候...');
+  
+  const projectName = document.getElementById('projectName').value || '未命名项目';
+  const positioning = document.getElementById('positioning').value;
+  const totalFloors = parseInt(document.getElementById('totalFloors').value);
+  const floorArea = parseInt(document.getElementById('floorArea').value) || 4000;
+  
+  // 解析目标品牌
+  const targetInput = document.getElementById('targetBrands').value.trim();
+  let targetBrandNames = targetInput ? targetInput.split('\n').map(s=>s.trim()).filter(Boolean) : [];
+  
+  // 解析排除项
+  const excludeInput = document.getElementById('excludeBrands').value.trim();
+  const excludeNames = excludeInput ? excludeInput.split('\n').map(s=>s.trim()).filter(Boolean) : [];
+  
+  // 筛选可用品牌
+  let availableBrands = brands.filter(b => {
+    if (excludeNames.includes(b.name)) return false;
+    if (excludeNames.includes(b.category)) return false;
+    if (excludeNames.includes(b.subcategory)) return false;
+    return true;
+  });
+  
+  // 如果有指定目标品牌，优先用它们
+  if (targetBrandNames.length > 0) {
+    availableBrands = targetBrandNames.map(name => {
+      const found = brands.find(b => b.name === name);
+      if (found) return found;
+      // 未在库中的品牌，给默认值
+      return {name, category:'零售', subcategory:'未知', priceLevel:'中', areaNeed:'200-500㎡', targetFloor:['1F','2F'], drawPower:'中', avoid:[]};
+    });
+  }
+  
+  const floors = [];
+  const hasB2 = totalFloors >= 7;
+  for (let i = 0; i < totalFloors; i++) {
+    let label;
+    if (hasB2) {
+      const map = ['B2','B1','1F','2F','3F','4F','5F'];
+      label = map[i];
+    } else {
+      const map = ['B1','1F','2F','3F','4F','5F'];
+      label = map[i];
+    }
+    floors.push(label);
+  }
+  
+  const ratios = ratioMap[positioning];
+  
+  // 按业态分组品牌
+  const byCategory = {};
+  availableBrands.forEach(b => {
+    if (!byCategory[b.category]) byCategory[b.category] = [];
+    byCategory[b.category].push(b);
+  });
+  
+  // 分配每层各业态的目标面积
+  const floorPlan = floors.map(floor => {
+    const tendency = floorTendency[floor] || {餐饮:0.25,零售:0.35,体验:0.3,配套:0.1};
+    return {
+      floor,
+      target: {
+        餐饮: Math.round(floorArea * tendency['餐饮'] || floorArea * 0.25),
+        零售: Math.round(floorArea * tendency['零售'] || floorArea * 0.35),
+        体验: Math.round(floorArea * tendency['体验'] || floorArea * 0.3),
+        配套: Math.round(floorArea * tendency['配套'] || floorArea * 0.1)
+      },
+      brands: [],
+      usedArea: {餐饮:0, 零售:0, 体验:0, 配套:0}
+    };
+  });
+  
+  // 为每层每个业态分配品牌
+  const assigned = new Set();
+  const fallbackAssigned = new Set(); // 跨层fallback
+  
+  // 第一轮：优先匹配目标楼层
+  floors.forEach((floor, fi) => {
+    Object.keys(floorPlan[fi].usedArea).forEach(cat => {
+      const catBrands = (byCategory[cat] || []).filter(b => !assigned.has(b.name));
+      const scored = catBrands.map(b => ({...b, _score: matchScore(b, floor, positioning)}));
+      scored.sort((a,b) => b._score - a._score);
+      
+      let targetArea = floorPlan[fi].target[cat];
+      for (const brand of scored) {
+        if (floorPlan[fi].usedArea[cat] >= targetArea * 1.3) break;
+        const area = parseArea(brand.areaNeed);
+        if (floorPlan[fi].usedArea[cat] + area > targetArea * 1.5) continue;
+        
+        // 检查竞品冲突
+        const hasConflict = floorPlan[fi].brands.some(pb => {
+          return (brand.avoid || []).includes(pb.name) || (pb.avoid || []).includes(brand.name);
+        });
+        if (hasConflict) continue;
+        
+        floorPlan[fi].brands.push(brand);
+        floorPlan[fi].usedArea[cat] += area;
+        assigned.add(brand.name);
+      }
+    });
+  });
+  
+  // 第二轮：跨层fallback——填充还没分配的品牌
+  const unassigned = availableBrands.filter(b => !assigned.has(b.name));
+  unassigned.forEach(brand => {
+    let bestFloor = null, bestScore = -1, bestFi = -1;
+    floors.forEach((floor, fi) => {
+      const cat = brand.category;
+      if (!floorPlan[fi].usedArea[cat]) floorPlan[fi].usedArea[cat] = 0;
+      const remaining = floorPlan[fi].target[cat] - floorPlan[fi].usedArea[cat];
+      if (remaining < 100) return;
+      const score = matchScore(brand, floor, positioning);
+      if (score > bestScore) { bestScore = score; bestFloor = floor; bestFi = fi; }
+    });
+    if (bestFloor && bestFi >= 0) {
+      const area = parseArea(brand.areaNeed);
+      floorPlan[bestFi].brands.push(brand);
+      floorPlan[bestFi].usedArea[brand.category] = (floorPlan[bestFi].usedArea[brand.category] || 0) + area;
+      fallbackAssigned.add(brand.name);
+    }
+  });
+  
+  // 计算整体统计
+  let totalBrands = 0, totalArea = 0;
+  const catStats = {餐饮:0, 零售:0, 体验:0, 配套:0};
+  floorPlan.forEach(fp => {
+    totalBrands += fp.brands.length;
+    fp.brands.forEach(b => {
+      const a = parseArea(b.areaNeed);
+      totalArea += a;
+      catStats[b.category] = (catStats[b.category] || 0) + 1;
+    });
+  });
+  
+  currentPlan = { projectName, positioning, totalFloors, floorArea, floorPlan, totalBrands, totalArea, catStats, ratios };
+  signedBrands = new Set();
+  
+  renderPlan();
+  renderDashboard();
+  switchTab('plan');
+}
+
+function parseArea(areaStr) {
+  const m = areaStr.match(/(\d+)-(\d+)/);
+  if (m) return (parseInt(m[1]) + parseInt(m[2])) / 2;
+  return 300;
+}
+
+// ============ 渲染落位方案 ============
+function renderPlan() {
+  if (!currentPlan) return;
+  const { projectName, positioning, floorPlan, totalBrands, totalArea, catStats, ratios, floorArea } = currentPlan;
+  
+  const posNames = {community:'社区MALL', premium:'中高端MALL', lifestyle:'生活方式中心', outlet:'奥特莱斯', street:'街区型MALL'};
+  
+  let html = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <h3>📍 ${projectName} · ${posNames[positioning]}</h3>
+        <span style="color:#666;font-size:13px">共 ${totalBrands} 个品牌 · 预估总面积 ${totalArea.toFixed(0)}㎡</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="exportPlan()">📥 导出Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="switchTab('setup')">⚙️ 调整参数</button>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">📊 业态配比</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        ${Object.keys(catStats).map(cat => {
+          const pct = totalArea > 0 ? ((catStats[cat]/totalBrands)*100) : 0;
+          const target = (ratios[cat] || 0) * 100;
+          return `<div style="flex:1;min-width:120px">
+            <div style="font-size:12px;color:#888;margin-bottom:4px">${cat} ${catStats[cat]}个 (${pct.toFixed(0)}% / 目标${target.toFixed(0)}%)</div>
+            <div class="progress-bar"><div class="progress-fill progress-blue" style="width:${Math.min(pct/target*100, 100)}%"></div></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    
+    <h4 style="margin-bottom:12px">🏢 各楼层落位</h4>
+  `;
+  
+  // 按楼层展示
+  floorPlan.forEach((fp, i) => {
+    const catBreakdown = {};
+    fp.brands.forEach(b => { catBreakdown[b.category] = (catBreakdown[b.category] || 0) + 1; });
+    
+    html += `<div class="floor-group" style="background:#f8f9fa;border-radius:8px;padding:16px;margin-bottom:12px">
+      <div class="floor-title" style="font-size:15px">${floorNames[fp.floor] || fp.floor} · ${fp.brands.length}个品牌</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        ${Object.entries(catBreakdown).map(([cat,n]) => `<span class="tag tag-blue">${cat} ×${n}</span>`).join('')}
+        <span style="font-size:11px;color:#999;margin-left:4px">预估面积 ${fp.brands.reduce((s,b)=>s+parseArea(b.areaNeed),0).toFixed(0)}㎡ / 可用${floorArea}㎡</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${fp.brands.map((b, j) => {
+          const signed = signedBrands.has(b.name);
+          return `<div class="brand-chip" style="${signed?'background:#e6f4ea;border:1px solid #0f9d58':''}" 
+            onclick="toggleSign('${b.name.replace(/'/g,"\\'")}', this)" title="${signed?'已签约，点击取消':'点击标记签约'}">
+            ${b.name} ${signed?'✅':''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  
+  // 警告：空楼层
+  const emptyFloors = floorPlan.filter(fp => fp.brands.length < 3);
+  if (emptyFloors.length > 0) {
+    html += `<div class="warning-box">⚠️ 以下楼层品牌较少，建议调整业态配比：${emptyFloors.map(f=>f.floor).join('、')}</div>`;
+  }
+  
+  // 冲突提示
+  const allBrands = floorPlan.flatMap(fp => fp.brands);
+  const conflicts = [];
+  for (let i = 0; i < allBrands.length; i++) {
+    for (let j = i+1; j < allBrands.length; j++) {
+      if ((allBrands[i].avoid||[]).includes(allBrands[j].name) || (allBrands[j].avoid||[]).includes(allBrands[i].name)) {
+        const sameFloor = floorPlan.find(fp => fp.brands.includes(allBrands[i]) && fp.brands.includes(allBrands[j]));
+        if (sameFloor) conflicts.push({a:allBrands[i].name, b:allBrands[j].name, floor: sameFloor.floor});
+      }
+    }
+  }
+  if (conflicts.length > 0) {
+    html += `<div class="warning-box">⚠️ 竞品冲突检测：${conflicts.map(c=>`「${c.a}」与「${c.b}」同在${c.floor}`).join('；')}</div>`;
+  }
+  
+  document.getElementById('planContent').innerHTML = html;
+}
+
+function toggleSign(name, el) {
+  if (signedBrands.has(name)) {
+    signedBrands.delete(name);
+    el.style.background = '#e8f0fe';
+    el.style.border = 'none';
+    el.textContent = name;
+  } else {
+    signedBrands.add(name);
+    el.style.background = '#e6f4ea';
+    el.style.border = '1px solid #0f9d58';
+    el.textContent = name + ' ✅';
+  }
+  renderDashboard();
+}
+
+// ============ 招商看板 ============
+function renderDashboard() {
+  if (!currentPlan) return;
+  const { floorPlan, totalBrands } = currentPlan;
+  const signed = signedBrands.size;
+  const rate = totalBrands > 0 ? (signed / totalBrands * 100) : 0;
+  
+  // 按楼层统计
+  let html = `
+    <div class="row">
+      <div class="col" style="flex:0 0 220px">
+        <div class="card" style="text-align:center">
+          <div style="font-size:42px;font-weight:700;color:#1a73e8">${rate.toFixed(0)}%</div>
+          <div style="color:#666;font-size:13px">签约率（${signed}/${totalBrands}）</div>
+          <div class="progress-bar" style="margin-top:8px"><div class="progress-fill progress-blue" style="width:${rate}%"></div></div>
+        </div>
+      </div>
+  `;
+  
+  floorPlan.forEach(fp => {
+    const floorSigned = fp.brands.filter(b => signedBrands.has(b.name)).length;
+    const floorRate = fp.brands.length > 0 ? (floorSigned / fp.brands.length * 100) : 0;
+    const barColor = floorRate >= 70 ? 'progress-green' : floorRate >= 40 ? 'progress-blue' : 'progress-yellow';
+    html += `
+      <div class="col" style="flex:0 0 180px">
+        <div class="card">
+          <div class="card-title">${floorNames[fp.floor] || fp.floor}</div>
+          <div style="font-size:28px;font-weight:600">${floorSigned}/${fp.brands.length}</div>
+          <div class="progress-bar"><div class="progress-fill ${barColor}" style="width:${floorRate}%"></div></div>
+          <div style="font-size:11px;color:#888;margin-top:4px">签约率 ${floorRate.toFixed(0)}%</div>
+        </div>
+      </div>
+    `;
+  });
+  
+  html += `</div>`;
+  
+  // 已签约品牌列表
+  if (signed > 0) {
+    const signedList = floorPlan.flatMap(fp => 
+      fp.brands.filter(b => signedBrands.has(b.name)).map(b => ({...b, floor: fp.floor}))
+    );
+    html += `<h4 style="margin:16px 0 8px">✅ 已签约品牌（${signed}个）</h4><div class="table-wrap"><table>
+      <thead><tr><th>品牌</th><th>楼层</th><th>业态</th><th>客单价</th></tr></thead>
+      <tbody>${signedList.map(b => `<tr><td><strong>${b.name}</strong></td><td>${floorNames[b.floor]||b.floor}</td><td>${b.category}/${b.subcategory}</td><td>${b.priceLevel}</td></tr>`).join('')}
+      </tbody></table></div>`;
+  }
+  
+  document.getElementById('dashboardContent').innerHTML = html;
+}
+
+// ============ 品牌库表格 ============
+function renderBrandTable() {
+  const filter = document.getElementById('brandFilter').value;
+  const search = document.getElementById('brandSearch').value.toLowerCase();
+  let filtered = brands;
+  if (filter !== 'all') filtered = filtered.filter(b => b.category === filter);
+  if (search) filtered = filtered.filter(b => b.name.toLowerCase().includes(search) || b.subcategory.includes(search));
+  
+  const tbody = filtered.map(b => `
+    <tr>
+      <td><strong>${b.name}</strong></td>
+      <td><span class="tag tag-blue">${b.category}</span></td>
+      <td>${b.subcategory}</td>
+      <td>${b.priceLevel}</td>
+      <td>${b.areaNeed}</td>
+      <td>${b.drawPower}</td>
+    </tr>
+  `).join('');
+  document.querySelector('#brandTable tbody').innerHTML = tbody || '<tr><td colspan="6" style="text-align:center;color:#999">无匹配品牌</td></tr>';
+}
+
+// ============ 导出 ============
+function exportPlan() {
+  if (!currentPlan) return;
+  const { floorPlan, projectName } = currentPlan;
+  let csv = '楼层,品牌,业态,子类,客单价,面积需求㎡,引流力,签约状态\n';
+  floorPlan.forEach(fp => {
+    fp.brands.forEach(b => {
+      csv += `${fp.floor},${b.name},${b.category},${b.subcategory},${b.priceLevel},${b.areaNeed},${b.drawPower},${signedBrands.has(b.name)?'已签约':'待签约'}\n`;
+    });
+  });
+  
+  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${projectName}_落位方案.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============ 重置 ============
+function resetAll() {
+  currentPlan = null;
+  signedBrands = new Set();
+  document.getElementById('planContent').innerHTML = '<div class="info-box">👈 请先在「项目设置」中配置参数，然后点击「生成落位方案」</div>';
+  document.getElementById('dashboardContent').innerHTML = '<div class="info-box">📋 请先生成落位方案，然后在这里跟踪签约进度</div>';
+  switchTab('setup');
+}
+
+// ============ 初始化 ============
+loadBrands();
+
+// ============ AI 函数 ============
+async function aiAnalyzeBrands() {
+  if (!currentPlan) { alert('请先生成落位方案'); return; }
+  var btn = document.getElementById('btnAnalyzeBrands');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>分析中...';
+  var resultDiv = document.getElementById('aiBrandResult');
+  resultDiv.innerHTML = '';
+  
+  var allBrands = currentPlan.floorPlan.flatMap(function(fp) {
+    return fp.brands.map(function(b) { return {name:b.name, category:b.category, subcategory:b.subcategory, floor:fp.floor}; });
+  });
+  
+  try {
+    var resp = await fetch('/api/ai/analyze-brands', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({brands:allBrands, positioning:currentPlan.positioning})
+    });
+    var j = await resp.json();
+    if (j.ok) {
+      resultDiv.innerHTML = '<div class="ai-result">' + j.result.replace(/\n/g,'<br>') + '</div>';
+    } else {
+      resultDiv.innerHTML = '<div class="error-box">' + (j.error || '未知错误') + '</div>';
+    }
+  } catch(e) {
+    resultDiv.innerHTML = '<div class="error-box">AI分析失败: '+e.message+'</div>';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '开始分析';
+}
+
+async function aiRecommendBrands() {
+  var btn = document.getElementById('btnRecommend');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>推荐中...';
+  var resultDiv = document.getElementById('aiRecommendResult');
+  resultDiv.innerHTML = '';
+  
+  var floor = document.getElementById('aiFloor').value;
+  var area = parseInt(document.getElementById('aiArea').value) || 500;
+  var positioning = currentPlan ? currentPlan.positioning : 'premium';
+  var existing = currentPlan ? (currentPlan.floorPlan.find(function(fp){return fp.floor===floor}) || {brands:[]}).brands.map(function(b){return b.name}) : [];
+  
+  try {
+    var resp = await fetch('/api/ai/recommend-brands', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({floor:floor, area:area, positioning:positioning, existing_brands:existing})
+    });
+    var j = await resp.json();
+    if (j.ok) {
+      resultDiv.innerHTML = '<div class="ai-result">' + j.result.replace(/\n/g,'<br>') + '</div>';
+    } else {
+      resultDiv.innerHTML = '<div class="error-box">' + (j.error || '未知错误') + '</div>';
+    }
+  } catch(e) {
+    resultDiv.innerHTML = '<div class="error-box">AI推荐失败: '+e.message+'</div>';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '推荐';
+}
+
+async function aiStrategyAdvice() {
+  if (!currentPlan) { alert('请先生成落位方案'); return; }
+  var btn = document.getElementById('btnStrategy');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>分析中...';
+  var resultDiv = document.getElementById('aiStrategyResult');
+  resultDiv.innerHTML = '';
+  
+  var floorStats = currentPlan.floorPlan.map(function(fp) {
+    var signed = fp.brands.filter(function(b){return signedBrands.has(b.name)}).length;
+    return {floor:fp.floor, total:fp.brands.length, signed:signed, rate:fp.brands.length>0 ? Math.round(signed/fp.brands.length*100) : 0};
+  });
+  
+  try {
+    var resp = await fetch('/api/ai/strategy-advice', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({signed:signedBrands.size, total:currentPlan.totalBrands, floorStats:floorStats, positioning:currentPlan.positioning})
+    });
+    var j = await resp.json();
+    if (j.ok) {
+      resultDiv.innerHTML = '<div class="ai-result">' + j.result.replace(/\n/g,'<br>') + '</div>';
+    } else {
+      resultDiv.innerHTML = '<div class="error-box">' + (j.error || '未知错误') + '</div>';
+    }
+  } catch(e) {
+    resultDiv.innerHTML = '<div class="error-box">AI策略失败: '+e.message+'</div>';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '获取策略建议';
+}
+</script>
+</body>
+</html>

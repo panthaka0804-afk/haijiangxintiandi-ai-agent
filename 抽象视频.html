@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>抽象视频 - 给领导看的</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+  }
+  .container {
+    width: 800px;
+    max-width: 95vw;
+    background: #111;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 0 60px rgba(255,255,255,0.05);
+    border: 1px solid #222;
+  }
+  .video-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #333;
+  }
+  #canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+  }
+  .controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    gap: 12px;
+  }
+  .controls button {
+    background: #222;
+    color: #fff;
+    border: 1px solid #444;
+    padding: 10px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s;
+  }
+  .controls button:hover {
+    background: #333;
+    border-color: #666;
+  }
+  .controls .play-btn {
+    background: #fff;
+    color: #000;
+    border: none;
+    font-weight: bold;
+  }
+  .controls .play-btn:hover {
+    background: #ddd;
+  }
+  .controls .play-btn.playing {
+    background: #ff4444;
+    color: #fff;
+  }
+  .controls .play-btn.playing:hover {
+    background: #cc3333;
+  }
+  .status {
+    color: #666;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .status span {
+    color: #888;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="video-wrapper">
+    <canvas id="canvas" width="800" height="450"></canvas>
+  </div>
+  <div class="controls">
+    <button class="play-btn" id="playBtn">▶ 播放</button>
+    <div class="status">⚡ 抽象模式 <span id="frameCount">0</span>f</div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const playBtn = document.getElementById('playBtn');
+    const frameSpan = document.getElementById('frameCount');
+
+    // 用 data URI 嵌入一张抽象图片（纯色+文字，代表“小王”抽象版）
+    // 为了效果更抽象，用 canvas 生成一个随机抽象图作为素材
+    function generateAbstractImage() {
+      const offscreen = document.createElement('canvas');
+      offscreen.width = 400;
+      offscreen.height = 400;
+      const offCtx = offscreen.getContext('2d');
+      // 黑底
+      offCtx.fillStyle = '#0a0a0a';
+      offCtx.fillRect(0, 0, 400, 400);
+      // 随机色块
+      for (let i = 0; i < 50; i++) {
+        offCtx.fillStyle = `hsl(${Math.random() * 360}, 80%, ${20 + Math.random() * 40}%)`;
+        offCtx.fillRect(Math.random() * 400, Math.random() * 400, Math.random() * 60 + 10, Math.random() * 60 + 10);
+      }
+      // 白色噪点
+      for (let i = 0; i < 300; i++) {
+        offCtx.fillStyle = `rgba(255,255,255,${0.1 + Math.random() * 0.5})`;
+        offCtx.fillRect(Math.random() * 400, Math.random() * 400, 2, 2);
+      }
+      // 文字“抽象”
+      offCtx.fillStyle = '#ffffff';
+      offCtx.font = 'bold 60px Impact, Arial Black, sans-serif';
+      offCtx.textAlign = 'center';
+      offCtx.textBaseline = 'middle';
+      offCtx.fillText('抽', 100, 150);
+      offCtx.fillText('象', 300, 250);
+      return offscreen;
+    }
+
+    const abstractImg = generateAbstractImage();
+
+    let playing = false;
+    let frame = 0;
+    let animId = null;
+
+    // 预置几种“抽象”效果：扭曲、撕裂、闪烁、反转、像素化
+    function drawAbstract(frame) {
+      const w = canvas.width;
+      const h = canvas.height;
+
+      // 清空
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, w, h);
+
+      // 绘制抽象图片，随机位移/缩放/旋转
+      const scale = 0.6 + Math.sin(frame * 0.02) * 0.2;
+      const dx = (Math.sin(frame * 0.007) * 80);
+      const dy = (Math.cos(frame * 0.009) * 60);
+      const rot = Math.sin(frame * 0.01) * 0.1;
+
+      ctx.save();
+      ctx.translate(w/2 + dx, h/2 + dy);
+      ctx.rotate(rot);
+      ctx.scale(scale, scale);
+      ctx.drawImage(abstractImg, -200, -200, 400, 400);
+      ctx.restore();
+
+      // 撕裂效果：随机水平条纹
+      for (let i = 0; i < 5; i++) {
+        const y = Math.random() * h;
+        const height = 2 + Math.random() * 6;
+        ctx.fillStyle = `rgba(255,255,255,${0.1 + Math.random() * 0.3})`;
+        ctx.fillRect(0, y, w, height);
+      }
+
+      // 闪烁：随机白屏闪
+      if (Math.random() < 0.03) {
+        ctx.fillStyle = `rgba(255,255,255,${0.1 + Math.random() * 0.2})`;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // 像素化效果：随机方块
+      for (let i = 0; i < 30; i++) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const size = 4 + Math.random() * 20;
+        ctx.fillStyle = `rgba(255,255,255,${0.05 + Math.random() * 0.15})`;
+        ctx.fillRect(x, y, size, size);
+      }
+
+      // 扫描线
+      for (let i = 0; i < h; i += 4) {
+        ctx.fillStyle = `rgba(0,0,0,${0.1 + Math.sin(i + frame * 0.5) * 0.05})`;
+        ctx.fillRect(0, i, w, 2);
+      }
+
+      // 边缘暗角
+      const gradient = ctx.createRadialGradient(w/2, h/2, w*0.2, w/2, h/2, w*0.8);
+      gradient.addColorStop(0, 'rgba(0,0,0,0)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0.6)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, w, h);
+
+      // 帧数显示
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(`f:${frame}`, w-10, h-10);
+    }
+
+    function loop() {
+      if (!playing) return;
+      frame++;
+      drawAbstract(frame);
+      frameSpan.textContent = frame;
+      animId = requestAnimationFrame(loop);
+    }
+
+    function togglePlay() {
+      if (playing) {
+        playing = false;
+        if (animId) {
+          cancelAnimationFrame(animId);
+          animId = null;
+        }
+        playBtn.textContent = '▶ 播放';
+        playBtn.classList.remove('playing');
+      } else {
+        playing = true;
+        playBtn.textContent = '⏹ 停止';
+        playBtn.classList.add('playing');
+        if (!animId) {
+          loop();
+        }
+      }
+    }
+
+    playBtn.addEventListener('click', togglePlay);
+
+    // 初始绘制一帧
+    drawAbstract(0);
+    frameSpan.textContent = '0';
+
+    // 键盘快捷键：空格切换
+    document.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      }
+    });
+  })();
+</script>
+</body>
+</html>

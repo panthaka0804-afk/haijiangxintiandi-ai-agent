@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>海江A栋 · 室内导航</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,SF Pro,sans-serif;background:#F2EFE9;overflow:hidden;height:100vh}
+#topbar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(0,0,0,.08)}
+#topbar h1{font-size:18px;font-weight:700;color:#333}
+#floorBtns{display:flex;gap:6px;margin-left:auto}
+#floorBtns button{border:none;padding:6px 16px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;background:rgba(0,0,0,.05);color:#666}
+#floorBtns button.active{background:#E65100;color:#fff}
+#searchBar{padding:12px 16px;position:fixed;top:56px;left:0;right:0;z-index:99;background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+#searchBar input{width:100%;padding:10px 16px;border:1px solid #ddd;border-radius:24px;font-size:15px;outline:none;background:#fff}
+#searchBar input:focus{border-color:#E65100;box-shadow:0 0 0 3px rgba(230,81,0,.1)}
+#searchResults{display:none;position:absolute;top:48px;left:16px;right:16px;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);max-height:200px;overflow-y:auto}
+#searchResults .sr-item{padding:10px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:14px}
+#searchResults .sr-item:last-child{border-bottom:none}
+#searchResults .sr-item:hover{background:#FFF3E0}
+#mapArea{margin-top:112px;height:calc(100vh - 112px);overflow:auto;-webkit-overflow-scrolling:touch;position:relative}
+#mapArea svg{display:block}
+.room-label{cursor:pointer;transition:opacity .2s}
+.room-label:hover{opacity:.8}
+.room-highlight{animation:pulse .8s ease-in-out 3}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+#navLine{stroke:#E65100;stroke-width:3;fill:none;stroke-dasharray:8 4;animation:dash .8s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-24}}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 24px;border-radius:20px;font-size:14px;z-index:200;opacity:0;transition:opacity .3s}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <h1>海江A栋 · 室内导航</h1>
+  <div id="floorBtns"></div>
+</div>
+<div id="searchBar">
+  <input type="text" id="navSearch" placeholder="搜索店铺/设施/教室..." autocomplete="off">
+  <div id="searchResults"></div>
+</div>
+<div id="mapArea"></div>
+<div id="toast"></div>
+
+<script>
+let currentFloor = '1F';
+let floorRooms = null;
+let navLine = null;
+
+async function init() {
+  let r = await fetch('/api/nav/floors');
+  let floors = await r.json();
+  let btns = document.getElementById('floorBtns');
+  floors.forEach(f => {
+    let b = document.createElement('button');
+    b.textContent = f;
+    b.className = f === currentFloor ? 'active' : '';
+    b.onclick = () => { currentFloor = f; renderMap(); updateBtns(); };
+    btns.appendChild(b);
+  });
+  // Load room data
+  let r2 = await fetch('/static/floor_data.json');
+  floorRooms = await r2.json();
+  renderMap();
+  // Search
+  let inp = document.getElementById('navSearch');
+  inp.addEventListener('input', onSearch);
+  inp.addEventListener('focus', onSearch);
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#searchBar')) document.getElementById('searchResults').style.display = 'none';
+  });
+}
+
+function updateBtns() {
+  document.querySelectorAll('#floorBtns button').forEach(b => {
+    b.className = b.textContent === currentFloor ? 'active' : '';
+  });
+}
+
+function renderMap() {
+  let rooms = floorRooms[currentFloor];
+  let svg = `<svg viewBox="0 0 2384 1684" style="width:100%;height:auto">
+<defs><filter id="sh"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.12"/></filter></defs>
+<rect width="2384" height="1684" fill="#F2EFE9"/>
+<text x="20" y="40" font-size="22" font-weight="700" fill="#333">海江A栋 ${currentFloor}</text>`;
+  // Corridor grid
+  svg += `
+<rect x="120" y="150" width="2120" height="10" rx="5" fill="#E0E0E0" opacity="0.5"/>
+<rect x="120" y="855" width="2120" height="10" rx="5" fill="#E0E0E0" opacity="0.5"/>
+<rect x="395" y="150" width="10" height="715" rx="5" fill="#E0E0E0" opacity="0.5"/>
+<rect x="810" y="150" width="10" height="715" rx="5" fill="#E0E0E0" opacity="0.5"/>`;
+
+  rooms.forEach((r,i) => {
+    let cx = r.x + r.w/2, cy = r.y + r.h/2;
+    let fs = r.name.length > 6 ? 11 : 13;
+    svg += `<g class="room-label" data-name="${r.name}" data-idx="${i}">
+<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="8" fill="${r.color}" fill-opacity="0.12" stroke="${r.color}" stroke-width="1.5" filter="url(#sh)"/>
+<text id="r${i}" x="${cx}" y="${cy-4}" text-anchor="middle" font-size="${fs}" font-weight="600" fill="#333">${r.name}</text>
+</g>`;
+  });
+
+  if (navLine) svg += navLine;
+  svg += '</svg>';
+  document.getElementById('mapArea').innerHTML = svg;
+
+  // Click handlers
+  document.querySelectorAll('.room-label').forEach(g => {
+    g.addEventListener('click', function() {
+      let name = this.dataset.name;
+      toast('已选中：' + name + ' | 请在聊天中发送"导航到' + name + '"获取路线');
+    });
+  });
+}
+
+async function onSearch() {
+  let q = document.getElementById('navSearch').value.trim();
+  let res = document.getElementById('searchResults');
+  if (!q) { res.style.display = 'none'; return; }
+  let r = await fetch('/api/nav/search?q=' + encodeURIComponent(q));
+  let items = await r.json();
+  if (!items.length) { res.style.display = 'none'; return; }
+  res.innerHTML = items.map(i => 
+    `<div class="sr-item" onclick="selectDest('${i.floor}','${i.name.replace(/'/g,"\\'")}',${i.x},${i.y})">${i.name} · ${i.floor}</div>`
+  ).join('');
+  res.style.display = 'block';
+}
+
+function selectDest(floor, name, x, y) {
+  document.getElementById('navSearch').value = name;
+  document.getElementById('searchResults').style.display = 'none';
+  if (floor !== currentFloor) { currentFloor = floor; renderMap(); updateBtns(); }
+  // Highlight
+  setTimeout(() => {
+    let els = document.querySelectorAll('.room-label');
+    els.forEach(el => { if (el.dataset.name === name) el.querySelector('rect').classList.add('room-highlight'); });
+  }, 200);
+  toast('目标：' + name + ' (' + floor + ')');
+}
+
+function toast(msg) {
+  let t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+init();
+</script>
+</body>
+</html>

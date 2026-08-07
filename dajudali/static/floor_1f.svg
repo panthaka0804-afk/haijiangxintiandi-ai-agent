@@ -1,0 +1,61 @@
+<svg viewBox="0 0 2384 1684" style="width:100%;height:auto;font-family:-apple-system,SF Pro,sans-serif">
+<defs>
+  <filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.15"/></filter>
+  <filter id="shadow2"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.2"/></filter>
+</defs>
+<rect width="2384" height="1684" fill="#F2EFE9"/>
+<!-- Floor label -->
+<text x="20" y="40" font-size="24" font-weight="700" fill="#333">1F</text>
+<rect x="120" y="245" width="200" height="140" rx="8" fill="#2D5A27" fill-opacity="0.12" stroke="#2D5A27" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="220.0" y="307.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">星巴克</text>
+<rect x="120" y="400" width="200" height="140" rx="8" fill="#B8860B" fill-opacity="0.12" stroke="#B8860B" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="220.0" y="462.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">金饰珠宝</text>
+<rect x="120" y="555" width="200" height="140" rx="8" fill="#8B4513" fill-opacity="0.12" stroke="#8B4513" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="220.0" y="617.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">轻奢服饰</text>
+<rect x="120" y="720" width="200" height="70" rx="8" fill="#6B8E9B" fill-opacity="0.12" stroke="#6B8E9B" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="220.0" y="747.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">卫生间</text>
+<rect x="350" y="520" width="200" height="220" rx="8" fill="#E65100" fill-opacity="0.12" stroke="#E65100" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="450.0" y="622.0" text-anchor="middle" font-size="10" font-weight="600" fill="#333">B1美食广场</text>
+<text x="450.0" y="640.0" text-anchor="middle" font-size="10" fill="#666">(下沉入口)</text>
+<rect x="580" y="350" width="220" height="390" rx="8" fill="#F5F0E8" fill-opacity="0.12" stroke="#F5F0E8" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="690.0" y="537.0" text-anchor="middle" font-size="10" font-weight="600" fill="#333">中央大厅</text>
+<text x="690.0" y="555.0" text-anchor="middle" font-size="10" fill="#666">服务台</text>
+<rect x="840" y="245" width="200" height="140" rx="8" fill="#C62828" fill-opacity="0.12" stroke="#C62828" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="940.0" y="307.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">蜀大侠火锅</text>
+<rect x="1070" y="245" width="200" height="140" rx="8" fill="#FF8F00" fill-opacity="0.12" stroke="#FF8F00" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1170.0" y="307.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">棒约翰披萨</text>
+<rect x="1300" y="245" width="220" height="140" rx="8" fill="#4DB6AC" fill-opacity="0.12" stroke="#4DB6AC" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1410.0" y="307.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">亲子儿童乐园</text>
+<rect x="840" y="400" width="200" height="140" rx="8" fill="#5D4037" fill-opacity="0.12" stroke="#5D4037" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="940.0" y="462.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">零售精品</text>
+<rect x="1070" y="400" width="200" height="140" rx="8" fill="#37474F" fill-opacity="0.12" stroke="#37474F" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1170.0" y="462.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">数码电子</text>
+<rect x="1300" y="400" width="220" height="140" rx="8" fill="#795548" fill-opacity="0.12" stroke="#795548" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1410.0" y="462.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">书吧文创</text>
+<rect x="1550" y="245" width="200" height="140" rx="8" fill="#00838F" fill-opacity="0.12" stroke="#00838F" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1650.0" y="307.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">健身房</text>
+<rect x="1550" y="400" width="200" height="140" rx="8" fill="#00695C" fill-opacity="0.12" stroke="#00695C" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1650.0" y="462.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">瑜伽舞蹈</text>
+<rect x="580" y="760" width="200" height="100" rx="8" fill="#E91E63" fill-opacity="0.12" stroke="#E91E63" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="680.0" y="802.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">母婴室</text>
+<rect x="840" y="555" width="430" height="305" rx="8" fill="#A5D6A7" fill-opacity="0.12" stroke="#A5D6A7" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1055.0" y="699.5" text-anchor="middle" font-size="12" font-weight="600" fill="#333">中央庭院</text>
+<rect x="840" y="880" width="200" height="100" rx="8" fill="#26A69A" fill-opacity="0.12" stroke="#26A69A" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="940.0" y="922.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">充电桩</text>
+<rect x="1070" y="880" width="200" height="100" rx="8" fill="#78909C" fill-opacity="0.12" stroke="#78909C" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1170.0" y="922.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">无障碍通道</text>
+<rect x="1300" y="560" width="470" height="420" rx="8" fill="#90A4AE" fill-opacity="0.12" stroke="#90A4AE" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1535.0" y="762.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">停车场入口</text>
+<rect x="365" y="280" width="30" height="30" rx="8" fill="#455A64" fill-opacity="0.12" stroke="#455A64" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="380.0" y="287.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">电梯</text>
+<rect x="830" y="775" width="30" height="30" rx="8" fill="#455A64" fill-opacity="0.12" stroke="#455A64" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="845.0" y="782.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">电梯</text>
+<rect x="1520" y="280" width="30" height="30" rx="8" fill="#455A64" fill-opacity="0.12" stroke="#455A64" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1535.0" y="287.0" text-anchor="middle" font-size="12" font-weight="600" fill="#333">电梯</text>
+
+<!-- Corridors -->
+<rect x="120" y="150" width="2120" height="12" rx="6" fill="#E0E0E0" opacity="0.6"/>
+<rect x="120" y="855" width="2120" height="12" rx="6" fill="#E0E0E0" opacity="0.6"/>
+<rect x="395" y="150" width="12" height="717" rx="6" fill="#E0E0E0" opacity="0.6"/>
+<rect x="810" y="150" width="12" height="717" rx="6" fill="#E0E0E0" opacity="0.6"/>
+</svg>

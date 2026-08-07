@@ -1,0 +1,179 @@
+/* ================================================================
+   海江新天地 — 黑橙亮色暗黑主题
+   品牌色: #FF7B2C (暖橙)
+   ================================================================ */
+
+:root {
+  /* 暗黑主题色 */
+  --neu-bg: #1A1A1A;
+  --neu-card: #222222;
+  --neu-shadow-raise: 0 2px 8px rgba(0,0,0,0.3);
+  --neu-shadow-inset: inset 0 2px 4px rgba(0,0,0,0.3);
+  --neu-shadow-sm: 0 2px 4px rgba(0,0,0,0.25);
+  --neu-shadow-xs: 0 1px 3px rgba(0,0,0,0.2);
+
+  /* 品牌色系 (保留大橘邻里的橙色基因) */
+  --orange-50: #3A2A1A;
+  --orange-100: #4A3020;
+  --orange-200: #5A3828;
+  --orange-300: #6A4030;
+  --orange-400: #8A5040;
+  --orange-500: #FF7B2C;
+  --orange-600: #E86A1F;
+  --orange-700: #C15818;
+  --orange-800: #9A4612;
+  --orange-900: #73340D;
+
+  /* 文字色 */
+  --text-primary: #F0F0F0;
+  --text-secondary: #999999;
+  --text-hint: #666666;
+
+  /* 圆角 */
+  --radius-neu: 16px;
+  --radius-neu-sm: 12px;
+  --radius-neu-lg: 20px;
+  --radius-neu-pill: 999px;
+
+  /* 字体 */
+  --font-ios: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', sans-serif;
+  --font-mono: 'SF Mono', 'Menlo', 'Consolas', monospace;
+
+  /* 间距系统 */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+
+  font-family: var(--font-ios);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-primary);
+  background: var(--neu-bg);
+}
+
+body {
+  margin: 0;
+  background: var(--neu-bg);
+  color: var(--text-primary);
+}
+
+html {
+  background: var(--neu-bg);
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+html, body {
+  overscroll-behavior-y: none;
+}
+
+#app {
+  max-width: 100%;
+  margin: 0 auto;
+  min-height: 100svh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--neu-bg);
+}
+
+/* ========== Vant 暗黑覆盖 ========== */
+:root {
+  --van-primary-color: #FF7B2C;
+  --van-nav-bar-background: #1A1A1A;
+  --van-nav-bar-title-text-color: #F0F0F0;
+  --van-nav-bar-icon-color: #FF7B2C;
+  --van-button-primary-background: #FF7B2C;
+  --van-button-primary-border-color: #FF7B2C;
+  --van-overlay-background: rgba(0,0,0,0.6);
+  --van-toast-background: rgba(255,255,255,0.15);
+  --van-field-label-color: #999999;
+  --van-cell-active-color: #2A2A2A;
+  --van-cell-background: #222222;
+  --van-cell-line-height: 22px;
+  --van-cell-font-size: 17px;
+  --van-cell-text-color: #F0F0F0;
+  --van-tabbar-background: #1A1A1A;
+  --van-tabbar-item-text-color: #777777;
+  --van-tabbar-item-active-color: #FF7B2C;
+  --van-tabs-nav-background: #222222;
+  --van-tab-font-size: 15px;
+  --van-tab-active-text-color: #FF7B2C;
+  --van-tab-text-color: #777777;
+  --van-popup-background: #222222;
+  --van-popup-round-radius: 16px;
+}
+
+/* 滚动条 — 暗黑风格 */
+::-webkit-scrollbar {
+  width: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 3px;
+}
+
+/* ========== 暗黑工具类 ========== */
+.neu-card {
+  background: var(--neu-card);
+  border-radius: var(--radius-neu);
+  box-shadow: var(--neu-shadow-raise);
+}
+
+.neu-inset {
+  background: var(--neu-card);
+  border-radius: var(--radius-neu);
+  box-shadow: var(--neu-shadow-inset);
+}
+
+.neu-btn {
+  background: var(--neu-bg);
+  box-shadow: var(--neu-shadow-raise);
+  border-radius: var(--radius-neu);
+  border: none;
+  transition: box-shadow 0.15s, transform 0.15s;
+  cursor: pointer;
+}
+.neu-btn:active {
+  box-shadow: var(--neu-shadow-inset);
+  transform: scale(0.97);
+}
+
+.neu-input {
+  background: var(--neu-bg);
+  border-radius: var(--radius-neu);
+  box-shadow: var(--neu-shadow-inset);
+  border: none;
+  padding: 10px 16px;
+  font-size: 16px;
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+  transition: box-shadow 0.2s;
+}
+.neu-input:focus {
+  box-shadow: inset 0 3px 8px rgba(0,0,0,0.4), inset 0 -3px 8px rgba(0,0,0,0.4);
+}
+
+/* 全局字体 — 覆盖 Element Plus 等第三方组件 */
+.el-menu-item,
+.el-menu-item *,
+.el-breadcrumb,
+.el-breadcrumb *,
+.el-button,
+.el-button *,
+.el-header,
+.el-main,
+.el-aside,
+.el-container,
+.admin-layout,
+.admin-layout * {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', sans-serif !important;
+}

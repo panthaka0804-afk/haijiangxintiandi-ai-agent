@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>海江新天地 · 管理后台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#2C2C2C;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:#fff;border-radius:20px;padding:36px 28px;width:380px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,0.3)}
+.logo{text-align:center;margin-bottom:24px}
+.logo .icon{font-size:40px}
+.logo h1{font-size:22px;color:#FF7B2C;margin:6px 0}
+.logo p{color:#999;font-size:12px}
+.logo .badge{display:inline-block;background:#FF7B2C;color:#fff;font-size:11px;padding:2px 10px;border-radius:10px;margin-top:4px}
+.fg{margin-bottom:18px}
+.fg label{display:block;font-weight:600;font-size:13px;color:#555;margin-bottom:6px}
+.fg input{width:100%;padding:12px 14px;border:2px solid #eee;border-radius:12px;font-size:15px;transition:border-color .2s}
+.fg input:focus{outline:none;border-color:#FF7B2C}
+.btn{width:100%;padding:14px;background:#FF7B2C;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:transform .1s}
+.btn:active{transform:scale(0.98)}
+.error{background:#FFF0F0;color:#D32F2F;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:16px;display:none}
+.hint{text-align:center;margin-top:16px;font-size:12px;color:#aaa}
+.hint span{background:#FFF5EC;color:#FF7B2C;padding:2px 8px;border-radius:4px;font-weight:600}
+.back{text-align:center;margin-top:12px}
+.back a{font-size:12px;color:#999;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="logo">
+<div class="icon">🏙️</div>
+<h1>海江新天地</h1>
+<p>商户管理平台</p>
+<div class="badge">仅限授权人员访问</div>
+</div>
+<div class="error" id="err"></div>
+<div class="fg"><label>用户名</label><input id="uname" placeholder="请输入用户名" autofocus></div>
+<div class="fg"><label>密码</label><input id="upw" type="password" placeholder="请输入密码"></div>
+<button class="btn" onclick="login()">登 录</button>
+<div class="hint">管理员账号登录</div>
+<div class="back"><a href="/">← 返回用户聊天页</a></div>
+</div>
+<script>
+document.getElementById('upw').addEventListener('keydown',function(e){if(e.key==='Enter')login()});
+function login(){
+var u=document.getElementById('uname').value.trim(),p=document.getElementById('upw').value.trim();
+if(!u||!p)return;
+fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p,admin:1})})
+.then(function(r){return r.json()})
+.then(function(j){
+if(j.ok){location.href='/admin'}
+else{document.getElementById('err').textContent=j.error;document.getElementById('err').style.display='block'}
+}).catch(function(){document.getElementById('err').textContent='网络错误';document.getElementById('err').style.display='block'})
+}
+</script>
+</body>
+</html>
