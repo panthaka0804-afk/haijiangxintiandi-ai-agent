@@ -357,6 +357,7 @@ def api_login():
     session['tenant_id'] = user['tenant_id']
     session['role'] = user['role']
     session['display_name'] = user['display_name']
+    session['phone'] = user['phone'] if user['phone'] else ''
     return jsonify(ok=True, user=dict(user))
 
 @app.route('/logout', methods=['POST'])
@@ -367,11 +368,30 @@ def api_logout():
 @app.route('/api/session')
 def api_session():
     if session.get('user_id'):
+        uid = session['user_id']
+        # 如果 session 缺 phone/headimgurl，从数据库补
+        phone = session.get('phone','')
+        headimgurl = session.get('headimgurl','')
+        if not phone or not headimgurl:
+            conn = get_db()
+            row = conn.execute('SELECT phone, headimgurl, display_name, points, membership_level FROM users WHERE id=?', (uid,)).fetchone()
+            conn.close()
+            if row:
+                if not phone:
+                    phone = row['phone'] or ''
+                    session['phone'] = phone
+                if not headimgurl:
+                    headimgurl = row['headimgurl'] or ''
+                    session['headimgurl'] = headimgurl
+                if not session.get('display_name'):
+                    session['display_name'] = row['display_name']
         return jsonify(ok=True, user={
-            'id': session['user_id'],
+            'id': uid,
             'tenant_id': session['tenant_id'],
             'role': session.get('role'),
-            'display_name': session.get('display_name')
+            'display_name': session.get('display_name'),
+            'phone': phone,
+            'headimgurl': headimgurl
         })
     return jsonify(ok=False)
 
@@ -1695,6 +1715,12 @@ def api_wx_auth():
         user = conn.execute('SELECT * FROM users WHERE wx_openid=?', (openid,)).fetchone()
         if user:
             conn.close()
+            session['user_id'] = user['id']
+            session['tenant_id'] = user['tenant_id']
+            session['role'] = user['role']
+            session['display_name'] = user['display_name']
+            session['phone'] = user['phone'] or ''
+            session['headimgurl'] = headimgurl or user['headimgurl'] or ''
             return jsonify(ok=True, user={
                 'id': user['id'],
                 'display_name': user['display_name'],
@@ -1716,6 +1742,12 @@ def api_wx_auth():
         conn.commit()
         uid = conn.execute('SELECT id FROM users WHERE wx_openid=?', (openid,)).fetchone()[0]
         conn.close()
+        session['user_id'] = uid
+        session['tenant_id'] = 1
+        session['role'] = 'user'
+        session['display_name'] = display_name
+        session['phone'] = ''
+        session['headimgurl'] = headimgurl
         return jsonify(ok=True, user={
             'id': uid,
             'display_name': display_name,
@@ -1727,6 +1759,27 @@ def api_wx_auth():
         })
     except Exception as e:
         print(f'[WX Auth] error: {e}')
+        return jsonify(ok=False, error=str(e))
+
+# ============ 会员二维码 ============
+@app.route('/api/member/qrcode', methods=['GET'])
+def api_member_qrcode():
+    if not session.get('user_id'):
+        return jsonify(ok=False, error='请先登录')
+    try:
+        import qrcode, io, base64
+        from PIL import Image
+        uid = session['user_id']
+        qr_data = f'HJXTD://member/{uid}'
+        qr = qrcode.QRCode(box_size=10, border=2, error_correction=qrcode.constants.ERROR_CORRECT_M)
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='#FF7B2C', back_color='#1C1C1E').convert('RGB').resize((280, 280))
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        b64 = base64.b64encode(buf.getvalue()).decode()
+        return jsonify(ok=True, qr='data:image/png;base64,' + b64)
+    except Exception as e:
         return jsonify(ok=False, error=str(e))
 
 # ============ 通用语音识别（接收音频文件） ============

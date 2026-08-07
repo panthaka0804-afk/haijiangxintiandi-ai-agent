@@ -44,19 +44,13 @@
 
       <div v-else class="member-logged">
         <div class="mc-arc-header">
-          <svg class="mc-arc-bg" viewBox="0 0 375 100" preserveAspectRatio="none">
-            <path d="M0,0 L0,80 Q187.5,0 375,80 L375,0 Z" fill="#1E1A1A"/>
-          </svg>
           <button class="mc-qr-btn" @click="openQrCode">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="1.5">
-              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-              <rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v3M14 21h3M21 21v-3"/>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M21 14v3a1 1 0 01-1 1h-3M14 21h3a1 1 0 001-1v-3"/></svg>
           </button>
           <div class="mc-arc-info">
             <div class="mc-avatar-sm" @click="triggerUpload">
               <img v-if="avatarUrl" :src="avatarUrl" alt="" />
-              <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0112 0v1"/></svg>
+              <span v-else class="mc-avatar-initial">{{ (displayName || '?')[0] }}</span>
               <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="onAvatarFile" />
             </div>
             <div class="mc-arc-detail">
@@ -71,9 +65,11 @@
           <span class="mc-progress-text">{{ upgradeHint }}</span>
         </div>
         <div class="mc-actions">
+          <button class="mc-btn mc-btn-outline" @click="openQrCode">会员码</button>
           <button class="mc-btn mc-btn-outline" @click="emit('switchTab', 'offers')">我的优惠券</button>
           <button class="mc-btn" @click="emit('switchTab', 'profile')">会员中心</button>
         </div>
+        <div class="mc-logout" @click="doLogout">退出登录</div>
       </div>
     </div>
 
@@ -225,7 +221,7 @@ onMounted(async () => {
       if (res.user.phone) {
         try {
           const minfo = await http.post('/api/member/lookup', { phone: res.user.phone })
-          if (minfo.ok && minfo.data) { memberInfo.value = minfo.data }
+          if (minfo.ok && minfo.member) { memberInfo.value = minfo.member }
         } catch {}
       }
     }
@@ -239,11 +235,11 @@ async function handleLogin() {
   const p = phone.value.trim()
   try {
     const lookup = await http.post('/api/member/lookup', { phone: p })
-    if (lookup.ok && lookup.data) {
+    if (lookup.ok && lookup.member) {
       const res = await http.post('/login', { username: 'm' + p, password: 'member' + p })
       if (res.ok && res.user) {
         loggedIn.value = true
-        memberInfo.value = lookup.data
+        memberInfo.value = lookup.member
         displayName.value = res.user.display_name || '会员'
       } else {
         alert(res.error || '登录失败')
@@ -278,7 +274,7 @@ async function openQrCode() {
   showQr.value = true
   try {
     const res = await http.get('/api/member/qrcode')
-    if (res.ok && res.qrcode) { qrSrc.value = res.qrcode }
+    if (res.ok && res.qr) { qrSrc.value = res.qr }
   } catch {}
 }
 
@@ -291,6 +287,15 @@ function editName() {
 }
 
 function triggerUpload() { avatarInput.value && avatarInput.value.click() }
+
+async function doLogout() {
+  await http.post('/logout')
+  loggedIn.value = false
+  memberInfo.value = null
+  displayName.value = ''
+  avatarUrl.value = ''
+  phone.value = ''
+}
 function onAvatarFile(e) {
   const file = e.target.files && e.target.files[0]
   if (!file) return
@@ -353,17 +358,20 @@ function go(route) {
 .mc-link { color: #FF7B2C; }
 
 .member-logged { padding: 0; }
-.mc-arc-header { position: relative; margin: -24px -20px 0; padding: 16px 20px 50px; overflow: hidden; }
-.mc-arc-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-.mc-qr-btn { position: absolute; top: 16px; right: 20px; width: 36px; height: 36px; border-radius: 10px; background: rgba(255,123,44,0.1); border: 1px solid rgba(255,123,44,0.2); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; }
+.mc-arc-header { position: relative; margin: -24px -20px 0; padding: 20px 20px 50px; overflow: visible; min-height: 120px; border-radius: 20px 20px 0 0; }
+.mc-arc-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; opacity: 0.3; }
+.mc-qr-btn { position: relative; margin-left: auto; z-index: 5; min-width: 32px; height: 32px; border-radius: 8px; background: rgba(255,123,44,0.2); border: 1px solid rgba(255,123,44,0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .mc-qr-btn:active { opacity: 0.7; }
-.mc-arc-info { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+.mc-arc-info { display: flex; align-items: center; gap: 12px; position: relative; z-index: 3; }
 .mc-avatar-sm { width: 48px; height: 48px; border-radius: 50%; background: #2A2A2E; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; cursor: pointer; border: 2px solid rgba(255,123,44,0.3); }
 .mc-avatar-sm img { width: 100%; height: 100%; object-fit: cover; }
+.mc-avatar-initial { font-size: 20px; font-weight: 700; color: #FF7B2C; }
+.mc-logout { text-align: center; padding: 12px; margin-top: 12px; font-size: 13px; color: #666; cursor: pointer; border-top: 1px solid rgba(255,255,255,0.06); }
+.mc-logout:active { color: #FF7B2C; }
 .mc-edit-pen { flex-shrink: 0; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; }
 .mc-edit-pen:active { opacity: 1; }
 .mc-arc-detail { flex: 1; }
-.mc-arc-level { position: absolute; bottom: 12px; right: 20px; background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 14px; border-radius: 10px; z-index: 1; letter-spacing: 1px; }
+.mc-arc-level { position: absolute; bottom: 12px; right: 20px; background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 14px; border-radius: 10px; z-index: 4; letter-spacing: 1px; }
 .mc-arc-progress-bar { margin-top: -24px; margin-bottom: 14px; position: relative; z-index: 1; }
 .mc-progress-bar { height: 6px; background: #2A2A2E; border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
 .mc-progress-fill { height: 100%; background: linear-gradient(90deg, #FF7B2C, #FF9500); border-radius: 3px; transition: width 0.4s ease; }
