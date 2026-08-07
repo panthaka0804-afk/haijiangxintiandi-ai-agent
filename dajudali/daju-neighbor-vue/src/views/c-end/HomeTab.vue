@@ -119,6 +119,17 @@
     <div class="biz-modules">
       <div class="biz-hero" @click="go('/activities')">
         <div class="biz-hero-bg"></div>
+        <svg class="biz-hero-illus" viewBox="0 0 200 120" fill="none" preserveAspectRatio="xMaxYMid slice">
+          <circle cx="160" cy="30" r="50" fill="rgba(255,255,255,0.06)"/>
+          <circle cx="180" cy="80" r="30" fill="rgba(255,255,255,0.04)"/>
+          <rect x="130" y="45" width="50" height="55" rx="4" fill="rgba(255,255,255,0.12)"/>
+          <rect x="110" y="55" width="35" height="35" rx="3" fill="rgba(255,255,255,0.08)"/>
+          <rect x="70" y="70" width="30" height="25" rx="2" fill="rgba(255,255,255,0.06)"/>
+          <circle cx="150" cy="20" r="8" fill="rgba(255,255,255,0.15)"/>
+          <circle cx="175" cy="15" r="5" fill="rgba(255,255,255,0.1)"/>
+          <circle cx="100" cy="30" r="4" fill="rgba(255,255,255,0.08)"/>
+          <circle cx="115" cy="18" r="6" fill="rgba(255,255,255,0.1)"/>
+        </svg>
         <div class="biz-hero-content">
           <div class="biz-hero-title">社区聚乐部</div>
           <div class="biz-hero-desc">活动报名 · 邻里社群 · 精彩生活</div>
@@ -127,11 +138,15 @@
       </div>
       <div class="biz-grid">
         <div class="biz-card" v-for="m in bizModules" :key="m.label" @click="go(m.route)">
-          <div class="biz-card-icon" :style="{background: m.grad}">
-            <svg v-html="m.icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></svg>
+          <div class="biz-card-bg" :style="{background: m.grad}"></div>
+          <svg class="biz-card-illus" v-html="m.illus" viewBox="0 0 120 100" fill="none" preserveAspectRatio="xMaxYMid slice"></svg>
+          <div class="biz-card-content">
+            <div class="biz-card-icon-sm">
+              <svg v-html="m.icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+            </div>
+            <div class="biz-card-title">{{ m.label }}</div>
+            <div class="biz-card-desc">{{ m.desc }}</div>
           </div>
-          <div class="biz-card-title">{{ m.label }}</div>
-          <div class="biz-card-desc">{{ m.desc }}</div>
         </div>
       </div>
     </div>
@@ -329,29 +344,33 @@ const bizModules = [
     label: '美食天地',
     desc: 'B1美食广场',
     route: '/shops',
-    grad: 'linear-gradient(135deg, #E85D04, #FF7B2C)',
-    icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>'
+    grad: 'linear-gradient(135deg, #E85D04 0%, #FF7B2C 60%, #FFB347 100%)',
+    icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+    illus: '<circle cx="90" cy="30" r="28" fill="rgba(255,255,255,0.08)"/><circle cx="100" cy="70" r="14" fill="rgba(255,255,255,0.06)"/><rect x="75" y="40" width="30" height="45" rx="6" fill="rgba(255,255,255,0.12)"/><rect x="50" y="55" width="18" height="20" rx="3" fill="rgba(255,255,255,0.08)"/><circle cx="85" cy="52" r="5" fill="rgba(255,255,255,0.15)"/><circle cx="95" cy="48" r="3" fill="rgba(255,255,255,0.1)"/>'
   },
   {
     label: '亲子乐园',
     desc: '3F儿童游乐',
     route: '/shops?floor=3',
-    grad: 'linear-gradient(135deg, #7C3AED, #A78BFA)',
-    icon: '<circle cx="12" cy="10" r="3"/><path d="M8 17l1.5-4h5L16 17"/><circle cx="12" cy="8" r="4"/><path d="M8 21v-1a6 6 0 0112 0v1"/>'
+    grad: 'linear-gradient(135deg, #7C3AED 0%, #8B5CF6 60%, #C4B5FD 100%)',
+    icon: '<circle cx="12" cy="8" r="4"/><path d="M8 21v-1a6 6 0 0112 0v1"/>',
+    illus: '<circle cx="85" cy="25" r="22" fill="rgba(255,255,255,0.08)"/><circle cx="100" cy="65" r="18" fill="rgba(255,255,255,0.05)"/><rect x="70" y="35" width="35" height="40" rx="8" fill="rgba(255,255,255,0.1)"/><circle cx="82" cy="50" r="6" fill="rgba(255,255,255,0.15)"/><circle cx="92" cy="46" r="4" fill="rgba(255,255,255,0.1)"/><circle cx="78" cy="60" r="3" fill="rgba(255,255,255,0.08)"/><circle cx="88" cy="58" r="3" fill="rgba(255,255,255,0.08)"/>'
   },
   {
     label: '生活服务',
     desc: '洗衣美甲维修',
     route: '/shops?floor=2',
-    grad: 'linear-gradient(135deg, #059669, #34D399)',
-    icon: '<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>'
+    grad: 'linear-gradient(135deg, #059669 0%, #10B981 60%, #6EE7B7 100%)',
+    icon: '<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>',
+    illus: '<circle cx="90" cy="30" r="20" fill="rgba(255,255,255,0.08)"/><circle cx="100" cy="70" r="12" fill="rgba(255,255,255,0.05)"/><rect x="72" y="38" width="28" height="35" rx="5" fill="rgba(255,255,255,0.1)"/><rect x="55" y="48" width="12" height="18" rx="2" fill="rgba(255,255,255,0.08)"/><circle cx="80" cy="48" r="3" fill="rgba(255,255,255,0.12)"/><circle cx="90" cy="52" r="2" fill="rgba(255,255,255,0.1)"/>'
   },
   {
     label: '停车缴费',
     desc: '在线缴费出场',
     route: '#',
-    grad: 'linear-gradient(135deg, #2563EB, #60A5FA)',
-    icon: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2"/><circle cx="16" cy="15" r="1.5"/><circle cx="8" cy="15" r="1.5"/>'
+    grad: 'linear-gradient(135deg, #2563EB 0%, #3B82F6 60%, #93C5FD 100%)',
+    icon: '<rect x="3" y="10" width="18" height="10" rx="2"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M6 10V6a2 2 0 012-2h8a2 2 0 012 2v4"/>',
+    illus: '<circle cx="85" cy="25" r="24" fill="rgba(255,255,255,0.07)"/><circle cx="100" cy="65" r="15" fill="rgba(255,255,255,0.04)"/><rect x="60" y="40" width="45" height="25" rx="6" fill="rgba(255,255,255,0.1)"/><rect x="68" y="48" width="10" height="8" rx="2" fill="rgba(255,255,255,0.12)"/><rect x="82" y="48" width="10" height="8" rx="2" fill="rgba(255,255,255,0.12)"/><circle cx="70" cy="60" r="3" fill="rgba(255,255,255,0.15)"/><circle cx="92" cy="60" r="3" fill="rgba(255,255,255,0.15)"/>'
   }
 ]
 
@@ -469,19 +488,21 @@ function go(route) {
 
 /* ── 业务版块 ── */
 .biz-modules { padding: 0 16px; margin-top: 16px; }
-.biz-hero { position: relative; border-radius: 16px; overflow: hidden; height: 180px; cursor: pointer; margin-bottom: 10px; }
-.biz-hero:active { opacity: 0.9; }
-.biz-hero-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #FF7B2C 0%, #E85D04 40%, #FFB347 100%); }
-.biz-hero-bg::after { content: ''; position: absolute; top: -40px; right: -30px; width: 160px; height: 160px; border-radius: 50%; background: rgba(255,255,255,0.08); }
-.biz-hero-bg::before { content: ''; position: absolute; bottom: -50px; left: -20px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.05); }
-.biz-hero-content { position: relative; z-index: 1; padding: 24px; display: flex; flex-direction: column; height: 100%; }
-.biz-hero-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 6px; letter-spacing: 1px; }
-.biz-hero-desc { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: auto; }
-.biz-hero-btn { display: inline-block; margin-top: 12px; padding: 6px 20px; background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4); border-radius: 20px; font-size: 13px; font-weight: 600; color: #fff; align-self: flex-start; }
+.biz-hero { position: relative; border-radius: 16px; overflow: hidden; height: 170px; cursor: pointer; margin-bottom: 10px; }
+.biz-hero:active { opacity: 0.95; transform: scale(0.98); }
+.biz-hero-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #FF7B2C 0%, #E85D04 50%, #FF8C42 100%); }
+.biz-hero-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; }
+.biz-hero-content { position: relative; z-index: 2; padding: 24px; display: flex; flex-direction: column; height: 100%; max-width: 60%; }
+.biz-hero-title { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 6px; letter-spacing: 0.5px; }
+.biz-hero-desc { font-size: 12px; color: rgba(255,255,255,0.8); margin-bottom: auto; }
+.biz-hero-btn { display: inline-block; margin-top: 8px; padding: 5px 18px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35); border-radius: 20px; font-size: 12px; font-weight: 600; color: #fff; align-self: flex-start; }
 .biz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.biz-card { background: #252525; border-radius: 14px; padding: 18px 16px; cursor: pointer; transition: transform 0.15s; }
+.biz-card { position: relative; border-radius: 14px; overflow: hidden; height: 150px; cursor: pointer; transition: transform 0.15s; }
 .biz-card:active { transform: scale(0.97); }
-.biz-card-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
-.biz-card-title { font-size: 16px; font-weight: 700; color: #F0F0F0; margin-bottom: 4px; }
-.biz-card-desc { font-size: 12px; color: #888; }
+.biz-card-bg { position: absolute; inset: 0; }
+.biz-card-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; }
+.biz-card-content { position: relative; z-index: 2; padding: 16px; display: flex; flex-direction: column; height: 100%; }
+.biz-card-icon-sm { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; margin-bottom: auto; }
+.biz-card-title { font-size: 15px; font-weight: 700; color: #fff; margin-top: 8px; }
+.biz-card-desc { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 2px; }
 </style>
