@@ -152,8 +152,8 @@
           </div>
           <div class="biz-hero-title">社区聚乐部</div>
           <div class="biz-hero-desc">活动报名 · 邻里社群 · 精彩生活</div>
-          <span class="biz-hero-btn">立即查看</span>
         </div>
+        <span class="biz-hero-btn">立即查看</span>
       </div>
       <div class="biz-grid">
         <div class="biz-card" v-for="m in bizModules" :key="m.label" @click="go(m.route)">
@@ -170,7 +170,7 @@
       </div>
     </div>
 
-    <div class="section-label">推荐商铺</div>
+    <div class="section-label">推荐商铺<span class="section-en">Recommended Shops</span></div>
     <div class="shop-list">
       <div v-for="s in shops" :key="s.id" class="shop-card" @click="go('/shop/' + s.id)">
         <div class="shop-avatar" :style="{background: s.color}">{{ s.name[0] }}</div>
@@ -463,7 +463,7 @@ function go(route) {
 .hero-bg { width: 100%; height: 100%; object-fit: cover; display: block; }
 .hero-gradient { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0.8) 100%); }
 .hero-slogan { position: absolute; top: 12px; left: 14px; display: flex; align-items: center; gap: 6px; z-index: 2; }
-.hero-slogan span { font-size: var(--fs-deco); color: rgba(255,255,255,0.7); letter-spacing: 0.5px; }
+.hero-slogan span { font-size: var(--fs-deco); color: #FFFFFF; letter-spacing: 0.5px; }
 .slogan-icon { flex-shrink: 0; opacity: 0.6; }
 .hero-logo { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); width: 55%; max-width: 220px; z-index: 1; }
 .hero-logo-img { width: 100%; display: block; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4)); }
@@ -482,12 +482,12 @@ function go(route) {
 .mc-btn:active { opacity: 0.85; }
 .mc-btn:disabled { opacity: 0.5; }
 .mc-btn-wx { background: #07C160 !important; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.mc-btn-outline { background: transparent !important; border: 1px solid #E8E8E8 !important; color: #E8E8E8 !important; }
+.mc-btn-outline { background: transparent !important; border: 1px solid #E8E8E8 !important; color: #FF8A2E !important; }
 .mc-agree { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; cursor: pointer; }
 .mc-agree-box { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #555; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 2px; transition: all 0.2s; }
-.mc-agree-box.checked { border-color: #E8E8E8; background: rgba(255,255,255,0.08); }
+.mc-agree-box.checked { border-color: #FFFFFF; background: rgba(255,255,255,0.08); }
 .mc-agree-text { font-size: var(--fs-aux); color: #777; line-height: 1.6; }
-.mc-link { color: #E8E8E8; }
+.mc-link { color: #FFFFFF; }
 
 /* 登录态：橙色渐变 + 清透感（浅亮、通透、有呼吸感） */
 /* iOS 玻璃边框：双层背景，border-box 渐变边(顶部亮→侧透→底微光)，大圆角 */
@@ -545,20 +545,43 @@ function go(route) {
 /* 导航图标：圆形内凹（中性灰底 + 白色凸起细线条，严格按参考图） */
 .qlink-icon { position: relative; width: 58px; height: 58px; border-radius: 50%; background: #C8C8C6; display: flex; align-items: center; justify-content: center; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(255, 255, 255, 0.82); transition: box-shadow .2s ease, transform .15s ease; }
 .qlink-icon:active { transform: scale(0.96); box-shadow: inset 4px 4px 9px rgba(0, 0, 0, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.78); }
-.qlink-glyph { width: 30px; height: 30px; color: #FFFFFF; filter: drop-shadow(0 -0.5px 0.8px rgba(255, 255, 255, 1)) drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+.qlink-glyph { width: 30px; height: 30px; color: #FFFFFF; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
 /* 选中态：银框轻微缩放反馈（无灰阴影） */
 .qlink-icon.active { opacity: 0.85; }
-.qlink-label { font-size: 12px; color: #AAA; }
+.qlink-label { font-size: 12px; color: #FFFFFF; }
 
-.daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; border-radius: 18px; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* ── 卡片多彩复古配色（无纹理） ── */
+.daily-deal, .biz-hero, .biz-card, .shop-card { position: relative; overflow: hidden; }
+.daily-deal > *, .shop-card > * { position: relative; z-index: 1; }
+
+/* 每日特惠 — 金黄 */
+.daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background-color: #C4923A; border: 3px solid #9A7425; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.dd-btn { display: inline-block; padding: 8px 20px; background-color: #9A7425; border: 3px solid #9A7425; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); color: #FFFFFF; font-size: var(--fs-button); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+
+/* 社区聚乐部 — 浅粉棕 */
+.biz-hero { position: relative; border-radius: 18px; overflow: hidden; height: 170px; cursor: pointer; margin-bottom: 10px; box-sizing: border-box; background-color: #D4A59A; border: 3px solid #A67D72; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); }
+.biz-hero-btn { position: absolute; right: 22px; bottom: 22px; z-index: 3; display: inline-block; padding: 5px 20px; background-color: #A67D72; border: 3px solid #A67D72; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(212,165,154,0.45); color: #FFFFFF; font-size: var(--fs-button); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+
+/* 四格业务卡 — 各一色 */
+.biz-card { position: relative; border-radius: 16px; overflow: hidden; height: 150px; cursor: pointer; transition: transform 0.15s; box-sizing: border-box; }
+.biz-card:nth-child(1) { background-color: #9B4A3E; border: 3px solid #6E332A; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); } /* 美食 — 深红棕 */
+.biz-card:nth-child(2) { background-color: #C9956C; border: 3px solid #A87C48; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); } /* 亲子 — 浅橙棕 */
+.biz-card:nth-child(3) { background-color: #8B8B90; border: 3px solid #6A6A6E; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); } /* 生活 — 灰紫 */
+.biz-card:nth-child(4) { background-color: #6B6E64; border: 3px solid #4E5049; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); } /* 停车 — 深灰绿 */
+
+/* 推荐商铺 — 金黄 */
+.shop-card { flex: 0 0 100%; height: 170px; border-radius: 18px; overflow: hidden; scroll-snap-align: start; box-sizing: border-box; padding: 0 18px; display: flex; flex-direction: row; align-items: center; gap: 14px; background-color: #C4923A; border: 3px solid #9A7425; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .daily-deal:active { opacity: 0.82; }
+.biz-hero:active { transform: scale(0.985); }
+.biz-card:active { transform: scale(0.97); }
+.shop-card:active { transform: scale(0.985); }
+
 .dd-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.dd-icon-box svg { filter: drop-shadow(0 -0.3px 0.4px rgba(0,0,0,0.7)) drop-shadow(0 0.3px 0.4px rgba(255,255,255,0.85)); }
+.dd-icon-box svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
 .dd-left { flex: 1; min-width: 0; }
-.dd-title { font-size: var(--fs-body); font-weight: 700; color: rgba(255,255,255,0.52); margin-bottom: 2px; text-shadow: 0 -1px 2px rgba(0,0,0,0.5), 0 1px 2px rgba(255,255,255,0.9); }
-.dd-desc { font-size: var(--fs-secondary); color: rgba(255,255,255,0.45); }
+.dd-title { font-size: var(--fs-body); font-weight: 700; color: #FFFFFF; margin-bottom: 2px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.dd-desc { font-size: var(--fs-secondary); color: #FFFFFF; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
 .dd-right { flex-shrink: 0; }
-.dd-btn { display: inline-block; padding: 8px 20px; background: #C8C8C6; border: none; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(255, 255, 255, 0.82); color: #FFFFFF; font-size: var(--fs-button); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 -0.5px 0.8px rgba(255, 255, 255, 1)) drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
 
 .qr-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); animation: qrFadeIn 0.2s ease; }
 @keyframes qrFadeIn { from { opacity: 0 } to { opacity: 1 } }
@@ -572,39 +595,34 @@ function go(route) {
 .qr-user { font-size: var(--fs-body); font-weight: 600; color: #F0F0F0; margin-bottom: 6px; }
 .qr-tip { font-size: var(--fs-aux); color: #888; }
 
-.section-label { font-size: var(--fs-headline); font-weight: 700; color: #F0F0F0; margin: 22px 16px 12px; }
+.section-label { font-size: var(--fs-headline); font-weight: 700; color: #FFFFFF; margin: 22px 16px 8px; }
+.section-en { display: block; margin-top: 3px; font-size: var(--fs-aux); font-weight: 400; letter-spacing: 1.5px; color: rgba(255,255,255,0.55); text-transform: uppercase; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.18); }
 .shop-list { margin: 0 0; padding: 4px 16px 10px; display: flex; flex-direction: row; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; -webkit-overflow-scrolling: touch; }
 .shop-list::-webkit-scrollbar { display: none; }
 .shop-list { scrollbar-width: none; }
-.shop-card { flex: 0 0 100%; height: 170px; border-radius: 18px; overflow: hidden; scroll-snap-align: start; box-sizing: border-box; padding: 0 18px; display: flex; flex-direction: row; align-items: center; gap: 14px; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.shop-card:active { transform: scale(0.985); }
 .shop-avatar { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 22px; font-weight: 700; flex-shrink: 0; background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.22); }
 .shop-info { flex: 1; min-width: 0; }
-.shop-name { font-size: var(--fs-body); font-weight: 600; color: rgba(255,255,255,0.52); text-shadow: 0 -1px 2px rgba(0,0,0,0.5), 0 1px 2px rgba(255,255,255,0.9); }
-.shop-meta { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 2px; }
-.shop-arrow { flex-shrink: 0; }
+.shop-name { font-size: var(--fs-body); font-weight: 600; color: #FFFFFF; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.shop-meta { font-size: 12px; color: #FFFFFF; margin-top: 2px; }
+.shop-arrow { flex-shrink: 0; stroke: #FFFFFF; }
 .spacer { height: 20px; }
 
 /* ── 业务版块 ── */
 .biz-modules { padding: 0 16px; margin-top: 16px; }
-.biz-hero { position: relative; border-radius: 18px; overflow: hidden; height: 170px; cursor: pointer; margin-bottom: 10px; box-sizing: border-box; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); }
-.biz-hero:active { transform: scale(0.985); }
 .biz-hero-bg { position: absolute; inset: 0; background: rgba(0,0,0,0.03); }
 .biz-hero-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; opacity: 0.9; }
 .biz-hero-content { position: relative; z-index: 2; padding: 22px; display: flex; flex-direction: column; height: 100%; max-width: 62%; }
-.biz-hero-title { font-size: var(--fs-headline); font-weight: 800; color: rgba(255,255,255,0.52); margin-bottom: 6px; letter-spacing: 0.5px; text-shadow: 0 -1px 2px rgba(0,0,0,0.5), 0 1px 2px rgba(255,255,255,0.9); }
-.biz-hero-desc { font-size: var(--fs-secondary); color: rgba(255,255,255,0.45); margin-bottom: auto; }
-.biz-hero-btn { display: inline-block; margin-top: 8px; padding: 5px 20px; background: #C8C8C6; border: none; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(255, 255, 255, 0.82); color: #FFFFFF; font-size: var(--fs-button); font-weight: 600; white-space: nowrap; align-self: flex-start; filter: drop-shadow(0 -0.5px 0.8px rgba(255, 255, 255, 1)) drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+.biz-hero-title { font-size: var(--fs-headline); font-weight: 800; color: #FFFFFF; margin-bottom: 6px; letter-spacing: 0.5px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.biz-hero-desc { font-size: var(--fs-secondary); color: #FFFFFF; margin-bottom: auto; }
 .biz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.biz-card { position: relative; border-radius: 16px; overflow: hidden; height: 150px; cursor: pointer; transition: transform 0.15s; box-sizing: border-box; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); }
 .biz-card:active { transform: scale(0.97); }
 .biz-card-bg { position: absolute; inset: 0; background: transparent !important; }
 .biz-card-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; opacity: 0.9; }
 .biz-card-content { position: relative; z-index: 2; padding: 14px; display: flex; flex-direction: column; height: 100%; }
-.biz-card-icon-sm { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-bottom: auto; color: #E8E8E8; }
-.biz-card-icon-sm svg { filter: drop-shadow(0 -0.3px 0.4px rgba(0,0,0,0.7)) drop-shadow(0 0.3px 0.4px rgba(255,255,255,0.85)); }
-.biz-hero-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; color: #E8E8E8; }
-.biz-hero-icon svg { filter: drop-shadow(0 -0.3px 0.4px rgba(0,0,0,0.7)) drop-shadow(0 0.3px 0.4px rgba(255,255,255,0.85)); }
-.biz-card-title { font-size: var(--fs-body); font-weight: 700; color: rgba(255,255,255,0.52); margin-top: 8px; text-shadow: 0 -1px 2px rgba(0,0,0,0.5), 0 1px 2px rgba(255,255,255,0.9); }
-.biz-card-desc { font-size: var(--fs-secondary); color: rgba(255,255,255,0.45); margin-top: 2px; }
+.biz-card-icon-sm { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-bottom: auto; color: #FFFFFF; }
+.biz-card-icon-sm svg { filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
+.biz-hero-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; color: #FFFFFF; }
+.biz-hero-icon svg { filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
+.biz-card-title { font-size: var(--fs-body); font-weight: 700; color: #FFFFFF; margin-top: 8px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.biz-card-desc { font-size: var(--fs-secondary); color: #FFFFFF; margin-top: 2px; }
 </style>
