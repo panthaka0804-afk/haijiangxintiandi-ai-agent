@@ -570,7 +570,7 @@ function go(route) {
 .qr-user { font-size: 16px; font-weight: 600; color: #F0F0F0; margin-bottom: 6px; }
 .qr-tip { font-size: 13px; color: #888; }
 
-.section-label { font-size: 16px; font-weight: 700; color: #F0F0F0; margin: 0 16px 12px; }
+.section-label { font-size: 16px; font-weight: 700; color: #F0F0F0; margin: 22px 16px 12px; }
 .shop-list { margin: 0 0; padding: 4px 16px 10px; display: flex; flex-direction: row; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
 .shop-list::-webkit-scrollbar { display: none; }
 .shop-list { scrollbar-width: none; }
