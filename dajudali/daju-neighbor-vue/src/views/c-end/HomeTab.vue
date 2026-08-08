@@ -54,7 +54,7 @@
             <div class="mc-right">
               <button class="mc-big-round" @click="triggerUpload" title="更换头像">
                 <img v-if="avatarUrl" :src="avatarUrl" alt="" />
-                <svg v-else width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+                <svg v-else width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
                 <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="onAvatarFile" />
               </button>
               <div class="mc-pill">{{ memberInfo && memberInfo.membership_level || '普卡' }}</div>
@@ -520,9 +520,9 @@ function go(route) {
 .mc-upgrade b { color: rgba(255, 178, 122, 0.85); font-weight: 700; font-size: 15px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.3); }
 
 .mc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-.mc-big-round { width: 70px; height: 70px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: inset 0 3px 7px rgba(0,0,0,0.5), inset 0 -2px 5px rgba(255,255,255,0.22); margin-top: -52px; position: relative; overflow: hidden; flex-shrink: 0; }
-.mc-big-round img { width: 84%; height: 84%; border-radius: 50%; object-fit: cover; margin: 8%; }
-.mc-big-round:active { background: rgba(255,255,255,0.1); }
+.mc-big-round { width: 92px; height: 92px; border-radius: 50%; border: 4px solid #FFF6EC; background: linear-gradient(135deg, #FF8A3D, #FF6F0F); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 8px 22px rgba(232, 93, 4, 0.45); margin-top: -90px; position: relative; overflow: hidden; flex-shrink: 0; }
+.mc-big-round img { width: 100%; height: 100%; object-fit: cover; }
+.mc-big-round:active { opacity: 0.9; }
 .mc-big-round svg, .mc-round svg { filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.5)) drop-shadow(0 1px 1px rgba(255,255,255,0.3)); }
 .mc-pill { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); color: rgba(255,255,255,0.72); font-size: 11px; font-weight: 700; padding: 5px 18px; border-radius: 16px; letter-spacing: 1px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.45), inset 0 -1px 3px rgba(255,255,255,0.22); text-shadow: 0 -1px 1px rgba(0,0,0,0.45), 0 1px 1px rgba(255,255,255,0.3); }
 
