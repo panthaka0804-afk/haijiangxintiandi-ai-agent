@@ -128,7 +128,7 @@
 
     <div class="daily-deal" @click="$router.push('/offers')">
       <div class="dd-icon-box">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
         </svg>
       </div>
@@ -146,7 +146,7 @@
         <div class="biz-hero-bg"></div>
         <div class="biz-hero-content">
           <div class="biz-hero-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </div>
@@ -161,7 +161,7 @@
           <svg class="biz-card-illus" v-html="m.illus" viewBox="0 0 120 100" fill="none" preserveAspectRatio="xMaxYMid slice"></svg>
           <div class="biz-card-content">
             <div class="biz-card-icon-sm">
-              <svg v-html="m.icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
+              <svg v-html="m.icon" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
             </div>
             <div class="biz-card-title">{{ m.label }}</div>
             <div class="biz-card-desc">{{ m.desc }}</div>
@@ -178,7 +178,7 @@
           <div class="shop-name">{{ s.name }}</div>
           <div class="shop-meta">{{ s.floor }} · {{ s.category }}</div>
         </div>
-        <svg class="shop-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <svg class="shop-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>
     <div class="spacer"></div>
@@ -552,13 +552,13 @@ function go(route) {
 
 .daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; border-radius: 18px; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .daily-deal:active { opacity: 0.82; }
-.dd-icon-box { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dd-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .dd-icon-box svg { filter: drop-shadow(0 -0.3px 0.4px rgba(0,0,0,0.7)) drop-shadow(0 0.3px 0.4px rgba(255,255,255,0.85)); }
 .dd-left { flex: 1; min-width: 0; }
 .dd-title { font-size: var(--fs-body); font-weight: 700; color: rgba(255,255,255,0.52); margin-bottom: 2px; text-shadow: 0 -1px 2px rgba(0,0,0,0.5), 0 1px 2px rgba(255,255,255,0.9); }
 .dd-desc { font-size: var(--fs-secondary); color: rgba(255,255,255,0.45); }
 .dd-right { flex-shrink: 0; }
-.dd-btn { display: inline-block; padding: 8px 20px; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; border-radius: 20px; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); color: rgba(255,255,255,0.52); font-size: var(--fs-button); font-weight: 600; white-space: nowrap; }
+.dd-btn { display: inline-block; padding: 8px 20px; background: #C8C8C6; border: none; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(255, 255, 255, 0.82); color: #FFFFFF; font-size: var(--fs-button); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 -0.5px 0.8px rgba(255, 255, 255, 1)) drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
 
 .qr-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); animation: qrFadeIn 0.2s ease; }
 @keyframes qrFadeIn { from { opacity: 0 } to { opacity: 1 } }
@@ -576,12 +576,12 @@ function go(route) {
 .shop-list { margin: 0 0; padding: 4px 16px 10px; display: flex; flex-direction: row; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; -webkit-overflow-scrolling: touch; }
 .shop-list::-webkit-scrollbar { display: none; }
 .shop-list { scrollbar-width: none; }
-.shop-card { flex: 0 0 100%; height: 170px; scroll-snap-align: start; box-sizing: border-box; padding: 0 16px; display: flex; flex-direction: row; align-items: center; gap: 14px; background: linear-gradient(145deg, #2d2d31, #1f1f23); border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; box-shadow: 9px 9px 18px rgba(0,0,0,0.55), -6px -6px 14px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.14); cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.shop-card:active { box-shadow: 3px 3px 8px rgba(0,0,0,0.55), -3px -3px 8px rgba(255,255,255,0.03); }
+.shop-card { flex: 0 0 100%; height: 170px; border-radius: 18px; overflow: hidden; scroll-snap-align: start; box-sizing: border-box; padding: 0 18px; display: flex; flex-direction: row; align-items: center; gap: 14px; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.shop-card:active { transform: scale(0.985); }
 .shop-avatar { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 22px; font-weight: 700; flex-shrink: 0; background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.22); }
 .shop-info { flex: 1; min-width: 0; }
-.shop-name { font-size: var(--fs-body); font-weight: 600; color: #F0F0F0; text-shadow: 0 1px 1px rgba(0,0,0,0.6), 0 -1px 1px rgba(255,255,255,0.15); }
-.shop-meta { font-size: 12px; color: #888; margin-top: 2px; }
+.shop-name { font-size: var(--fs-body); font-weight: 600; color: rgba(255,255,255,0.52); text-shadow: 0 -1px 2px rgba(0,0,0,0.5), 0 1px 2px rgba(255,255,255,0.9); }
+.shop-meta { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 2px; }
 .shop-arrow { flex-shrink: 0; }
 .spacer { height: 20px; }
 
@@ -594,14 +594,14 @@ function go(route) {
 .biz-hero-content { position: relative; z-index: 2; padding: 22px; display: flex; flex-direction: column; height: 100%; max-width: 62%; }
 .biz-hero-title { font-size: var(--fs-headline); font-weight: 800; color: rgba(255,255,255,0.52); margin-bottom: 6px; letter-spacing: 0.5px; text-shadow: 0 -1px 2px rgba(0,0,0,0.5), 0 1px 2px rgba(255,255,255,0.9); }
 .biz-hero-desc { font-size: var(--fs-secondary); color: rgba(255,255,255,0.45); margin-bottom: auto; }
-.biz-hero-btn { display: inline-block; margin-top: 8px; padding: 5px 20px; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; border-radius: 20px; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); font-size: var(--fs-button); font-weight: 600; color: rgba(255,255,255,0.52); align-self: flex-start; }
+.biz-hero-btn { display: inline-block; margin-top: 8px; padding: 5px 20px; background: #C8C8C6; border: none; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(255, 255, 255, 0.82); color: #FFFFFF; font-size: var(--fs-button); font-weight: 600; white-space: nowrap; align-self: flex-start; filter: drop-shadow(0 -0.5px 0.8px rgba(255, 255, 255, 1)) drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
 .biz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .biz-card { position: relative; border-radius: 16px; overflow: hidden; height: 150px; cursor: pointer; transition: transform 0.15s; box-sizing: border-box; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); }
 .biz-card:active { transform: scale(0.97); }
 .biz-card-bg { position: absolute; inset: 0; background: transparent !important; }
 .biz-card-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; opacity: 0.9; }
 .biz-card-content { position: relative; z-index: 2; padding: 14px; display: flex; flex-direction: column; height: 100%; }
-.biz-card-icon-sm { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: auto; color: #E8E8E8; }
+.biz-card-icon-sm { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-bottom: auto; color: #E8E8E8; }
 .biz-card-icon-sm svg { filter: drop-shadow(0 -0.3px 0.4px rgba(0,0,0,0.7)) drop-shadow(0 0.3px 0.4px rgba(255,255,255,0.85)); }
 .biz-hero-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; color: #E8E8E8; }
 .biz-hero-icon svg { filter: drop-shadow(0 -0.3px 0.4px rgba(0,0,0,0.7)) drop-shadow(0 0.3px 0.4px rgba(255,255,255,0.85)); }
