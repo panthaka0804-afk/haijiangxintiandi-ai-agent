@@ -62,9 +62,9 @@
           </div>
 
           <!-- 弧形进度条 -->
-          <div class="mc-arc" v-if="memberInfo">
+          <div class="mc-arc">
             <svg class="mc-arc-svg" viewBox="0 0 300 44" preserveAspectRatio="none">
-              <path d="M10 38 Q150 -6 290 38" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="7" stroke-linecap="round"/>
+              <path d="M10 38 Q150 -6 290 38" fill="none" stroke="rgba(255,255,255,0.36)" stroke-width="7" stroke-linecap="round"/>
               <path d="M10 38 Q150 -6 290 38" fill="none" stroke="#FF8A3D" stroke-width="7" stroke-linecap="round" :stroke-dasharray="arcLen" :stroke-dashoffset="arcDash"/>
               <circle :cx="arcDotX" :cy="arcDotY" r="7" fill="#fff" stroke="#FF7B2C" stroke-width="3"/>
             </svg>
@@ -492,7 +492,7 @@ function go(route) {
   background-color: transparent !important;
   background-image:
     linear-gradient(150deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 241, 224, 0.08) 100%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.55) 16%, rgba(255, 255, 255, 0.12) 42%, rgba(255, 255, 255, 0.06) 56%, rgba(255, 255, 255, 0.36) 100%);
+    linear-gradient(160deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.42) 30%, rgba(255, 255, 255, 0.34) 60%, rgba(255, 255, 255, 0.46) 100%);
   background-origin: padding-box, border-box;
   background-clip: padding-box, border-box;
   border: 1.5px solid transparent;
@@ -500,8 +500,8 @@ function go(route) {
   backdrop-filter: blur(6px) saturate(150%);
   -webkit-backdrop-filter: blur(6px) saturate(150%);
   box-shadow:
-    0 10px 34px rgba(0, 0, 0, 0.20),
-    inset 0 1px 1px rgba(255, 255, 255, 0.55);
+    0 10px 34px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.20);
 }
 .member-logged { padding: 0; position: relative; }
 
