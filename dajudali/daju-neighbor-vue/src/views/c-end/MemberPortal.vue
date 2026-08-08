@@ -99,15 +99,15 @@ const memberData = ref(null)
 const coupons = ref([])
 
 const redeemList = [
-  { id: 1, name: '停车券', points: 500, value: '¥10' },
-  { id: 2, name: 'B1美食券', points: 800, value: '¥10' },
-  { id: 3, name: '星巴克券', points: 1000, value: '¥35' },
-  { id: 4, name: '电影票', points: 2000, value: '¥60' },
-  { id: 5, name: '蜀大侠券', points: 3000, value: '¥100' },
-  { id: 6, name: '乐园门票', points: 5000, value: '¥128' },
-  { id: 7, name: '棒约翰双人餐', points: 8000, value: '¥156' },
-  { id: 8, name: '购物卡', points: 10000, value: '¥200' },
-  { id: 9, name: '火锅套餐', points: 15000, value: '¥368' },
+  { id: 'g4', name: '停车券', points: 500, value: '¥10' },
+  { id: 'g7', name: '瑞幸咖啡券', points: 1000, value: '¥35' },
+  { id: 'g1', name: 'SFC电影票', points: 2000, value: '¥45' },
+  { id: 'g6', name: '泡泡米体验课', points: 2000, value: '¥49' },
+  { id: 'g3', name: '华为30元券', points: 2500, value: '¥30' },
+  { id: 'g5', name: '康友四季足浴', points: 2500, value: '¥30' },
+  { id: 'g2', name: '朱光玉火锅券', points: 3000, value: '¥50' },
+  { id: 'g8', name: '哇咔健身周卡', points: 4000, value: '¥39' },
+  { id: 9, name: '火锅双人餐', points: 15000, value: '¥368' },
 ]
 
 async function queryMember() {

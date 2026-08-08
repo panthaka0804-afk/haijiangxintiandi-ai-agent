@@ -37,17 +37,21 @@ import { ref, computed, onMounted } from 'vue'
 import { getRedeemGoods, lookupMember } from '@/api'
 
 const activeCat = ref('全部')
-const cats = ['全部', '餐饮', '购物', '娱乐', '停车']
+const cats = ['全部', '餐饮', '购物', '娱乐', '亲子', '生活服务', '停车']
 const loading = ref(true)
 const goods = ref([])
 const memberInfo = ref({ points: null, level: '', discount: '' })
 
-// 本地兜底（后台异常时也能展示）
+// 本地兜底（后台异常时也能展示）— 真实招商落位商户
 const FALLBACK_GOODS = [
-  { id: 'g1', name: '星巴克中杯券', points: 1000, category: '餐饮', gradient: 'linear-gradient(135deg, #00704A, #00A85A)' },
-  { id: 'g7', name: '名创优品礼品卡', points: 1500, category: '购物', gradient: 'linear-gradient(135deg, #E8809E, #F0AAC0)' },
-  { id: 'g4', name: '万达影城电影票', points: 1200, category: '娱乐', gradient: 'linear-gradient(135deg, #E85D04, #FFB347)' },
-  { id: 'g5', name: '停车券 10元', points: 500, category: '停车', gradient: 'linear-gradient(135deg, #4A90D9, #7DB8F0)' },
+  { id: 'g1', name: 'SFC上影影城 电影票', points: 2000, category: '娱乐', gradient: 'linear-gradient(135deg, #9B7BD4, #C9B6E8)' },
+  { id: 'g2', name: '朱光玉火锅 50元代金券', points: 3000, category: '餐饮', gradient: 'linear-gradient(135deg, #9B4A3E, #C97A6E)' },
+  { id: 'g3', name: '华为授权店 30元券', points: 2500, category: '购物', gradient: 'linear-gradient(135deg, #4A90D9, #7DB8F0)' },
+  { id: 'g4', name: '海江新天地 停车券10元', points: 500, category: '停车', gradient: 'linear-gradient(135deg, #6B6E64, #9AA39A)' },
+  { id: 'g5', name: '康友四季 足浴券', points: 2500, category: '生活服务', gradient: 'linear-gradient(135deg, #3E8E41, #6FBF73)' },
+  { id: 'g6', name: '泡泡米儿童 体验课', points: 2000, category: '亲子', gradient: 'linear-gradient(135deg, #E8809E, #F0AAC0)' },
+  { id: 'g7', name: '瑞幸咖啡 中杯券', points: 1000, category: '餐饮', gradient: 'linear-gradient(135deg, #0051A8, #3E7FD0)' },
+  { id: 'g8', name: '哇咔健身 体验周卡', points: 4000, category: '娱乐', gradient: 'linear-gradient(135deg, #3E8E41, #6FBF73)' },
 ]
 
 onMounted(async () => {

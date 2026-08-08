@@ -56,17 +56,21 @@ const cats = [
   { key: 'all', label: '全部' },
   { key: 'food', label: '餐饮券' },
   { key: 'retail', label: '零售券' },
-  { key: 'parking', label: '停车券' },
   { key: 'fun', label: '娱乐券' },
+  { key: 'kids', label: '亲子券' },
+  { key: 'service', label: '生活服务券' },
+  { key: 'parking', label: '停车券' },
 ]
 
-// 本地兜底（后台异常时也能展示）
+// 本地兜底（后台异常时也能展示）— 真实招商落位商户
 const FALLBACK_OFFERS = [
-  { id: 1, name: '蜀大侠火锅', label: '满200减50', expire: '2026-12-31', amount: 50, category: 'food' },
-  { id: 2, name: '星巴克', label: '买一赠一券', expire: '2026-10-31', amount: 35, category: 'food' },
-  { id: 4, name: 'UNIQLO', label: '满299减30', expire: '2026-11-30', amount: 30, category: 'retail' },
-  { id: 9, name: '海江新天地', label: '停车券 减10', expire: '2026-12-31', amount: 10, category: 'parking' },
-  { id: 6, name: '万达影城', label: '观影立减20', expire: '2026-11-30', amount: 20, category: 'fun' },
+  { id: 1, name: '海江食集', label: '满50减5 代金券', expire: '2026-12-31', amount: 5, category: 'food' },
+  { id: 2, name: '朱光玉火锅', label: '到店赠秘制小菜2份', expire: '2026-12-31', amount: 18, category: 'food' },
+  { id: 3, name: '华为授权店', label: '手机满1000减50', expire: '2026-12-31', amount: 50, category: 'retail' },
+  { id: 4, name: 'SFC上影影城', label: '免费电影票1张', expire: '2026-12-31', amount: 45, category: 'fun' },
+  { id: 5, name: '泡泡米儿童', label: '体验课免费1节', expire: '2026-12-31', amount: 49, category: 'kids' },
+  { id: 6, name: '康友四季', label: '足浴满150减30', expire: '2026-12-31', amount: 30, category: 'service' },
+  { id: 7, name: '海江新天地停车场', label: '免费停车2小时', expire: '2026-12-31', amount: 10, category: 'parking' },
 ]
 
 const coupons = ref([])
@@ -104,6 +108,8 @@ const CAT_ICON = {
   retail: '<path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
   parking: '<path d="M5 13l1.5-4.5A2 2 0 0 1 8.4 7h7.2a2 2 0 0 1 1.9 1.5L19 13"/><path d="M4 13h16v5H4z"/><circle cx="7.5" cy="18" r="1.5"/><circle cx="16.5" cy="18" r="1.5"/>',
   fun: '<path d="M12 3l2.5 5.5L20 9.3l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.8z"/>',
+  kids: '<path d="M9 11a3 3 0 1 0 6 0 3 3 0 0 0-6 0z"/><path d="M12 2a3 3 0 0 1 3 3v1a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M5 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>',
+  service: '<path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/>',
 }
 function catIcon(cat) {
   return CAT_ICON[cat] || '<path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8z"/>'

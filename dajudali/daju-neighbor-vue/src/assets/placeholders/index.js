@@ -33,11 +33,11 @@ export const placeholderImages = {
 // 商户模拟数据 — 后续从数据库或 API 获取
 export const shopList = [
   { id: 's1', name: '星巴克', floor: '1F', category: '餐饮', tags: ['咖啡', '轻食'], placeholder: null },
-  { id: 's2', name: '蜀大侠火锅', floor: '4F', category: '餐饮', tags: ['火锅', '川菜'], placeholder: null },
-  { id: 's3', name: '棒约翰', floor: 'B1', category: '餐饮', tags: ['披萨', '亲子'], placeholder: null },
-  { id: 's4', name: 'UNIQLO', floor: '1F', category: '零售', tags: ['服饰', '日系'], placeholder: null },
-  { id: 's5', name: '名创优品', floor: '2F', category: '零售', tags: ['百货', '生活'], placeholder: null },
-  { id: 's6', name: '万达影城', floor: '5F', category: '娱乐', tags: ['电影', 'IMAX'], placeholder: null },
-  { id: 's7', name: '玩具反斗城', floor: '3F', category: '亲子', tags: ['玩具', '儿童'], placeholder: null },
-  { id: 's8', name: '海底捞', floor: '4F', category: '餐饮', tags: ['火锅', '服务'], placeholder: null },
+  { id: 's2', name: '朱光玉火锅', floor: '1F', category: '餐饮', tags: ['火锅', '川菜'], placeholder: null },
+  { id: 's3', name: '瑞幸咖啡', floor: '1F', category: '餐饮', tags: ['咖啡', '快取'], placeholder: null },
+  { id: 's4', name: '华为授权店', floor: '1F', category: '零售', tags: ['手机', '数码'], placeholder: null },
+  { id: 's5', name: '晨光文具', floor: '1F', category: '零售', tags: ['文具', '办公'], placeholder: null },
+  { id: 's6', name: 'SFC上影影城', floor: '1F', category: '娱乐', tags: ['电影', '影城'], placeholder: null },
+  { id: 's7', name: '泡泡米儿童', floor: '1F', category: '亲子', tags: ['儿童', '教培'], placeholder: null },
+  { id: 's8', name: '康友四季', floor: '1F', category: '生活服务', tags: ['足浴', '养生'], placeholder: null },
 ]

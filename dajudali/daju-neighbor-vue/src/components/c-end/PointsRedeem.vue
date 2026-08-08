@@ -82,15 +82,15 @@ const emit = defineEmits(['close', 'redeem'])
 const selectedItem = ref(null)
 
 const items = [
-  { id: 1, icon: 'parking', name: '停车券', desc: '1小时停车券', points: 500, value: '¥10', ratio: 50 },
-  { id: 2, icon: 'shop', name: 'B1美食券', desc: 'B1美食广场通用', points: 800, value: '¥10', ratio: 80 },
-  { id: 3, icon: 'star', name: '星巴克券', desc: '星巴克30元代金券', points: 1000, value: '¥35', ratio: 28.6 },
-  { id: 4, icon: 'gift', name: '电影票', desc: '影城通兑券', points: 2000, value: '¥60', ratio: 33.3 },
-  { id: 5, icon: 'star', name: '蜀大侠券', desc: '蜀大侠100元代金券', points: 3000, value: '¥100', ratio: 30 },
-  { id: 6, icon: 'calendar', name: '乐园门票', desc: '亲子乐园单人票', points: 5000, value: '¥128', ratio: 39 },
-  { id: 7, icon: 'gift', name: '棒约翰双人餐', desc: '棒约翰双人披萨套餐', points: 8000, value: '¥156', ratio: 51.3 },
-  { id: 8, icon: 'tag', name: '购物卡', desc: '200元商场购物卡', points: 10000, value: '¥200', ratio: 50 },
-  { id: 9, icon: 'star', name: '火锅套餐', desc: '双人火锅套餐', points: 15000, value: '¥368', ratio: 40.8 },
+  { id: 1, icon: 'parking', name: '停车券', desc: '海江新天地1小时停车券', points: 500, value: '¥10', ratio: 50 },
+  { id: 2, icon: 'shop', name: 'B1美食券', desc: '海江食集通用10元', points: 800, value: '¥10', ratio: 80 },
+  { id: 3, icon: 'star', name: '瑞幸咖啡券', desc: '瑞幸中杯代金券', points: 1000, value: '¥35', ratio: 28.6 },
+  { id: 4, icon: 'gift', name: 'SFC电影票', desc: 'SFC上影影城通兑票', points: 2000, value: '¥45', ratio: 44.5 },
+  { id: 5, icon: 'star', name: '华为30元券', desc: '华为授权店30元代金券', points: 2500, value: '¥30', ratio: 12 },
+  { id: 6, icon: 'calendar', name: '泡泡米体验课', desc: '泡泡米儿童体验课', points: 2000, value: '¥49', ratio: 40.8 },
+  { id: 7, icon: 'gift', name: '康友四季足浴', desc: '康友四季足浴券', points: 2500, value: '¥30', ratio: 12 },
+  { id: 8, icon: 'tag', name: '朱光玉火锅券', desc: '朱光玉火锅50元代金券', points: 3000, value: '¥50', ratio: 60 },
+  { id: 9, icon: 'star', name: '哇咔健身周卡', desc: '哇咔健身体验周卡', points: 4000, value: '¥39', ratio: 9.75 },
 ]
 
 // 性价比排序：价值/积分越高越划算

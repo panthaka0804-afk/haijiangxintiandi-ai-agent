@@ -44,14 +44,14 @@ import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const goodsMap = {
-  'g1': { name: '星巴克中杯券', points: 1000, gradient: 'linear-gradient(135deg, #4A4A4A, #6D6D6D)' },
-  'g2': { name: '蜀大侠50元代金券', points: 3000, gradient: 'linear-gradient(135deg, #535353, #A3A3A3)' },
-  'g3': { name: 'UNIQLO 30元券', points: 2500, gradient: 'linear-gradient(135deg, #474747, #8C8C8C)' },
-  'g4': { name: '万达影城电影票', points: 2000, gradient: 'linear-gradient(135deg, #7C7C7C, #BDBDBD)' },
-  'g5': { name: '停车券 10元', points: 500, gradient: 'linear-gradient(135deg, #838383, #ADADAD)' },
-  'g6': { name: '棒约翰双人餐券', points: 5000, gradient: 'linear-gradient(135deg, #BDBDBD, #999999)' },
-  'g7': { name: '名创优品礼品卡', points: 1500, gradient: 'linear-gradient(135deg, #A3A3A3, #C1C1C1)' },
-  'g8': { name: '亲子乐园门票', points: 5000, gradient: 'linear-gradient(135deg, #878787, #AAAAAA)' },
+  'g1': { name: 'SFC上影影城 电影票', points: 2000, gradient: 'linear-gradient(135deg, #9B7BD4, #C9B6E8)' },
+  'g2': { name: '朱光玉火锅 50元代金券', points: 3000, gradient: 'linear-gradient(135deg, #9B4A3E, #C97A6E)' },
+  'g3': { name: '华为授权店 30元券', points: 2500, gradient: 'linear-gradient(135deg, #4A90D9, #7DB8F0)' },
+  'g4': { name: '海江新天地 停车券10元', points: 500, gradient: 'linear-gradient(135deg, #6B6E64, #9AA39A)' },
+  'g5': { name: '康友四季 足浴券', points: 2500, gradient: 'linear-gradient(135deg, #3E8E41, #6FBF73)' },
+  'g6': { name: '泡泡米儿童 体验课', points: 2000, gradient: 'linear-gradient(135deg, #E8809E, #F0AAC0)' },
+  'g7': { name: '瑞幸咖啡 中杯券', points: 1000, gradient: 'linear-gradient(135deg, #0051A8, #3E7FD0)' },
+  'g8': { name: '哇咔健身 体验周卡', points: 4000, gradient: 'linear-gradient(135deg, #3E8E41, #6FBF73)' },
 }
 const goods = ref(goodsMap[route.params.id] || { name: '兑换商品', points: 0, gradient: '#999' })
 </script>

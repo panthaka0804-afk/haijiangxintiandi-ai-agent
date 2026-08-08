@@ -48,7 +48,7 @@ const expanded = ref(false)
 
 const food = [
   { label: '火锅套餐', action: '美食优惠有哪些' },
-  { label: '披萨亲子', action: '棒约翰披萨优惠' },
+  { label: '火锅优惠', action: '朱光玉火锅优惠' },
   { label: '美食广场', action: 'B1美食广场优惠' },
   { label: '星巴克', action: '星巴克会员优惠' },
 ]
