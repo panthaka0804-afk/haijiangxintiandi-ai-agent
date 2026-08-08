@@ -119,8 +119,8 @@
 
     <div class="quick-links">
       <div class="qlink" v-for="e in entries" :key="e.label" @click="go(e.route)">
-        <div class="qlink-icon" :class="{ active: e.active }">
-          <svg v-html="e.icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></svg>
+        <div class="qlink-icon" :class="{ active: e.active }" :style="{ '--m': iconMask(e.icon) }">
+          <span class="qlink-cut"></span>
         </div>
         <span class="qlink-label">{{ e.label }}</span>
       </div>
@@ -200,6 +200,14 @@ import http from '@/api'
 
 const emit = defineEmits(['switchTab'])
 const router = useRouter()
+
+// 把图标路径转成 CSS mask 数据 URI，用于把图标形状镂空成凹陷腔体
+const iconMask = (paths) => {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'>${paths}</svg>`
+  const uri = encodeURIComponent(svg).replace(/\(/g, '%28').replace(/\)/g, '%29')
+  return `url("data:image/svg+xml,${uri}")`
+}
+
 const isWechat = /micromessenger/i.test(navigator.userAgent || '')
 const WX_APPID = 'wxbdd219b39de37798'
 
@@ -543,9 +551,9 @@ function go(route) {
 .quick-links { display: flex; justify-content: space-around; margin: 22px 12px 22px; }
 .qlink { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .qlink:active { opacity: 0.7; }
-.qlink-icon { width: 58px; height: 58px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.10); background: linear-gradient(145deg, #2d2d31, #1f1f23); box-shadow: 6px 6px 14px rgba(0,0,0,0.55), -5px -5px 12px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.52); transition: all 0.2s; }
-.qlink-icon svg { filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.6)) drop-shadow(0 1px 1px rgba(255,255,255,0.35)); }
-.qlink-icon.active { color: rgba(255,255,255,0.7); background: linear-gradient(145deg, #3a3a3f, #26262a); border-color: rgba(255,255,255,0.22); }
+.qlink-icon { position: relative; overflow: hidden; width: 58px; height: 58px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.10); background: linear-gradient(145deg, #2d2d31, #1f1f23); box-shadow: 6px 6px 14px rgba(0,0,0,0.55), -5px -5px 12px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.qlink-cut { position: absolute; inset: 0; background: linear-gradient(145deg, #141416, #1e1e22); box-shadow: inset 0 3px 7px rgba(0,0,0,0.78), inset 0 -2px 4px rgba(255,255,255,0.10); -webkit-mask: var(--m) center / 30px 30px no-repeat; mask: var(--m) center / 30px 30px no-repeat; }
+.qlink-icon.active { background: linear-gradient(145deg, #3a3a3f, #26262a); border-color: rgba(255,255,255,0.22); }
 .qlink-label { font-size: 12px; color: #AAA; }
 
 .daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background: linear-gradient(145deg, #2d2d31, #1f1f23); border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; box-shadow: 9px 9px 18px rgba(0,0,0,0.55), -6px -6px 14px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.14); cursor: pointer; -webkit-tap-highlight-color: transparent; }
