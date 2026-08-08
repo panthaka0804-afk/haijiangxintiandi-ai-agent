@@ -119,8 +119,8 @@
 
     <div class="quick-links">
       <div class="qlink" v-for="e in entries" :key="e.label" @click="go(e.route)">
-        <div class="qlink-icon" :class="{ active: e.active }" :style="{ '--m': iconMask(e.icon) }">
-          <span class="qlink-cut"></span>
+        <div class="qlink-icon" :class="{ active: e.active }">
+          <span class="qlink-glyph" v-html="iconSvg(e.icon)"></span>
         </div>
         <span class="qlink-label">{{ e.label }}</span>
       </div>
@@ -144,18 +144,12 @@
     <div class="biz-modules">
       <div class="biz-hero" @click="go('/activities')">
         <div class="biz-hero-bg"></div>
-        <svg class="biz-hero-illus" viewBox="0 0 200 120" fill="none" preserveAspectRatio="xMaxYMid slice">
-          <circle cx="160" cy="30" r="50" fill="rgba(255,255,255,0.06)"/>
-          <circle cx="180" cy="80" r="30" fill="rgba(255,255,255,0.04)"/>
-          <rect x="130" y="45" width="50" height="55" rx="4" fill="rgba(255,255,255,0.12)"/>
-          <rect x="110" y="55" width="35" height="35" rx="3" fill="rgba(255,255,255,0.08)"/>
-          <rect x="70" y="70" width="30" height="25" rx="2" fill="rgba(255,255,255,0.06)"/>
-          <circle cx="150" cy="20" r="8" fill="rgba(255,255,255,0.15)"/>
-          <circle cx="175" cy="15" r="5" fill="rgba(255,255,255,0.1)"/>
-          <circle cx="100" cy="30" r="4" fill="rgba(255,255,255,0.08)"/>
-          <circle cx="115" cy="18" r="6" fill="rgba(255,255,255,0.1)"/>
-        </svg>
         <div class="biz-hero-content">
+          <div class="biz-hero-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
           <div class="biz-hero-title">社区聚乐部</div>
           <div class="biz-hero-desc">活动报名 · 邻里社群 · 精彩生活</div>
           <span class="biz-hero-btn">立即查看</span>
@@ -167,7 +161,7 @@
           <svg class="biz-card-illus" v-html="m.illus" viewBox="0 0 120 100" fill="none" preserveAspectRatio="xMaxYMid slice"></svg>
           <div class="biz-card-content">
             <div class="biz-card-icon-sm">
-              <svg v-html="m.icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+              <svg v-html="m.icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
             </div>
             <div class="biz-card-title">{{ m.label }}</div>
             <div class="biz-card-desc">{{ m.desc }}</div>
@@ -201,13 +195,9 @@ import http from '@/api'
 const emit = defineEmits(['switchTab'])
 const router = useRouter()
 
-// 把图标路径转成 CSS mask 数据 URI，用于把图标线条镂空成凹陷腔体
-// 注意：这些图标是线条描边(feather)，必须用 stroke 而非 fill，否则线条消失
-const iconMask = (paths) => {
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'>${paths}</svg>`
-  const uri = encodeURIComponent(svg).replace(/\(/g, '%28').replace(/\)/g, '%29')
-  return `url("data:image/svg+xml,${uri}")`
-}
+// 新拟态：把图标线条渲染成内嵌 SVG（stroke=currentColor），配合 engraved 阴影做"刻入卡面"效果
+const iconSvg = (paths) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`
 
 const isWechat = /micromessenger/i.test(navigator.userAgent || '')
 const WX_APPID = 'wxbdd219b39de37798'
@@ -418,7 +408,7 @@ const bizModules = [
     route: '/shops',
     grad: 'linear-gradient(135deg, #2E2E2E 0%, #4A4A4A 60%, #D8D8D8 100%)',
     icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
-    illus: '<circle cx="90" cy="30" r="28" fill="rgba(255,255,255,0.08)"/><circle cx="100" cy="70" r="14" fill="rgba(255,255,255,0.06)"/><rect x="75" y="40" width="30" height="45" rx="6" fill="rgba(255,255,255,0.12)"/><rect x="50" y="55" width="18" height="20" rx="3" fill="rgba(255,255,255,0.08)"/><circle cx="85" cy="52" r="5" fill="rgba(255,255,255,0.15)"/><circle cx="95" cy="48" r="3" fill="rgba(255,255,255,0.1)"/>'
+    illus: ''
   },
   {
     label: '亲子乐园',
@@ -426,7 +416,7 @@ const bizModules = [
     route: '/shops?floor=3',
     grad: 'linear-gradient(135deg, #3A3A3A 0%, #4A4A4A 60%, #C8C8C8 100%)',
     icon: '<circle cx="12" cy="8" r="4"/><path d="M8 21v-1a6 6 0 0112 0v1"/>',
-    illus: '<circle cx="85" cy="25" r="22" fill="rgba(255,255,255,0.08)"/><circle cx="100" cy="65" r="18" fill="rgba(255,255,255,0.05)"/><rect x="70" y="35" width="35" height="40" rx="8" fill="rgba(255,255,255,0.1)"/><circle cx="82" cy="50" r="6" fill="rgba(255,255,255,0.15)"/><circle cx="92" cy="46" r="4" fill="rgba(255,255,255,0.1)"/><circle cx="78" cy="60" r="3" fill="rgba(255,255,255,0.08)"/><circle cx="88" cy="58" r="3" fill="rgba(255,255,255,0.08)"/>'
+    illus: ''
   },
   {
     label: '生活服务',
@@ -434,7 +424,7 @@ const bizModules = [
     route: '/shops?floor=2',
     grad: 'linear-gradient(135deg, #3A3A3A 0%, #4A4A4A 60%, #C8C8C8 100%)',
     icon: '<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>',
-    illus: '<circle cx="90" cy="30" r="20" fill="rgba(255,255,255,0.08)"/><circle cx="100" cy="70" r="12" fill="rgba(255,255,255,0.05)"/><rect x="72" y="38" width="28" height="35" rx="5" fill="rgba(255,255,255,0.1)"/><rect x="55" y="48" width="12" height="18" rx="2" fill="rgba(255,255,255,0.08)"/><circle cx="80" cy="48" r="3" fill="rgba(255,255,255,0.12)"/><circle cx="90" cy="52" r="2" fill="rgba(255,255,255,0.1)"/>'
+    illus: ''
   },
   {
     label: '停车缴费',
@@ -442,7 +432,7 @@ const bizModules = [
     route: '#',
     grad: 'linear-gradient(135deg, #3A3A3A 0%, #4A4A4A 60%, #C8C8C8 100%)',
     icon: '<rect x="3" y="10" width="18" height="10" rx="2"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M6 10V6a2 2 0 012-2h8a2 2 0 012 2v4"/>',
-    illus: '<circle cx="85" cy="25" r="24" fill="rgba(255,255,255,0.07)"/><circle cx="100" cy="65" r="15" fill="rgba(255,255,255,0.04)"/><rect x="60" y="40" width="45" height="25" rx="6" fill="rgba(255,255,255,0.1)"/><rect x="68" y="48" width="10" height="8" rx="2" fill="rgba(255,255,255,0.12)"/><rect x="82" y="48" width="10" height="8" rx="2" fill="rgba(255,255,255,0.12)"/><circle cx="70" cy="60" r="3" fill="rgba(255,255,255,0.15)"/><circle cx="92" cy="60" r="3" fill="rgba(255,255,255,0.15)"/>'
+    illus: ''
   }
 ]
 
@@ -552,20 +542,23 @@ function go(route) {
 .quick-links { display: flex; justify-content: space-around; margin: 22px 12px 22px; }
 .qlink { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .qlink:active { opacity: 0.7; }
-.qlink-icon { position: relative; overflow: hidden; width: 58px; height: 58px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.10); background: linear-gradient(145deg, #2d2d31, #1f1f23); box-shadow: 6px 6px 14px rgba(0,0,0,0.55), -5px -5px 12px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-.qlink-cut { position: absolute; inset: 0; background: linear-gradient(150deg, #202024, #131315); -webkit-mask: var(--m) center / 30px 30px no-repeat; mask: var(--m) center / 30px 30px no-repeat; filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.9)) drop-shadow(0 1px 1px rgba(255,255,255,0.32)); }
-.qlink-icon.active { background: linear-gradient(145deg, #3a3a3f, #26262a); border-color: rgba(255,255,255,0.22); }
+/* 导航图标：圆形内凹（中性灰底 + 白色凸起细线条，严格按参考图） */
+.qlink-icon { position: relative; width: 58px; height: 58px; border-radius: 50%; background: #C8C8C6; display: flex; align-items: center; justify-content: center; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(255, 255, 255, 0.82); transition: box-shadow .2s ease, transform .15s ease; }
+.qlink-icon:active { transform: scale(0.96); box-shadow: inset 4px 4px 9px rgba(0, 0, 0, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.78); }
+.qlink-glyph { width: 30px; height: 30px; color: #FFFFFF; filter: drop-shadow(0 -0.5px 0.8px rgba(255, 255, 255, 1)) drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+/* 选中态：银框轻微缩放反馈（无灰阴影） */
+.qlink-icon.active { opacity: 0.85; }
 .qlink-label { font-size: 12px; color: #AAA; }
 
-.daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background: linear-gradient(145deg, #2d2d31, #1f1f23); border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; box-shadow: 9px 9px 18px rgba(0,0,0,0.55), -6px -6px 14px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.14); cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.daily-deal:active { box-shadow: 3px 3px 8px rgba(0,0,0,0.55), -3px -3px 8px rgba(255,255,255,0.03); }
-.dd-icon-box { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.dd-icon-box svg { filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.6)) drop-shadow(0 1px 1px rgba(255,255,255,0.3)); }
+.daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; border-radius: 18px; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.daily-deal:active { opacity: 0.82; }
+.dd-icon-box { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dd-icon-box svg { filter: drop-shadow(0 -0.3px 0.4px rgba(0,0,0,0.7)) drop-shadow(0 0.3px 0.4px rgba(255,255,255,0.85)); }
 .dd-left { flex: 1; min-width: 0; }
-.dd-title { font-size: var(--fs-body); font-weight: 700; color: #E8E8E8; margin-bottom: 2px; text-shadow: 0 -1px 1px rgba(0,0,0,0.6), 0 1px 1px rgba(255,255,255,0.12); }
-.dd-desc { font-size: var(--fs-secondary); color: #888; }
+.dd-title { font-size: var(--fs-body); font-weight: 700; color: rgba(255,255,255,0.52); margin-bottom: 2px; text-shadow: 0 -1px 2px rgba(0,0,0,0.5), 0 1px 2px rgba(255,255,255,0.9); }
+.dd-desc { font-size: var(--fs-secondary); color: rgba(255,255,255,0.45); }
 .dd-right { flex-shrink: 0; }
-.dd-btn { display: inline-block; padding: 8px 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.18); color: #fff; font-size: var(--fs-button); font-weight: 600; border-radius: 20px; white-space: nowrap; }
+.dd-btn { display: inline-block; padding: 8px 20px; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; border-radius: 20px; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); color: rgba(255,255,255,0.52); font-size: var(--fs-button); font-weight: 600; white-space: nowrap; }
 
 .qr-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); animation: qrFadeIn 0.2s ease; }
 @keyframes qrFadeIn { from { opacity: 0 } to { opacity: 1 } }
@@ -594,21 +587,24 @@ function go(route) {
 
 /* ── 业务版块 ── */
 .biz-modules { padding: 0 16px; margin-top: 16px; }
-.biz-hero { position: relative; border-radius: 18px; overflow: hidden; height: 170px; cursor: pointer; margin-bottom: 10px; box-sizing: border-box; background: linear-gradient(145deg, #2d2d31, #1f1f23); border: 1px solid rgba(255,255,255,0.10); box-shadow: 9px 9px 18px rgba(0,0,0,0.55), -6px -6px 14px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.14); }
+.biz-hero { position: relative; border-radius: 18px; overflow: hidden; height: 170px; cursor: pointer; margin-bottom: 10px; box-sizing: border-box; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); }
 .biz-hero:active { transform: scale(0.985); }
-.biz-hero-bg { position: absolute; inset: 0; background: rgba(255,255,255,0.05); }
+.biz-hero-bg { position: absolute; inset: 0; background: rgba(0,0,0,0.03); }
 .biz-hero-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; opacity: 0.9; }
 .biz-hero-content { position: relative; z-index: 2; padding: 22px; display: flex; flex-direction: column; height: 100%; max-width: 62%; }
-.biz-hero-title { font-size: var(--fs-headline); font-weight: 800; color: #fff; margin-bottom: 6px; letter-spacing: 0.5px; text-shadow: 0 -1px 1px rgba(0,0,0,0.6), 0 1px 1px rgba(255,255,255,0.12); }
-.biz-hero-desc { font-size: var(--fs-secondary); color: rgba(255,255,255,0.8); margin-bottom: auto; }
-.biz-hero-btn { display: inline-block; margin-top: 8px; padding: 5px 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.18); border-radius: 20px; font-size: var(--fs-button); font-weight: 600; color: #fff; align-self: flex-start; }
+.biz-hero-title { font-size: var(--fs-headline); font-weight: 800; color: rgba(255,255,255,0.52); margin-bottom: 6px; letter-spacing: 0.5px; text-shadow: 0 -1px 2px rgba(0,0,0,0.5), 0 1px 2px rgba(255,255,255,0.9); }
+.biz-hero-desc { font-size: var(--fs-secondary); color: rgba(255,255,255,0.45); margin-bottom: auto; }
+.biz-hero-btn { display: inline-block; margin-top: 8px; padding: 5px 20px; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; border-radius: 20px; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); font-size: var(--fs-button); font-weight: 600; color: rgba(255,255,255,0.52); align-self: flex-start; }
 .biz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.biz-card { position: relative; border-radius: 16px; overflow: hidden; height: 150px; cursor: pointer; transition: transform 0.15s; box-sizing: border-box; background: linear-gradient(145deg, #2d2d31, #1f1f23); border: 1px solid rgba(255,255,255,0.10); box-shadow: 7px 7px 16px rgba(0,0,0,0.55), -5px -5px 12px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.14); }
+.biz-card { position: relative; border-radius: 16px; overflow: hidden; height: 150px; cursor: pointer; transition: transform 0.15s; box-sizing: border-box; background-color: transparent !important; background-image: linear-gradient(150deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.55) 58%, rgba(255,255,255,0.88) 100%); background-origin: padding-box, border-box; background-clip: padding-box, border-box; border: 3px solid transparent; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); box-shadow: 0 0 16px rgba(255,255,255,0.22), 0 8px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28); }
 .biz-card:active { transform: scale(0.97); }
 .biz-card-bg { position: absolute; inset: 0; background: transparent !important; }
 .biz-card-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; opacity: 0.9; }
 .biz-card-content { position: relative; z-index: 2; padding: 14px; display: flex; flex-direction: column; height: 100%; }
-.biz-card-icon-sm { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; margin-bottom: auto; color: #fff; }
-.biz-card-title { font-size: var(--fs-body); font-weight: 700; color: #fff; margin-top: 8px; text-shadow: 0 1px 1px rgba(0,0,0,0.6), 0 -1px 1px rgba(255,255,255,0.15); }
-.biz-card-desc { font-size: var(--fs-secondary); color: rgba(255,255,255,0.7); margin-top: 2px; }
+.biz-card-icon-sm { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: auto; color: #E8E8E8; }
+.biz-card-icon-sm svg { filter: drop-shadow(0 -0.3px 0.4px rgba(0,0,0,0.7)) drop-shadow(0 0.3px 0.4px rgba(255,255,255,0.85)); }
+.biz-hero-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; color: #E8E8E8; }
+.biz-hero-icon svg { filter: drop-shadow(0 -0.3px 0.4px rgba(0,0,0,0.7)) drop-shadow(0 0.3px 0.4px rgba(255,255,255,0.85)); }
+.biz-card-title { font-size: var(--fs-body); font-weight: 700; color: rgba(255,255,255,0.52); margin-top: 8px; text-shadow: 0 -1px 2px rgba(0,0,0,0.5), 0 1px 2px rgba(255,255,255,0.9); }
+.biz-card-desc { font-size: var(--fs-secondary); color: rgba(255,255,255,0.45); margin-top: 2px; }
 </style>
