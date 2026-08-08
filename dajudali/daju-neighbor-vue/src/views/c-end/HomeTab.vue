@@ -81,10 +81,6 @@
                 <div class="mc-col-num">{{ memberInfo && memberInfo.coupon_count != null ? memberInfo.coupon_count : 0 }}</div>
                 <div class="mc-col-label">优惠券</div>
               </div>
-              <div class="mc-col" @click="emit('switchTab', 'profile')">
-                <div class="mc-col-num">{{ memberInfo && memberInfo.timescard_count != null ? memberInfo.timescard_count : 0 }}</div>
-                <div class="mc-col-label">次卡</div>
-              </div>
             </div>
             <div class="mc-rounds">
               <button class="mc-round" @click="emit('switchTab', 'profile')" title="会员中心">
@@ -494,37 +490,46 @@ function go(route) {
 .mc-agree-text { font-size: 13px; color: #777; line-height: 1.6; }
 .mc-link { color: #FF7B2C; }
 
-/* 登录态：照图样式，浅色暖橙卡片（保留品牌橙 #FF7B2C） */
-.mc-light { background: linear-gradient(160deg, #FFF7EE 0%, #FFEEDC 100%) !important; box-shadow: 0 -4px 20px rgba(255, 123, 44, 0.22); }
+/* 登录态：橙色渐变 + 清透感（浅亮、通透、有呼吸感） */
+.mc-light {
+  background: linear-gradient(155deg, #FFFEFC 0%, #FFF4E8 42%, #FFE4C6 100%) !important;
+  box-shadow: 0 -6px 24px rgba(232, 93, 4, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+.mc-light::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 46%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
+  border-radius: 20px 20px 0 0; pointer-events: none;
+}
 .member-logged { padding: 0; }
 
-.mcard { position: relative; padding: 16px 18px 16px; overflow: visible; }
+.mcard { position: relative; padding: 22px 20px 20px; overflow: visible; }
 
 /* 上半区：左名 + 右上大圆按钮 & 胶囊 */
 .mc-upper { display: flex; align-items: flex-start; justify-content: space-between; }
-.mc-left { flex: 1; min-width: 0; padding-top: 8px; }
-.mc-name { font-size: 19px; font-weight: 800; color: #1A1A1A; }
-.mc-upgrade { font-size: 12px; color: #9A8B7A; margin-top: 8px; }
-.mc-upgrade b { color: #E85D04; font-weight: 700; font-size: 14px; }
+.mc-left { flex: 1; min-width: 0; padding-top: 10px; }
+.mc-name { font-size: 20px; font-weight: 800; color: #2A1A0E; letter-spacing: 0.3px; }
+.mc-upgrade { font-size: 12px; color: #B09C88; margin-top: 12px; }
+.mc-upgrade b { color: #E85D04; font-weight: 700; font-size: 15px; }
 
-.mc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-.mc-big-round { width: 66px; height: 66px; border-radius: 50%; border: 3px solid #FFF7EE; background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 14px rgba(232, 93, 4, 0.45); margin-top: -46px; position: relative; overflow: hidden; flex-shrink: 0; }
+.mc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.mc-big-round { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #FFF6EC; background: linear-gradient(135deg, #FF8A3D, #FF6F0F); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 18px rgba(232, 93, 4, 0.42); margin-top: -52px; position: relative; overflow: hidden; flex-shrink: 0; }
 .mc-big-round img { width: 100%; height: 100%; object-fit: cover; }
 .mc-big-round:active { opacity: 0.9; }
-.mc-pill { background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 11px; font-weight: 700; padding: 4px 16px; border-radius: 14px; letter-spacing: 1px; }
+.mc-pill { background: linear-gradient(135deg, #FF8A3D, #FF6F0F); color: #fff; font-size: 11px; font-weight: 700; padding: 5px 18px; border-radius: 16px; letter-spacing: 1px; box-shadow: 0 2px 8px rgba(232,93,4,0.3); }
 
 /* 弧形进度条 */
-.mc-arc { margin: 12px 2px 4px; }
-.mc-arc-svg { width: 100%; height: 44px; display: block; }
+.mc-arc { margin: 20px 2px 6px; }
+.mc-arc-svg { width: 100%; height: 46px; display: block; }
 
-/* 底部：三列数据 + 三个圆形按钮 */
-.mc-lower { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 14px; }
-.mc-cols { display: flex; gap: 26px; }
+/* 底部：两列数据 + 三个圆形按钮 */
+.mc-lower { display: flex; align-items: center; justify-content: space-between; margin-top: 22px; }
+.mc-cols { display: flex; gap: 44px; }
 .mc-col { cursor: pointer; }
-.mc-col-num { font-size: 19px; font-weight: 800; color: #1A1A1A; line-height: 1.2; }
-.mc-col-label { font-size: 12px; color: #9A8B7A; margin-top: 4px; }
-.mc-rounds { display: flex; gap: 10px; }
-.mc-round { width: 40px; height: 40px; border-radius: 50%; border: none; background: linear-gradient(135deg, #FF7B2C, #E85D04); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(232, 93, 4, 0.35); }
+.mc-col-num { font-size: 22px; font-weight: 800; color: #2A1A0E; line-height: 1.2; }
+.mc-col-label { font-size: 12px; color: #B09C88; margin-top: 6px; letter-spacing: 0.5px; }
+.mc-rounds { display: flex; gap: 12px; }
+.mc-round { width: 42px; height: 42px; border-radius: 50%; border: none; background: linear-gradient(135deg, #FF8A3D, #FF6F0F); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 3px 10px rgba(232, 93, 4, 0.36); }
 .mc-round:active { opacity: 0.85; }
 
 .quick-links { display: flex; justify-content: space-around; margin: 20px 16px 20px; }

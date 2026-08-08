@@ -1,1 +1,0 @@
-(function(){System.register([`./css-legacy-Clrx7Ev1.js`],function(e,t){return{setters:[function(e){}],execute:function(){}}})})();
