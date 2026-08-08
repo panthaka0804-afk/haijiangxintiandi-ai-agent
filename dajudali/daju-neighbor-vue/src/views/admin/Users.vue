@@ -6,9 +6,8 @@
     </div>
 
     <el-card shadow="never">
-      <div class="table-x">
       <el-table :data="list" stripe v-loading="loading" style="width: 100%;">
-        <el-table-column prop="id" label="ID" width="60" class-name="m-hide" />
+        <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="username" label="用户名" width="130" />
         <el-table-column prop="display_name" label="显示名" width="120" />
         <el-table-column prop="role" label="角色" width="120">
@@ -18,10 +17,9 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="tenant_id" label="租户ID" width="80" class-name="m-hide" />
-        <el-table-column prop="created_at" label="创建时间" width="160" class-name="m-hide" />
+        <el-table-column prop="tenant_id" label="租户ID" width="80" />
+        <el-table-column prop="created_at" label="创建时间" width="160" />
       </el-table>
-      </div>
     </el-card>
 
     <!-- 新增用户弹窗 -->

@@ -78,7 +78,7 @@ const bank = [
 
 /* 渐变顶 */
 .card-grad {
-  background: linear-gradient(135deg, #FF7B2C 0%, #E85D04 100%);
+  background: linear-gradient(135deg, #1A1A1A 0%, #1A1A1A 100%);
   padding: 22px 18px 18px; position: relative; overflow: hidden;
   display: flex; justify-content: space-between; align-items: flex-start;
 }
@@ -89,7 +89,7 @@ const bank = [
 .card-dots {
   position: absolute; top: 12px; right: 60px;
   width: 28px; height: 28px;
-  background: radial-gradient(circle, rgba(255,255,255,0.2) 1px, transparent 1px);
+  background: radial-gradient(circle, #1A1A1A 1px, transparent 1px);
   background-size: 7px 7px;
 }
 .card-ring {
@@ -101,20 +101,20 @@ const bank = [
 
 /* 白底 */
 .card-white {
-  background: #F0F2F5; padding: 10px 18px 12px;
+  background: #1A1A1A; padding: 10px 18px 12px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .card-tags { display: flex; gap: 6px; }
-.tag { background: #FFF3E0; color: #FF7B2C; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; }
+.tag { background: #1A1A1A; color: #999999; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; }
 
 /* 展开菜单 — 凸起新拟态 */
-.cd-menu { background: #F0F2F5; border-radius: 16px; padding: 12px 12px 6px; margin-bottom: 2px; margin-top: 4px; box-shadow: 3px 3px 6px #d1d6dd, -3px -3px 6px #ffffff; }
-.cd-section-title { font-size: 12px; font-weight: 600; color: #888; letter-spacing: 0.4px; padding: 6px 4px 8px; }
+.cd-menu { background: #1A1A1A; border-radius: 16px; padding: 12px 12px 6px; margin-bottom: 2px; margin-top: 4px; box-shadow: 3px 3px 6px #d1d6dd, -3px -3px 6px #ffffff; }
+.cd-section-title { font-size: 12px; font-weight: 600; color: #BBBBBB; letter-spacing: 0.4px; padding: 6px 4px 8px; }
 .cd-section-title:first-child { padding-top: 0; }
 .cd-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
 .cd-btn {
   padding: 8px 16px; border: none; border-radius: 8px;
-  background: #E8ECF1; color: #FF7B2C;
+  background: #1A1A1A; color: #999999;
   box-shadow: 2px 2px 4px #d1d6dd, -2px -2px 4px #ffffff;
   font-size: 13px; font-weight: 500; cursor: pointer;
   white-space: nowrap; transition: box-shadow 0.15s; font-family: inherit;

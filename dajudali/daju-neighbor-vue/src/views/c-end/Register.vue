@@ -80,11 +80,11 @@ async function onSubmit() {
 }
 
 .tips b {
-  color: #FF7B2C;
+  color: #999999;
 }
 
 :deep(.van-nav-bar) {
-  background: linear-gradient(135deg, #FF7B2C, #C15818);
+  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
 }
 
 :deep(.van-nav-bar__title),

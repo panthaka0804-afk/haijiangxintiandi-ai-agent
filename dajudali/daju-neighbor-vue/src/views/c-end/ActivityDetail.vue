@@ -22,7 +22,7 @@
         <div class="ad-price-row" v-if="activity.price > 0 || activity.points_price > 0">
           <span class="ad-price" v-if="activity.price > 0">¥{{ activity.price }}/人</span>
           <span class="ad-points" v-if="activity.points_price > 0">或 {{ activity.points_price }} 积分</span>
-          <span class="ad-price" v-if="activity.price === 0 && activity.points_price === 0" style="color:#4CAF50">免费</span>
+          <span class="ad-price" v-if="activity.price === 0 && activity.points_price === 0" style="color:#878787">免费</span>
         </div>
       </div>
 
@@ -268,8 +268,8 @@ onMounted(() => {
 .ad-card p { margin: 0; }
 
 .ad-price-row { margin-top: 12px; display: flex; gap: 12px; align-items: center; }
-.ad-price { color: #FF7B2C; font-size: 18px; font-weight: 700; }
-.ad-points { color: #FFB347; font-size: 14px; }
+.ad-price { color: #999999; font-size: 18px; font-weight: 700; }
+.ad-points { color: #BDBDBD; font-size: 14px; }
 
 /* 场次 */
 .ad-sessions { display: flex; gap: 10px; overflow-x: auto; padding: 0 4px; }
@@ -277,19 +277,19 @@ onMounted(() => {
   flex-shrink: 0; width: 140px; background: #222; border: 1px solid #333; border-radius: 12px;
   padding: 12px; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; gap: 4px;
 }
-.ad-session-item.selected { border-color: #FF7B2C; background: #2A2018; }
+.ad-session-item.selected { border-color: #999999; background: #1A1A1A; }
 .ad-session-item.full { opacity: 0.4; cursor: not-allowed; }
 .asi-date { font-size: 14px; font-weight: 600; color: #F0F0F0; }
-.asi-time { font-size: 13px; color: #FF7B2C; font-weight: 600; }
+.asi-time { font-size: 13px; color: #999999; font-weight: 600; }
 .asi-venue { font-size: 12px; color: #777; }
-.asi-left { font-size: 12px; color: #4CAF50; }
+.asi-left { font-size: 12px; color: #878787; }
 
 /* 报名表单 */
 .ad-form { display: flex; flex-direction: column; gap: 12px; }
 .ad-field { display: flex; flex-direction: column; gap: 6px; }
 .ad-field label { font-size: 13px; color: #999; font-weight: 500; }
 .ad-input-wrap { background: #2A2A2A; border: 1px solid #444; border-radius: 12px; transition: border-color 0.15s; }
-.ad-input-wrap:focus-within { border-color: #FF7B2C; }
+.ad-input-wrap:focus-within { border-color: #999999; }
 .ad-input-wrap input { width: 100%; padding: 12px 14px; border: none; background: none; outline: none; font-size: 15px; color: #F0F0F0; font-family: inherit; }
 .ad-input-wrap input::placeholder { color: #666; }
 
@@ -300,16 +300,16 @@ onMounted(() => {
   background: #2A2A2A; color: #999; font-size: 14px; font-family: inherit; cursor: pointer;
   transition: all 0.15s;
 }
-.ad-pay-btn.on { border-color: #FF7B2C; color: #FF7B2C; background: #2A2018; }
+.ad-pay-btn.on { border-color: #999999; color: #999999; background: #1A1A1A; }
 
 .ad-member-tip {
-  background: #2A2018; border: 1px solid #3A2A1A; border-radius: 10px;
-  padding: 10px 14px; font-size: 13px; color: #FFB347;
+  background: #1A1A1A; border: 1px solid #2D2D2D; border-radius: 10px;
+  padding: 10px 14px; font-size: 13px; color: #BDBDBD;
 }
 
 .ad-submit {
   width: 100%; padding: 14px; border: none; border-radius: 12px;
-  background: #FF7B2C; color: #fff; font-size: 16px; font-weight: 700;
+  background: #1A1A1A; color: #fff; font-size: 16px; font-weight: 700;
   cursor: pointer; font-family: inherit; transition: opacity 0.15s; margin-top: 6px;
 }
 .ad-submit:disabled { background: #444; color: #777; cursor: not-allowed; }
@@ -324,15 +324,15 @@ onMounted(() => {
   background: #222; border-radius: 16px; padding: 24px; width: 90%; max-width: 360px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
-.at-h { font-size: 18px; font-weight: 700; color: #FF7B2C; margin-bottom: 16px; text-align: center; }
+.at-h { font-size: 18px; font-weight: 700; color: #999999; margin-bottom: 16px; text-align: center; }
 .at-body { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
 .at-row { display: flex; justify-content: space-between; font-size: 14px; }
 .at-lbl { color: #777; }
-.at-code { color: #FF7B2C; font-weight: 700; font-family: monospace; }
+.at-code { color: #999999; font-weight: 700; font-family: monospace; }
 .at-actions { display: flex; gap: 8px; }
 .at-btn {
   flex: 1; padding: 10px; border: none; border-radius: 10px;
-  background: #FF7B2C; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  background: #1A1A1A; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
 }
 .at-btn.secondary { background: #333; color: #AAA; }
 
@@ -346,15 +346,15 @@ onMounted(() => {
 .arli-top { display: flex; justify-content: space-between; align-items: center; }
 .arli-title { font-size: 15px; font-weight: 600; color: #F0F0F0; }
 .arli-status { font-size: 12px; padding: 3px 8px; border-radius: 6px; }
-.arli-status.confirmed { background: #1A3A1A; color: #4CAF50; }
-.arli-status.refunding { background: #3A2A1A; color: #FFB347; }
-.arli-status.cancelled { background: #3A1A1A; color: #F44336; }
+.arli-status.confirmed { background: #1A1A1A; color: #878787; }
+.arli-status.refunding { background: #1A1A1A; color: #BDBDBD; }
+.arli-status.cancelled { background: #1A1A1A; color: #767676; }
 .arli-info { font-size: 13px; color: #999; margin-top: 6px; }
-.arli-code { font-size: 12px; color: #FF7B2C; font-family: monospace; margin-top: 4px; }
+.arli-code { font-size: 12px; color: #999999; font-family: monospace; margin-top: 4px; }
 .arli-actions { display: flex; gap: 8px; margin-top: 10px; }
 .arli-btn {
   padding: 6px 14px; border: 1px solid #444; border-radius: 8px;
   background: #333; color: #AAA; font-size: 13px; cursor: pointer; font-family: inherit;
 }
-.arli-btn.danger { border-color: #5A1A1A; color: #F44336; }
+.arli-btn.danger { border-color: #2D2D2D; color: #767676; }
 </style>

@@ -26,14 +26,13 @@
 
     <!-- 表格 -->
     <el-card shadow="never">
-      <div class="table-x">
       <el-table :data="list" stripe v-loading="loading" style="width: 100%;">
-        <el-table-column prop="id" label="ID" width="60" class-name="m-hide" />
-        <el-table-column prop="category" label="分类" width="100" class-name="m-hide" />
+        <el-table-column prop="id" label="ID" width="60" />
+        <el-table-column prop="category" label="分类" width="100" />
         <el-table-column prop="question" label="问题" min-width="200" show-overflow-tooltip />
         <el-table-column prop="answer" label="回答" min-width="300" show-overflow-tooltip />
-        <el-table-column prop="keywords" label="关键词" width="150" class-name="m-hide" show-overflow-tooltip />
-        <el-table-column label="操作" width="160">
+        <el-table-column prop="keywords" label="关键词" width="150" show-overflow-tooltip />
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="editRow(row)">编辑</el-button>
             <el-popconfirm title="确定删除？" @confirm="deleteRow(row.id)">
@@ -44,7 +43,6 @@
           </template>
         </el-table-column>
       </el-table>
-      </div>
 
       <el-pagination
         v-model:current-page="page"

@@ -2,7 +2,7 @@
   <div class="member-page">
     <van-nav-bar title="会员中心" left-text="返回" left-arrow @click-left="$router.back()" fixed placeholder>
       <template #right>
-        <van-button size="small" round plain @click="userStore.largeFont = !userStore.largeFont" :style="{ color: userStore.largeFont ? '#FF8C00' : '#777', borderColor: userStore.largeFont ? '#FF8C00' : '#444', fontWeight: '700' }">{{ userStore.largeFont ? '老年关怀' : '老年关怀' }}</van-button>
+        <van-button size="small" round plain @click="userStore.largeFont = !userStore.largeFont" :style="{ color: userStore.largeFont ? '#9E9E9E' : '#777', borderColor: userStore.largeFont ? '#9E9E9E' : '#444', fontWeight: '700' }">{{ userStore.largeFont ? '老年关怀' : '老年关怀' }}</van-button>
       </template>
     </van-nav-bar>
 
@@ -153,10 +153,10 @@ async function showRedeemConfirm(item) {
 
 .member-card {
   margin: 16px;
-  background: linear-gradient(135deg, #3A2818, #2A2A2A);
+  background: linear-gradient(135deg, #1A1A1A, #2A2A2A);
   border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 2px 12px rgba(255, 123, 44, 0.15);
+  box-shadow: 0 2px 12px #999999;
 }
 
 .card-header {
@@ -176,9 +176,9 @@ async function showRedeemConfirm(item) {
 }
 
 .level-badge.普卡 { background: #999; }
-.level-badge.银卡 { background: #78909C; }
-.level-badge.金卡 { background: #FFB300; }
-.level-badge.钻石卡 { background: #7C4DFF; }
+.level-badge.银卡 { background: #1A1A1A; }
+.level-badge.金卡 { background: #1A1A1A; }
+.level-badge.钻石卡 { background: #1A1A1A; }
 
 .card-name {
   font-size: 18px;
@@ -209,12 +209,12 @@ async function showRedeemConfirm(item) {
 }
 
 .info-row .value.highlight {
-  color: #FF7B2C;
+  color: #999999;
   font-size: 18px;
 }
 
 :deep(.van-nav-bar) {
-  background: linear-gradient(135deg, #FF7B2C, #C15818);
+  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
 }
 
 :deep(.van-nav-bar__title),

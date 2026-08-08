@@ -6,7 +6,7 @@
       class="tb-btn"
       @click="handleClick(btn)"
     >
-      <SvgIcon :name="btn.icon" :size="18" color="#FF7B2C" />
+      <SvgIcon :name="btn.icon" :size="18" color="#999999" />
       <span>{{ btn.label }}</span>
     </button>
   </div>
@@ -42,7 +42,7 @@ function handleClick(btn) {
   flex-wrap: wrap;
   gap: 8px;
   padding: 12px 16px;
-  background: #E8ECF1;
+  background: #1A1A1A;
   flex-shrink: 0;
 }
 
@@ -55,9 +55,9 @@ function handleClick(btn) {
   padding: 10px 4px;
   border: none;
   border-radius: 16px;
-  background: #F0F2F5;
+  background: #1A1A1A;
   box-shadow: 3px 3px 6px #d1d6dd, -3px -3px 6px #ffffff;
-  color: #333;
+  color: #F0F0F0;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;

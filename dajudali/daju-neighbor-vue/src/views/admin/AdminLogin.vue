@@ -70,12 +70,12 @@ async function onSubmit() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, #1A1A1A 0%, #1A1A1A 100%);
 }
 
 .login-box {
   width: 400px;
-  background: #fff;
+  background: #1A1A1A;
   border-radius: 12px;
   padding: 40px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.08);
@@ -92,7 +92,7 @@ async function onSubmit() {
 
 .login-logo h2 {
   font-size: 24px;
-  color: #FF7B2C;
+  color: #999999;
   margin: 8px 0 4px;
 }
 

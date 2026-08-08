@@ -103,7 +103,7 @@ function onSwitchTab(tab) {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 2px; cursor: pointer; color: #777; transition: all 0.15s;
 }
-.tb-item.active { color: #FF7B2C; }
+.tb-item.active { color: #999999; }
 .tb-icon {
   width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
   border-radius: 10px; transition: all 0.15s;

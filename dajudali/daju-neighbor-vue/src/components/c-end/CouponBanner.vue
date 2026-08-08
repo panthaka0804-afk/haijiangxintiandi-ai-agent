@@ -41,7 +41,7 @@ defineEmits(['click'])
 
 /* 渐变顶 */
 .card-grad {
-  background: linear-gradient(135deg, #FF7B2C 0%, #E85D04 100%);
+  background: linear-gradient(135deg, #1A1A1A 0%, #1A1A1A 100%);
   padding: 22px 18px 18px; position: relative; overflow: hidden;
   display: flex; justify-content: space-between; align-items: flex-start;
 }
@@ -52,7 +52,7 @@ defineEmits(['click'])
 .card-dots {
   position: absolute; top: 12px; right: 60px;
   width: 28px; height: 28px;
-  background: radial-gradient(circle, rgba(255,255,255,0.2) 1px, transparent 1px);
+  background: radial-gradient(circle, #1A1A1A 1px, transparent 1px);
   background-size: 7px 7px;
 }
 .card-ring {
@@ -63,7 +63,7 @@ defineEmits(['click'])
 }
 
 /* 白底 */
-.card-white { background: #F0F2F5; padding: 10px 18px 12px; }
+.card-white { background: #1A1A1A; padding: 10px 18px 12px; }
 .card-tags { display: flex; gap: 6px; }
-.tag { background: #FFF3E0; color: #FF7B2C; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; }
+.tag { background: #1A1A1A; color: #999999; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; }
 </style>

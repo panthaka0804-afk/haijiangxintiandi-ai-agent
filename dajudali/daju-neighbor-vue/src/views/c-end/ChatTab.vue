@@ -12,7 +12,7 @@
           <div class="msg-bubble user-bubble">{{ msg.content }}</div>
         </template>
         <template v-else>
-          <div class="msg-avatar"><SvgIcon name="message" :size="22" color="#FF8C00" /></div>
+          <div class="msg-avatar"><SvgIcon name="message" :size="22" color="#9E9E9E" /></div>
           <div class="msg-bubble ai-bubble" v-html="formatMsg(msg.content)"></div>
           <!-- 智能快捷操作按钮 -->
           <div v-if="getQuickActions(msg.content).length" class="quick-actions-row">
@@ -71,7 +71,7 @@
 
       <!-- 打字动画 -->
       <div class="message-wrapper ai" v-if="typing">
-        <div class="msg-avatar"><SvgIcon name="message" :size="22" color="#FF8C00" /></div>
+        <div class="msg-avatar"><SvgIcon name="message" :size="22" color="#9E9E9E" /></div>
         <div class="msg-bubble ai-bubble typing-bubble">
           <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         </div>
@@ -98,7 +98,7 @@
           @touchcancel.prevent="stopVoice"
           @contextmenu.prevent
         >
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" :stroke="recording ? '#fff' : '#FF8C00'" stroke-width="1.5" stroke-linecap="round">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" :stroke="recording ? '#fff' : '#9E9E9E'" stroke-width="1.5" stroke-linecap="round">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
             <line x1="12" y1="19" x2="12" y2="23"/>
@@ -673,7 +673,7 @@ watch(() => chatStore.messages.length, () => {
 }
 
 .user-bubble {
-  background: #FF7B2C;
+  background: #1A1A1A;
   color: #FFFFFF;
   border-radius: 18px 18px 4px 18px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
@@ -688,7 +688,7 @@ watch(() => chatStore.messages.length, () => {
 
 .msg-time {
   font-size: 11px;
-  color: #777;
+  color: #BBBBBB;
   padding: 1px 8px;
   font-weight: 400;
 }
@@ -741,7 +741,7 @@ watch(() => chatStore.messages.length, () => {
 /* 实时文字白框 */
 .voice-text-panel {
   width: 100%;
-  background: rgba(255,255,255,0.12);
+  background: #1A1A1A;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 0.5px solid rgba(255,255,255,0.15);
@@ -769,7 +769,7 @@ watch(() => chatStore.messages.length, () => {
 }
 .wave-bar-inline {
   width: 3px;
-  background: #FF7B2C;
+  background: #1A1A1A;
   border-radius: 2px;
   animation: waveInline 0.5s ease-in-out infinite alternate;
 }
@@ -796,7 +796,7 @@ watch(() => chatStore.messages.length, () => {
   user-select: none;
 }
 .voice-btn:active {
-  background: #FF7B2C;
+  background: #1A1A1A;
   box-shadow: none;
   transform: scale(0.95);
 }
@@ -843,7 +843,7 @@ watch(() => chatStore.messages.length, () => {
   min-width: 0;
 }
 .wx-input-field::placeholder {
-  color: #666;
+  color: #BBBBBB;
 }
 .wx-input-field:disabled {
   opacity: 0.6;
@@ -888,7 +888,7 @@ watch(() => chatStore.messages.length, () => {
   min-width: 0;
 }
 .wx-voice-input::placeholder {
-  color: #666;
+  color: #BBBBBB;
 }
 .voice-text-input-row {
   display: flex;
@@ -910,11 +910,11 @@ watch(() => chatStore.messages.length, () => {
   min-width: 0;
 }
 .voice-mini-input::placeholder {
-  color: #555;
+  color: #BBBBBB;
   font-size: 14px;
 }
 .voice-mini-input:focus {
-  border-color: #FF8C00;
+  border-color: #9E9E9E;
 }
 
 /* 快捷操作按钮 */
@@ -941,19 +941,19 @@ watch(() => chatStore.messages.length, () => {
 }
 .qa-icon {
   flex-shrink: 0;
-  color: #FF8C00;
+  color: #9E9E9E;
 }
 .quick-action-btn:active {
-  background: #FF8C00;
+  background: #1A1A1A;
   color: #fff;
-  border-color: #FF8C00;
+  border-color: #9E9E9E;
 }
 .quick-action-btn:active .qa-icon {
   color: #fff;
 }
 .wx-send-btn {
   flex-shrink: 0;
-  background: linear-gradient(135deg, #FF8C00, #FF6B00);
+  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
   color: #fff;
   border: none;
   border-radius: 18px;
@@ -982,7 +982,7 @@ watch(() => chatStore.messages.length, () => {
   color: #D4D4D4 !important;
 }
 :deep(.text-input .van-field__control::placeholder) {
-  color: #777 !important;
+  color: #BBBBBB !important;
 }
 :deep(.text-input .van-field) {
   background: transparent !important;
@@ -1011,7 +1011,7 @@ watch(() => chatStore.messages.length, () => {
 .ai-card-name { font-size: 16px; font-weight: 500; color: #F0F0F0; line-height: 1.3; }
 .ai-card-desc { font-size: 13px; color: #999; margin-top: 2px; line-height: 1.2; }
 .ai-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
-.ai-card-tag { font-size: 11px; color: #FF7B2C; background: rgba(255,123,44,0.15); padding: 2px 6px; border-radius: 4px; font-weight: 500; white-space: nowrap; }
-.ai-card-price { font-size: 15px; font-weight: 600; color: #FF7B2C; white-space: nowrap; }
+.ai-card-tag { font-size: 11px; color: #999999; background: #1A1A1A; padding: 2px 6px; border-radius: 4px; font-weight: 500; white-space: nowrap; }
+.ai-card-price { font-size: 15px; font-weight: 600; color: #999999; white-space: nowrap; }
 .ai-card-footer { font-size: 13px; color: #999; padding: 10px 14px; background: #222222; line-height: 1.4; border-top: 1px solid #2E2E2E; }
 </style>

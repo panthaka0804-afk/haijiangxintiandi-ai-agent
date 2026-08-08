@@ -38,7 +38,7 @@
               <template #button>
                 <van-button
                   size="small"
-                  color="#FF8C00" style="background:#FF8C00;border-color:#FF8C00;color:#fff"
+                  color="#9E9E9E" style="background:#1A1A1A;border-color:#9E9E9E;color:#fff"
                   :disabled="codeSending || codeCountdown > 0"
                   @click="sendCode"
                 >
@@ -51,7 +51,7 @@
             <van-button
               round
               block
-              color="#FF8C00" style="background:#FF8C00;border-color:#FF8C00;color:#fff"
+              color="#9E9E9E" style="background:#1A1A1A;border-color:#9E9E9E;color:#fff"
               :loading="loading"
               @click="doLogin"
             >
@@ -82,7 +82,7 @@
             <van-button
               round
               block
-              color="#FF8C00" style="background:#FF8C00;border-color:#FF8C00;color:#fff"
+              color="#9E9E9E" style="background:#1A1A1A;border-color:#9E9E9E;color:#fff"
               :loading="loading"
               loading-text="注册中..."
               @click="doRegister"
@@ -217,7 +217,7 @@ async function doRegister() {
 }
 
 .ls-sheet {
-  background: #fff;
+  background: #1A1A1A;
   border-radius: 20px 20px 0 0;
   padding: 24px;
   max-height: 70vh;
@@ -228,7 +228,7 @@ async function doRegister() {
 .ls-handle {
   width: 36px;
   height: 4px;
-  background: #ddd;
+  background: #1A1A1A;
   border-radius: 2px;
   margin: 0 auto 16px;
 }
@@ -243,13 +243,13 @@ async function doRegister() {
 
 .ls-header h3 {
   font-size: 18px;
-  color: #333;
+  color: #F0F0F0;
   margin: 0;
 }
 
 .ls-switch {
   font-size: 13px;
-  color: #FF7B2C;
+  color: #999999;
   cursor: pointer;
 }
 
@@ -265,18 +265,18 @@ async function doRegister() {
 }
 
 .ls-tip b {
-  color: #FF7B2C;
+  color: #999999;
 }
 
 .ls-close {
   display: block;
   width: 100%;
   padding: 10px;
-  background: #eee;
+  background: #1A1A1A;
   border: none;
   border-radius: 10px;
   margin-top: 12px;
-  color: #666;
+  color: #BBBBBB;
   font-size: 14px;
   cursor: pointer;
   font-family: inherit;

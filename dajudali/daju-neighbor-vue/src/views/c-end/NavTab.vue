@@ -37,7 +37,7 @@
           </g>
           <!-- 出入口 -->
           <g v-for="ex in exits" :key="ex.label">
-            <rect :x="ex.x - 12" :y="ex.y" :width="24" :height="16" rx="4" fill="#FF7B2C" />
+            <rect :x="ex.x - 12" :y="ex.y" :width="24" :height="16" rx="4" fill="#999999" />
             <text :x="ex.x" :y="ex.y + 12" text-anchor="middle" fill="#fff" font-size="10" font-weight="600" font-family="inherit">{{ ex.label }}</text>
           </g>
           <!-- 扶梯 -->
@@ -53,22 +53,22 @@
           <!-- 导航路线 -->
           <polyline v-if="routePath.length >= 2"
             :points="routePath.map(p => `${p.x},${p.y}`).join(' ')"
-            fill="none" stroke="#FF7B2C" stroke-width="2.5" stroke-dasharray="8,4"
+            fill="none" stroke="#999999" stroke-width="2.5" stroke-dasharray="8,4"
             stroke-linecap="round" stroke-linejoin="round"
           >
             <animate attributeName="stroke-dashoffset" from="24" to="0" dur="1s" repeatCount="indefinite" />
           </polyline>
           <!-- 路线起点标记 -->
-          <circle v-if="routePath.length" :cx="routePath[0].x" :cy="routePath[0].y" r="6" fill="#4CAF50" stroke="#fff" stroke-width="2" />
+          <circle v-if="routePath.length" :cx="routePath[0].x" :cy="routePath[0].y" r="6" fill="#878787" stroke="#fff" stroke-width="2" />
           <!-- 路线终点标记 -->
-          <circle v-if="routePath.length" :cx="routePath[routePath.length-1].x" :cy="routePath[routePath.length-1].y" r="6" fill="#FF7B2C" stroke="#fff" stroke-width="2" />
+          <circle v-if="routePath.length" :cx="routePath[routePath.length-1].x" :cy="routePath[routePath.length-1].y" r="6" fill="#999999" stroke="#fff" stroke-width="2" />
           <!-- 电梯标记 -->
           <g v-for="(ep, ei) in elevatorPositions[String(activeFloor)] || []" :key="'e'+ei">
-            <rect :x="ep.x - 6" :y="ep.y - 6" width="12" height="12" rx="3" fill="#607D8B" stroke="#fff" stroke-width="1" />
+            <rect :x="ep.x - 6" :y="ep.y - 6" width="12" height="12" rx="3" fill="#767676" stroke="#fff" stroke-width="1" />
             <text :x="ep.x" :y="ep.y + 4" text-anchor="middle" fill="#fff" font-size="8" font-family="inherit">梯</text>
           </g>
           <!-- 入口 -->
-          <rect :x="entrancePos.x - 8" :y="entrancePos.y - 8" width="16" height="16" rx="4" fill="#4CAF50" stroke="#fff" stroke-width="1" />
+          <rect :x="entrancePos.x - 8" :y="entrancePos.y - 8" width="16" height="16" rx="4" fill="#878787" stroke="#fff" stroke-width="1" />
           <text :x="entrancePos.x" :y="entrancePos.y + 4" text-anchor="middle" fill="#fff" font-size="8" font-family="inherit">入</text>
         </svg>
       </div>
@@ -79,13 +79,13 @@
           <div class="mt-name">{{ highlightShop.name }}</div>
           <div class="mt-meta">{{ highlightShop.floor }}F · {{ highlightShop.category }}</div>
         </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
 
       <!-- 步行指引面板 -->
       <div v-if="showRoute && routeSteps.length" class="route-panel">
         <div class="rp-header">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           <span class="rp-title">{{ routeTarget ? '前往 ' + routeTarget.name : '步行指引' }}</span>
           <button class="rp-close" @click="showRoute=false;highlightId=null;routePath=[]">✕</button>
         </div>
@@ -329,7 +329,7 @@ onMounted(() => {
   display: flex; align-items: center; gap: 10px; padding: 6px 14px; margin: 8px 12px;
   background: #2A2A2A; border: 1px solid transparent; border-radius: 12px; transition: border-color 0.15s;
 }
-.nav-search:focus-within { border-color: #FF7B2C; background: #2A2A2A; }
+.nav-search:focus-within { border-color: #999999; background: #2A2A2A; }
 .nav-search input { flex: 1; border: none; background: none; outline: none; font-size: 15px; color: #F0F0F0; font-family: inherit; }
 .nav-search input::placeholder { color: #666; }
 .search-clear { border: none; background: none; font-size: 16px; color: #666; cursor: pointer; padding: 0 4px; }
@@ -355,7 +355,7 @@ onMounted(() => {
   flex: 1; border: none; background: none; padding: 8px 0; font-size: 15px; font-weight: 600;
   color: #777; cursor: pointer; position: relative; z-index: 1; transition: color 0.25s; font-family: inherit;
 }
-.seg-btn.active { color: #FF7B2C; }
+.seg-btn.active { color: #999999; }
 
 /* 地图 */
 .map-section { flex: 1; margin: 0 12px; position: relative; }
@@ -406,7 +406,7 @@ onMounted(() => {
   padding: 8px; border: none; border-radius: 12px; background: #2A2A2A; color: #999;
   font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
-.na-btn.on { background: #3A2A1A; color: #FF7B2C; }
+.na-btn.on { background: #1A1A1A; color: #999999; }
 .na-btn:active { opacity: 0.7; }
 
 /* 路线指引面板 */
@@ -437,8 +437,8 @@ onMounted(() => {
   background: #333; color: #999; font-size: 12px; font-weight: 700;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.rps-dot.start { background: #4CAF50; color: #fff; }
-.rps-dot.end { background: #FF7B2C; color: #fff; }
+.rps-dot.start { background: #1A1A1A; color: #fff; }
+.rps-dot.end { background: #1A1A1A; color: #fff; }
 .rps-text { font-size: 14px; color: #CCC; line-height: 1.6; padding-top: 3px; }
 
 </style>

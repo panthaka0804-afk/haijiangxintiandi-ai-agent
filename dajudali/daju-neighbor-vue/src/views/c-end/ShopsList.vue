@@ -75,7 +75,7 @@ const filteredShops = computed(() => {
   background: #2A2A2A; border: 1px solid #444; border-radius: 12px;
   margin-bottom: 12px; transition: border-color 0.15s;
 }
-.sl-search:focus-within { border-color: #FF7B2C; }
+.sl-search:focus-within { border-color: #999999; }
 .sl-search input { flex: 1; border: none; background: none; outline: none; font-size: 15px; color: #F0F0F0; font-family: inherit; }
 .sl-search input::placeholder { color: #666; }
 
@@ -87,7 +87,7 @@ const filteredShops = computed(() => {
   background: #222222; color: #999;
   transition: all 0.15s;
 }
-.sl-cat-btn.active { background: #FF7B2C; color: #fff; border-color: #FF7B2C; }
+.sl-cat-btn.active { background: #1A1A1A; color: #fff; border-color: #999999; }
 
 .sl-list { display: flex; flex-direction: column; gap: 0; }
 .sl-card {

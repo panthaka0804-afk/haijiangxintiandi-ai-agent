@@ -11,18 +11,17 @@
     </div>
 
     <el-card shadow="never">
-      <div class="table-x">
       <el-table :data="list" stripe v-loading="loading" style="width: 100%;">
-        <el-table-column prop="id" label="工单号" width="80" class-name="m-hide" />
-        <el-table-column prop="type" label="类型" width="100" class-name="m-hide" />
+        <el-table-column prop="id" label="工单号" width="80" />
+        <el-table-column prop="type" label="类型" width="100" />
         <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="statusType(row.status)">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="160" class-name="m-hide" />
-        <el-table-column label="操作" width="180">
+        <el-table-column prop="created_at" label="创建时间" width="160" />
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="viewDetail(row)">查看</el-button>
             <el-select
@@ -39,7 +38,6 @@
           </template>
         </el-table-column>
       </el-table>
-      </div>
 
       <el-pagination
         v-model:current-page="page"

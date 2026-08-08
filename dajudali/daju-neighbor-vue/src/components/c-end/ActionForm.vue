@@ -246,7 +246,7 @@ function submit() {
 }
 
 .af-sheet {
-  background: #FAFAF9;
+  background: #1A1A1A;
   border-radius: 20px 20px 0 0;
   padding-bottom: env(safe-area-inset-bottom, 24px);
   max-height: 85vh;
@@ -256,7 +256,7 @@ function submit() {
 .af-handle {
   width: 36px;
   height: 5px;
-  background: #D1D1D6;
+  background: #1A1A1A;
   border-radius: 3px;
   margin: 8px auto 0;
 }
@@ -270,7 +270,7 @@ function submit() {
 
 .af-cancel-btn {
   font-size: 16px;
-  color: #FF8C00;
+  color: #9E9E9E;
   background: none;
   border: none;
   padding: 4px;
@@ -283,7 +283,7 @@ function submit() {
 .af-title {
   font-size: 17px;
   font-weight: 600;
-  color: #000;
+  color: #F0F0F0;
   margin: 0;
   letter-spacing: -0.2px;
   font-family: -apple-system, 'PingFang SC', sans-serif;
@@ -291,7 +291,7 @@ function submit() {
 
 .af-form {
   margin: 0 16px;
-  background: #fff;
+  background: #1A1A1A;
   border-radius: 12px;
   overflow: hidden;
 }
@@ -301,7 +301,7 @@ function submit() {
   align-items: center;
   padding: 12px 16px;
   min-height: 44px;
-  background: #fff;
+  background: #1A1A1A;
   cursor: default;
   gap: 12px;
 }
@@ -313,7 +313,7 @@ function submit() {
 
 .af-label {
   font-size: 15px;
-  color: #000;
+  color: #F0F0F0;
   white-space: nowrap;
   min-width: 64px;
   font-family: -apple-system, 'PingFang SC', sans-serif;
@@ -324,7 +324,7 @@ function submit() {
   border: none;
   outline: none;
   font-size: 15px;
-  color: #000;
+  color: #F0F0F0;
   text-align: right;
   font-family: -apple-system, 'PingFang SC', sans-serif;
   background: transparent;
@@ -340,7 +340,7 @@ function submit() {
   border: none;
   outline: none;
   font-size: 15px;
-  color: #000;
+  color: #F0F0F0;
   text-align: right;
   font-family: -apple-system, 'PingFang SC', sans-serif;
   background: transparent;
@@ -353,7 +353,7 @@ function submit() {
   flex: 1;
   text-align: right;
   font-size: 15px;
-  color: #000;
+  color: #F0F0F0;
   font-family: -apple-system, 'PingFang SC', sans-serif;
 }
 
@@ -370,7 +370,7 @@ function submit() {
 
 .af-divider {
   height: 0.5px;
-  background: #E5E5EA;
+  background: #1A1A1A;
   margin: 0 16px;
 }
 
@@ -379,7 +379,7 @@ function submit() {
   width: calc(100% - 32px);
   margin: 20px 16px;
   padding: 15px 0;
-  background: linear-gradient(135deg, #FF7B2C, #FF6330);
+  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
   color: #fff;
   border: none;
   border-radius: 14px;
@@ -389,7 +389,7 @@ function submit() {
   font-family: -apple-system, 'PingFang SC', sans-serif;
   letter-spacing: -0.2px;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 16px rgba(255, 123, 44, 0.2);
+  box-shadow: 0 4px 16px #999999;
 }
 
 .af-submit-btn:active {

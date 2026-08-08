@@ -101,7 +101,7 @@ function claim(id) {
   transition: all 0.15s;
 }
 .cat-btn.active {
-  background: #FF7B2C; color: #fff; border-color: #FF7B2C;
+  background: #1A1A1A; color: #fff; border-color: #999999;
 }
 .cat-btn:not(.active):active { background: #2A2A2A; }
 
@@ -125,12 +125,12 @@ function claim(id) {
 .c-desc { font-size: 13px; color: #999; margin-top: 3px; }
 .c-expire { font-size: 11px; color: #666; margin-top: 4px; }
 .c-right { text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center; }
-.c-amount { font-size: 28px; font-weight: 700; color: #FF7B2C; }
+.c-amount { font-size: 28px; font-weight: 700; color: #999999; }
 .c-sign { font-size: 16px; }
 .c-btn {
   padding: 7px 18px; border: none; border-radius: 12px;
   font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
-  background: #FF7B2C; color: #fff;
+  background: #1A1A1A; color: #fff;
   transition: opacity 0.15s;
 }
 .c-btn:active:not(.claimed) { opacity: 0.8; }

@@ -1,13 +1,13 @@
 <template>
-  <div class="nav-page" style="background:#F2EFEA">
+  <div class="nav-page" style="background:#1A1A1A">
     <!-- 苹果风顶部栏 - 毛玻璃 -->
     <div class="nav-top">
       <div class="nav-top-inner">
         <button class="nav-back" @click="$router.back()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <h2>室内导航</h2>
-        <button class="nav-aa" @click="userStore.largeFont = !userStore.largeFont" :style="{ color: userStore.largeFont ? '#FF7B2C' : '#999', fontWeight: '700', fontSize: '14px' }">{{ userStore.largeFont ? '老年关怀' : '老年关怀' }}</button>
+        <button class="nav-aa" @click="userStore.largeFont = !userStore.largeFont" :style="{ color: userStore.largeFont ? '#999999' : '#999', fontWeight: '700', fontSize: '14px' }">{{ userStore.largeFont ? '老年关怀' : '老年关怀' }}</button>
       </div>
     </div>
 
@@ -53,7 +53,7 @@
       <div class="route-card-top">
         <span class="route-title">{{ routeTitle }}</span>
         <button class="route-play" @click="startStepNav">
-          <svg width="14" height="14" viewBox="0 0 24 24" :fill="isNavigating ? '#666' : '#FF8C00'"><polygon points="5,3 19,12 5,21"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" :fill="isNavigating ? '#666' : '#FFFFFF'"><polygon points="5,3 19,12 5,21"/></svg>
           <span>{{ isNavigating ? '停止' : '导航' }}</span>
         </button>
       </div>
@@ -86,11 +86,11 @@
     <!-- 缩放控件（固定定位，不随地图动） -->
     <div class="zoom-controls">
       <button class="zoom-btn" @click.stop="mapScale = Math.min(3, mapScale + 0.2)">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF8C00" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="11" y1="7" x2="11" y2="15"/><line x1="7" y1="11" x2="15" y2="11"/><line x1="20" y1="20" x2="16" y2="16"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F0F0F0" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="11" y1="7" x2="11" y2="15"/><line x1="7" y1="11" x2="15" y2="11"/><line x1="20" y1="20" x2="16" y2="16"/></svg>
       </button>
       <div class="zoom-level">{{ Math.round(mapScale * 100) }}%</div>
       <button class="zoom-btn" @click.stop="mapScale = Math.max(0.5, mapScale - 0.2)">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF8C00" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="7" y1="11" x2="15" y2="11"/><line x1="20" y1="20" x2="16" y2="16"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F0F0F0" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="7" y1="11" x2="15" y2="11"/><line x1="20" y1="20" x2="16" y2="16"/></svg>
       </button>
     </div>
   </div>
@@ -548,19 +548,19 @@ const svgContent = computed(() => {
 
   const cc = (type) => {
     const m = {
-      cafe:       { fill:'#E8F5E9', stroke:'#66BB6A', text:'#2E7D32' },
-      retail:     { fill:'#FFF8E1', stroke:'#FFB300', text:'#F57F17' },
-      food:       { fill:'#FFF3E0', stroke:'#FF8A65', text:'#E65100' },
-      service:    { fill:'#F3E5F5', stroke:'#BA68C8', text:'#6A1B9A' },
-      kids:       { fill:'#FCE4EC', stroke:'#F06292', text:'#AD1457' },
-      sport:      { fill:'#E0F7FA', stroke:'#4DD0E1', text:'#00838F' },
-      wc:         { fill:'#ECEFF1', stroke:'#90A4AE', text:'#546E7A' },
-      parking:    { fill:'#E8EAF6', stroke:'#7986CB', text:'#283593' },
-      elevator:   { fill:'#EFEBE9', stroke:'#A1887F', text:'#4E342E' },
-      classroom:  { fill:'#E3F2FD', stroke:'#64B5F6', text:'#1565C0' },
-      meeting:    { fill:'#E0F2F1', stroke:'#80CBC4', text:'#00695C' },
-      cinema:     { fill:'#FBE9E7', stroke:'#FF8A65', text:'#BF360C' },
-      open:       { fill:'#F1F8E9', stroke:'#AED581', text:'#33691E' },
+      cafe:       { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#BBBBBB' },
+      retail:     { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#B0B0B0' },
+      food:       { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#C0C0C0' },
+      service:    { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#A8A8A8' },
+      kids:       { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#B8B8B8' },
+      sport:      { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#A0A0A0' },
+      wc:         { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#C8C8C8' },
+      parking:    { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#AEAEAE' },
+      elevator:   { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#B4B4B4' },
+      classroom:  { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#A8A8A8' },
+      meeting:    { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#B0B0B0' },
+      cinema:     { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#C0C0C0' },
+      open:       { fill:'#F0F0F0', stroke:'#BBBBBB', text:'#A8A8A8' },
     }
     return m[type] || m.retail
   }
@@ -571,7 +571,7 @@ const svgContent = computed(() => {
   let s = '<svg viewBox="0 0 1840 1060" width="100%" height="100%" style="display:block">'
   s += '<defs>'
   s += '<filter id="s1"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity=".08"/></filter>'
-  s += '<filter id="s2"><feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#FF8C00" flood-opacity=".35"/></filter>'
+  s += '<filter id="s2"><feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#9E9E9E" flood-opacity=".35"/></filter>'
 
   for (const t of types) {
     const l = cc(t)
@@ -609,12 +609,12 @@ const svgContent = computed(() => {
     const rad = 10
 
     if (isT) {
-      s += '<g filter="url(#s2)"><rect x="' + (r.x-4) + '" y="' + (r.y-4) + '" width="' + (r.w+8) + '" height="' + (r.h+8) + '" rx="14" fill="none" stroke="#FF8C00" stroke-width="3.5" stroke-dasharray="10 6"/></g>'
-      s += '<rect x="' + r.x + '" y="' + r.y + '" width="' + r.w + '" height="' + r.h + '" rx="' + rad + '" fill="url(#g-' + r.type + ')" stroke="#FF8C00" stroke-width="3"/>'
+      s += '<g filter="url(#s2)"><rect x="' + (r.x-4) + '" y="' + (r.y-4) + '" width="' + (r.w+8) + '" height="' + (r.h+8) + '" rx="14" fill="none" stroke="#9E9E9E" stroke-width="3.5" stroke-dasharray="10 6"/></g>'
+      s += '<rect x="' + r.x + '" y="' + r.y + '" width="' + r.w + '" height="' + r.h + '" rx="' + rad + '" fill="url(#g-' + r.type + ')" stroke="#9E9E9E" stroke-width="3"/>'
       s += '<rect x="' + r.x + '" y="' + r.y + '" width="' + r.w + '" height="' + r.h + '" rx="' + rad + '" fill="url(#hatch)"/>'
-      s += '<rect x="' + (r.x+r.w/2-45) + '" y="' + (r.y+r.h/2-13) + '" width="90" height="26" rx="7" fill="#FF8C00" opacity=".92"/>'
+      s += '<rect x="' + (r.x+r.w/2-45) + '" y="' + (r.y+r.h/2-13) + '" width="90" height="26" rx="7" fill="#9E9E9E" opacity=".92"/>'
       s += '<text x="' + (r.x+r.w/2) + '" y="' + (r.y+r.h/2+4) + '" text-anchor="middle" font-size="' + fs + '" font-weight="700" fill="#fff" font-family="-apple-system,PingFang SC,sans-serif">' + r.name + '</text>'
-      s += '<circle cx="' + (r.x+r.w/2) + '" cy="' + (r.y+r.h+16) + '" r="8" fill="#FF8C00"/><circle cx="' + (r.x+r.w/2) + '" cy="' + (r.y+r.h+16) + '" r="3" fill="#fff"/>'
+      s += '<circle cx="' + (r.x+r.w/2) + '" cy="' + (r.y+r.h+16) + '" r="8" fill="#9E9E9E"/><circle cx="' + (r.x+r.w/2) + '" cy="' + (r.y+r.h+16) + '" r="3" fill="#fff"/>'
     } else {
       s += '<rect x="' + r.x + '" y="' + r.y + '" width="' + r.w + '" height="' + r.h + '" rx="' + rad + '" fill="url(#g-' + r.type + ')" stroke="' + cl.stroke + '" stroke-width="1.2" filter="url(#s1)"/>'
       s += '<rect x="' + r.x + '" y="' + r.y + '" width="' + r.w + '" height="' + r.h + '" rx="' + rad + '" fill="url(#hatch)"/>'
@@ -674,29 +674,29 @@ const svgContent = computed(() => {
       s += '<path d="' + remainD + '" fill="none" stroke="#D1D5DB" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>'
     }
     if (walkedD) {
-      s += '<path d="' + walkedD + '" fill="none" stroke="#4A90D9" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.1"/>'
-      s += '<path d="' + walkedD + '" fill="none" stroke="#4A90D9" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>'
+      s += '<path d="' + walkedD + '" fill="none" stroke="#BBBBBB" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.1"/>'
+      s += '<path d="' + walkedD + '" fill="none" stroke="#BBBBBB" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>'
     }
     const sp = pts[0]
-    s += `<circle cx="${sp.x}" cy="${sp.y}" r="11" fill="#4A90D9" stroke="#fff" stroke-width="2.5"/>`
+    s += `<circle cx="${sp.x}" cy="${sp.y}" r="11" fill="#BBBBBB" stroke="#fff" stroke-width="2.5"/>`
     s += `<circle cx="${sp.x}" cy="${sp.y}" r="4" fill="#fff"/>`
-    s += `<text x="${sp.x}" y="${sp.y - 18}" text-anchor="middle" font-size="11" font-weight="700" fill="#4A90D9">起点</text>`
+    s += `<text x="${sp.x}" y="${sp.y - 18}" text-anchor="middle" font-size="11" font-weight="700" fill="#BBBBBB">起点</text>`
     const ep = pts[pts.length - 1]
     const nearestSpot = parkingSpots.reduce((best, s) => {
       const d = Math.hypot(s.x + 17.5 - ep.x, s.y + 11 - ep.y)
       return d < best.d ? { spot: s, d } : best
     }, { spot: null, d: Infinity })
-    s += `<path d="M${ep.x},${ep.y - 14} Q${ep.x},${ep.y + 6} ${ep.x - 10},${ep.y + 4} Q${ep.x},${ep.y + 14} ${ep.x},${ep.y + 14} Q${ep.x},${ep.y + 14} ${ep.x + 10},${ep.y + 4} Q${ep.x},${ep.y + 6} ${ep.x},${ep.y - 14} Z" fill="#FF3B30" stroke="#fff" stroke-width="2"><animate attributeName="opacity" values="0.85;1;0.85" dur="0.8s" repeatCount="indefinite"/></path>`
+    s += `<path d="M${ep.x},${ep.y - 14} Q${ep.x},${ep.y + 6} ${ep.x - 10},${ep.y + 4} Q${ep.x},${ep.y + 14} ${ep.x},${ep.y + 14} Q${ep.x},${ep.y + 14} ${ep.x + 10},${ep.y + 4} Q${ep.x},${ep.y + 6} ${ep.x},${ep.y - 14} Z" fill="#4A4A4A" stroke="#fff" stroke-width="2"><animate attributeName="opacity" values="0.85;1;0.85" dur="0.8s" repeatCount="indefinite"/></path>`
     s += `<circle cx="${ep.x}" cy="${ep.y - 2}" r="4" fill="#fff"/>`
     const spotLabel = nearestSpot.spot ? nearestSpot.spot.id : '车位'
-    s += `<text x="${ep.x}" y="${ep.y + 28}" text-anchor="middle" font-size="11" font-weight="700" fill="#FF3B30">${spotLabel}</text>`
+    s += `<text x="${ep.x}" y="${ep.y + 28}" text-anchor="middle" font-size="11" font-weight="700" fill="#F0F0F0">${spotLabel}</text>`
     if (cutoffPt && cutoffPt.x > 0) {
       const np = cutoffPt
-      s += `<circle cx="${np.x}" cy="${np.y}" r="16" fill="#4A90D9" opacity="0.08"><animate attributeName="r" values="14;22;14" dur="2s" repeatCount="indefinite"/></circle>`
-      s += `<circle cx="${np.x}" cy="${np.y}" r="12" fill="#4A90D9" opacity="0.15"><animate attributeName="r" values="10;16;10" dur="1.5s" repeatCount="indefinite"/></circle>`
-      s += `<circle cx="${np.x}" cy="${np.y}" r="8" fill="#4A90D9" stroke="#fff" stroke-width="2"/>`
+      s += `<circle cx="${np.x}" cy="${np.y}" r="16" fill="#BBBBBB" opacity="0.08"><animate attributeName="r" values="14;22;14" dur="2s" repeatCount="indefinite"/></circle>`
+      s += `<circle cx="${np.x}" cy="${np.y}" r="12" fill="#BBBBBB" opacity="0.15"><animate attributeName="r" values="10;16;10" dur="1.5s" repeatCount="indefinite"/></circle>`
+      s += `<circle cx="${np.x}" cy="${np.y}" r="8" fill="#BBBBBB" stroke="#fff" stroke-width="2"/>`
       s += `<polygon points="${np.x},${np.y - 9} ${np.x - 5},${np.y - 1} ${np.x + 5},${np.y - 1}" fill="#fff"/>`
-      s += `<circle cx="${np.x}" cy="${np.y}" r="6" fill="none" stroke="#4A90D9" stroke-width="2" opacity="0.6"><animate attributeName="r" values="6;18" dur="1s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.6;0" dur="1s" repeatCount="indefinite"/></circle>`
+      s += `<circle cx="${np.x}" cy="${np.y}" r="6" fill="none" stroke="#BBBBBB" stroke-width="2" opacity="0.6"><animate attributeName="r" values="6;18" dur="1s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.6;0" dur="1s" repeatCount="indefinite"/></circle>`
     }
   }
 
@@ -746,7 +746,8 @@ const svgContent = computed(() => {
 }
 .seg-track {
   display: flex; position: relative;
-  background: rgba(255,255,255,0.06); border-radius: 10px; padding: 2px;
+  background: #1A1A1A; border-radius: 10px; padding: 2px;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.06);
 }
 .seg-bg {
   position: absolute; top: 2px; bottom: 2px;
@@ -758,7 +759,7 @@ const svgContent = computed(() => {
   flex: 1; position: relative; z-index: 1;
   padding: 8px 0; border: none; background: none;
   font-size: 14px; font-weight: 600; cursor: pointer;
-  color: #777; transition: color .15s;
+  color: #BBBBBB; transition: color .15s;
   font-family: inherit;
 }
 .seg-btn.active { color: #F0F0F0; }
@@ -773,12 +774,13 @@ const svgContent = computed(() => {
 }
 .nav-search-inner {
   display: flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,0.08); border-radius: 10px;
+  background: #1A1A1A; border-radius: 10px;
   padding: 0 8px; height: 36px;
   transition: background .2s;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.06);
 }
 .nav-search-inner:focus-within {
-  background: rgba(255,255,255,0.12);
+  background: #1A1A1A;
 }
 .search-icon { flex-shrink: 0; }
 .nav-search-inner input {
@@ -786,10 +788,10 @@ const svgContent = computed(() => {
   font-size: 15px; outline: none; color: #F0F0F0;
   font-family: inherit;
 }
-.nav-search-inner input::placeholder { color: #666; }
+.nav-search-inner input::placeholder { color: #BBBBBB; }
 .search-clear {
   width: 20px; height: 20px; border: none; border-radius: 50%;
-  background: rgba(255,255,255,.15); color: #fff; font-size: 10px;
+  background: #1A1A1A; color: #fff; font-size: 10px;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
@@ -803,8 +805,8 @@ const svgContent = computed(() => {
   padding: 12px 16px; font-size: 15px; cursor: pointer;
   border-bottom: 0.5px solid #2E2E2E; color: #F0F0F0;
 }
-.search-item:active { background: rgba(255,123,44,.1); }
-.search-floor { color: #666; font-size: 13px; }
+.search-item:active { background: #1A1A1A; }
+.search-floor { color: #BBBBBB; font-size: 13px; }
 
 /* 路线卡片 */
 .route-card {
@@ -818,7 +820,7 @@ const svgContent = computed(() => {
 .route-title { font-size: 16px; font-weight: 500; color: #F0F0F0; }
 .route-play {
   display: flex; align-items: center; gap: 4px; border: none;
-  background: #FF7B2C; color: #FFFFFF; font-size: 13px; font-weight: 500;
+  background: #1A1A1A; color: #FFFFFF; font-size: 13px; font-weight: 500;
   padding: 6px 14px; border-radius: 999px; cursor: pointer; font-family: inherit;
 }
 .route-steps { padding: 4px 0; }
@@ -826,16 +828,16 @@ const svgContent = computed(() => {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 14px; font-size: 14px; color: rgba(255,255,255,0.3); transition: all .3s;
 }
-.route-step--active { color: #FF7B2C; font-weight: 500; background: rgba(255,123,44,0.08); }
-.route-step--done { color: #34C759; }
+.route-step--active { color: #999999; font-weight: 500; background: #1A1A1A; }
+.route-step--done { color: #BBBBBB; }
 .step-dot {
   width: 22px; height: 22px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; font-weight: 600; flex-shrink: 0;
   background: #2A2A2A; color: rgba(255,255,255,0.3); transition: all .3s;
 }
-.route-step--active .step-dot { background: #FF7B2C; color: #FFFFFF; }
-.route-step--done .step-dot { background: #34C759; color: #FFFFFF; }
+.route-step--active .step-dot { background: #1A1A1A; color: #FFFFFF; }
+.route-step--done .step-dot { background: #8A8A8A; color: #FFFFFF; }
 
 /* 地图 */
 .nav-map-wrap {
@@ -885,7 +887,7 @@ const svgContent = computed(() => {
   transition: all .2s;
 }
 .zoom-btn:active {
-  background: #3A2A1A;
+  background: #2A2A2A;
   transform: scale(.92);
 }
 .zoom-level {

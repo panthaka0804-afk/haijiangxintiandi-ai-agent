@@ -88,7 +88,7 @@ async function onSubmit() {
   background: #222222;
   border-radius: 20px;
   padding: 30px 20px;
-  box-shadow: 0 8px 30px rgba(255, 123, 44, 0.15);
+  box-shadow: 0 8px 30px #999999;
 }
 
 .logo-area {
@@ -102,7 +102,7 @@ async function onSubmit() {
 
 .logo-area h1 {
   font-size: 24px;
-  color: #FF7B2C;
+  color: #999999;
   margin: 8px 0 4px;
 }
 
@@ -119,7 +119,7 @@ async function onSubmit() {
 }
 
 .links span {
-  color: #FF7B2C;
+  color: #999999;
   font-size: 13px;
   cursor: pointer;
 }

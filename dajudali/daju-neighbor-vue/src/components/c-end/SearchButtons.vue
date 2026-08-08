@@ -41,13 +41,13 @@ const buttons = [
   padding: 10px 18px;
   border: none;
   border-radius: 22px;
-  background: linear-gradient(135deg, #FF6B00, #E65100);
+  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(230, 81, 0, 0.25);
+  box-shadow: 0 2px 8px #747474;
   transition: transform 0.1s;
   font-family: inherit;
 }

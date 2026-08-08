@@ -35,7 +35,7 @@
           <div class="kpi-item"><span>工单办结率</span><strong>{{ stats?.order_done_rate || '91%' }}</strong></div>
           <div class="kpi-item"><span>待处理工单</span><strong>{{ stats?.pending_orders || 0 }}</strong></div>
           <div class="kpi-item"><span>用户满意度</span><strong>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             {{ stats?.satisfaction || '4.8' }}
           </strong></div>
         </div>
@@ -43,12 +43,12 @@
 
       <div class="db-card">
         <div class="db-card-h">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M17.66 18l-3.55-6.53a1 1 0 00-1.73.01L8.83 18"/><polyline points="6 11 10.59 3 15.18 11"/><line x1="2" y1="22" x2="22" y2="22"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M17.66 18l-3.55-6.53a1 1 0 00-1.73.01L8.83 18"/><polyline points="6 11 10.59 3 15.18 11"/><line x1="2" y1="22" x2="22" y2="22"/></svg>
           热门活动 TOP5
         </div>
         <div class="hot-list" v-if="stats?.hot_activities?.length">
           <div v-for="(a, i) in stats.hot_activities" :key="a.id" class="hot-item">
-            <span class="hot-rank" :style="i === 0 ? 'background:#FF7B2C;color:#fff' : ''">{{ i + 1 }}</span>
+            <span class="hot-rank" :style="i === 0 ? 'background:#1A1A1A;color:#fff' : ''">{{ i + 1 }}</span>
             <span class="hot-text">{{ a.title }}</span>
             <span class="hot-count">{{ a.enrolled || 0 }}人</span>
           </div>
@@ -65,12 +65,12 @@ import { ref, reactive, onMounted } from 'vue'
 const stats = ref(null)
 
 const statCards = reactive([
-  { key: 'chats', label: '今日咨询', value: '--', color: '#409EFF' },
-  { key: 'members', label: '活跃会员', value: '--', color: '#67C23A' },
-  { key: 'orders', label: '工单总数', value: '--', color: '#E6A23C' },
-  { key: 'rate', label: '好评率', value: '--', color: '#F56C6C' },
-  { key: 'activities', label: '活动总数', value: '--', color: '#FF7B2C' },
-  { key: 'regs', label: '活动报名', value: '--', color: '#9C27B0' },
+  { key: 'chats', label: '今日咨询', value: '--', color: '#BBBBBB' },
+  { key: 'members', label: '活跃会员', value: '--', color: '#979797' },
+  { key: 'orders', label: '工单总数', value: '--', color: '#ABABAB' },
+  { key: 'rate', label: '好评率', value: '--', color: '#BBBBBB' },
+  { key: 'activities', label: '活动总数', value: '--', color: '#999999' },
+  { key: 'regs', label: '活动报名', value: '--', color: '#BBBBBB' },
 ])
 
 onMounted(async () => {
@@ -92,17 +92,17 @@ onMounted(async () => {
 
 <style scoped>
 .admin-dashboard { padding: 0; background: transparent; }
-.admin-dashboard h3 { margin: 0 0 16px; color: #333; font-size: 18px; }
+.admin-dashboard h3 { margin: 0 0 16px; color: #F0F0F0; font-size: 18px; }
 
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .stat-card {
-  background: #fff; border-radius: 14px; padding: 16px;
+  background: #1A1A1A; border-radius: 14px; padding: 16px;
   display: flex; align-items: center; gap: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 .stat-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--card-color) 15%, transparent); }
 .stat-info { display: flex; flex-direction: column; }
-.stat-value { font-size: 22px; font-weight: 800; color: #333; line-height: 1.2; }
+.stat-value { font-size: 22px; font-weight: 800; color: #F0F0F0; line-height: 1.2; }
 .stat-label { font-size: 12px; color: #999; margin-top: 2px; }
 
 .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -114,19 +114,19 @@ onMounted(async () => {
   .stat-icon { width: 34px; height: 34px; }
 }
 
-.db-card { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.db-card-h { padding: 14px 16px; font-weight: 600; color: #333; font-size: 15px; border-bottom: 1px solid #eee; }
+.db-card { background: #1A1A1A; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.db-card-h { padding: 14px 16px; font-weight: 600; color: #F0F0F0; font-size: 15px; border-bottom: 1px solid #eee; }
 .hot-empty { padding: 20px; text-align: center; color: #999; font-size: 13px; }
 
 .kpi-list { padding: 4px 0; }
-.kpi-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 14px; color: #666; }
+.kpi-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 14px; color: #BBBBBB; }
 .kpi-item:last-child { border-bottom: none; }
-.kpi-item strong { color: #333; font-size: 16px; }
+.kpi-item strong { color: #F0F0F0; font-size: 16px; }
 
 .hot-list { padding: 4px 0; }
 .hot-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 14px; }
 .hot-item:last-child { border-bottom: none; }
-.hot-rank { width: 22px; height: 22px; border-radius: 6px; background: #F0F0F0; color: #999; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.hot-text { flex: 1; color: #333; }
+.hot-rank { width: 22px; height: 22px; border-radius: 6px; background: #1A1A1A; color: #999; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.hot-text { flex: 1; color: #F0F0F0; }
 .hot-count { color: #999; font-size: 12px; }
 </style>

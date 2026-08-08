@@ -54,7 +54,7 @@
               @click="loadProject(project)"
             >
               <div class="project-preview">
-                <el-icon :size="32" color="#FF7B2C"><Folder /></el-icon>
+                <el-icon :size="32" color="#999999"><Folder /></el-icon>
               </div>
               <div class="project-info">
                 <div class="project-name">{{ project.name }}</div>
@@ -142,7 +142,7 @@
               <el-card shadow="hover" class="comment-card">
                 <div class="comment-header">
                   <div class="comment-author">
-                    <el-avatar :size="32" style="background:#FF7B2C">{{ item.author?.[0] || 'A' }}</el-avatar>
+                    <el-avatar :size="32" style="background:#1A1A1A">{{ item.author?.[0] || 'A' }}</el-avatar>
                     <div>
                       <strong>{{ item.author || '匿名' }}</strong>
                       <span class="comment-page-ref" v-if="item.pageRef"> · {{ item.pageRef }}</span>
@@ -371,7 +371,7 @@ function openInFigma() {
 
 .figma-sub {
   margin: 0;
-  color: #787774;
+  color: #BBBBBB;
   font-size: 14px;
 }
 
@@ -398,7 +398,7 @@ function openInFigma() {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #787774;
+  color: #BBBBBB;
 }
 
 .figma-empty p {
@@ -450,7 +450,7 @@ function openInFigma() {
 .project-name {
   font-size: 14px;
   font-weight: 600;
-  color: #1B1B1A;
+  color: #F0F0F0;
 }
 
 .project-date {
@@ -470,7 +470,7 @@ function openInFigma() {
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px;
-  background: #fff;
+  background: #1A1A1A;
   border-radius: 8px;
   margin-bottom: 8px;
   border: 1px solid #E8E8E6;
@@ -555,7 +555,7 @@ function openInFigma() {
 .comment-body {
   font-size: 14px;
   line-height: 1.6;
-  color: #3D3C39;
+  color: #F0F0F0;
 }
 
 .comment-reply {
@@ -567,7 +567,7 @@ function openInFigma() {
 .reply-item {
   font-size: 13px;
   line-height: 1.5;
-  color: #787774;
+  color: #BBBBBB;
   margin-bottom: 4px;
 }
 

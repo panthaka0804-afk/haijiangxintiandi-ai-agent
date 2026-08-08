@@ -112,6 +112,6 @@
 defineProps({
   name: { type: String, required: true },
   size: { type: [Number, String], default: 24 },
-  color: { type: String, default: '#FF8C00' },
+  color: { type: String, default: '#9E9E9E' },
 })
 </script>

@@ -38,7 +38,7 @@
             }"
             @click="selectItem(item)"
           >
-            <div class="re-item-icon"><SvgIcon :name="item.icon" :size="24" color="#FF8C00" /></div>
+            <div class="re-item-icon"><SvgIcon :name="item.icon" :size="24" color="#9E9E9E" /></div>
             <div class="re-item-info">
               <div class="re-item-name">{{ item.name }}</div>
               <div class="re-item-meta">{{ item.desc }}</div>
@@ -145,7 +145,7 @@ function confirmRedeem() {
 }
 
 .re-sheet {
-  background: #fff;
+  background: #1A1A1A;
   border-radius: 20px;
   width: 340px;
   max-width: 90vw;
@@ -159,12 +159,12 @@ function confirmRedeem() {
   text-align: center;
   margin: 0 0 16px;
   font-size: 18px;
-  color: #333;
+  color: #F0F0F0;
 }
 
 /* 积分概览 */
 .re-summary {
-  background: linear-gradient(135deg, #FFF8E1, #FFF3E0);
+  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 16px;
@@ -172,7 +172,7 @@ function confirmRedeem() {
 }
 
 .re-summary--guest {
-  background: #f5f5f5;
+  background: #1A1A1A;
 }
 
 .re-summary--guest p {
@@ -183,18 +183,18 @@ function confirmRedeem() {
 
 .re-points {
   font-size: 14px;
-  color: #666;
+  color: #BBBBBB;
   margin-bottom: 6px;
 }
 
 .re-points b {
-  color: #FF6B00;
+  color: #BBBBBB;
   font-size: 22px;
 }
 
 .re-progress {
   height: 6px;
-  background: #FFE0B2;
+  background: #1A1A1A;
   border-radius: 3px;
   overflow: hidden;
   margin-bottom: 4px;
@@ -202,7 +202,7 @@ function confirmRedeem() {
 
 .re-progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #FF6B00, #FF9800);
+  background: linear-gradient(90deg, #1A1A1A, #1A1A1A);
   border-radius: 3px;
   transition: width 0.3s;
 }
@@ -216,7 +216,7 @@ function confirmRedeem() {
 .re-list-title {
   font-size: 14px;
   font-weight: 700;
-  color: #333;
+  color: #F0F0F0;
   margin-bottom: 8px;
   padding-bottom: 4px;
   border-bottom: 1px solid #eee;
@@ -235,19 +235,19 @@ function confirmRedeem() {
   gap: 10px;
   padding: 12px;
   border-radius: 12px;
-  background: #fafafa;
+  background: #1A1A1A;
   cursor: pointer;
   transition: all 0.15s;
   border: 2px solid transparent;
 }
 
 .re-item--affordable {
-  background: #FFF8F0;
-  border-color: #FFE0B2;
+  background: #1A1A1A;
+  border-color: #E4E4E4;
 }
 
 .re-item--affordable:hover {
-  border-color: #FF9800;
+  border-color: #A5A5A5;
 }
 
 .re-item--locked {
@@ -272,7 +272,7 @@ function confirmRedeem() {
 .re-item-name {
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: #F0F0F0;
 }
 
 .re-item-meta {
@@ -289,7 +289,7 @@ function confirmRedeem() {
 .re-item-points {
   font-size: 14px;
   font-weight: 700;
-  color: #FF6B00;
+  color: #BBBBBB;
 }
 
 .re-item-value {
@@ -309,7 +309,7 @@ function confirmRedeem() {
   width: 100%;
   padding: 12px;
   margin-top: 14px;
-  background: linear-gradient(135deg, #FF6B00, #E65100);
+  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
   color: #fff;
   border: none;
   border-radius: 25px;
@@ -320,7 +320,7 @@ function confirmRedeem() {
 }
 
 .re-confirm--disabled {
-  background: #ccc;
+  background: #1A1A1A;
   color: #999;
   cursor: not-allowed;
 }
@@ -333,11 +333,11 @@ function confirmRedeem() {
   display: block;
   width: 100%;
   padding: 10px;
-  background: #eee;
+  background: #1A1A1A;
   border: none;
   border-radius: 10px;
   margin-top: 8px;
-  color: #666;
+  color: #BBBBBB;
   font-size: 14px;
   cursor: pointer;
   font-family: inherit;

@@ -5,7 +5,7 @@
     </div>
 
     <div class="pp-hero">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M14 7h-4v10h4a3 3 0 0 0 0-6h-3"/></svg>
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M14 7h-4v10h4a3 3 0 0 0 0-6h-3"/></svg>
       <div class="pp-title">停车缴费</div>
     </div>
 
@@ -132,7 +132,7 @@ async function doPay() {
   background: #2A2A2A; border: 1px solid #444; border-radius: 12px;
   margin-bottom: 10px; transition: border-color 0.15s;
 }
-.pp-plate-input-wrap:focus-within { border-color: #FF7B2C; }
+.pp-plate-input-wrap:focus-within { border-color: #999999; }
 .pp-plate-input {
   width: 100%; padding: 16px; border: none; background: none; outline: none;
   font-size: 28px; font-weight: 700; color: #F0F0F0; text-align: center;
@@ -145,20 +145,20 @@ async function doPay() {
   cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
 .pp-preset-btn:active { background: #2A2A2A; }
-.pp-preset-btn.add { color: #FF7B2C; border-color: #FF7B2C; }
+.pp-preset-btn.add { color: #999999; border-color: #999999; }
 
 .pp-query-btn {
   width: 100%; padding: 14px; border: none; border-radius: 12px;
   background: #2A2A2A; color: #666; font-size: 16px; font-weight: 600;
   cursor: pointer; font-family: inherit; transition: all 0.15s; margin-bottom: 20px;
 }
-.pp-query-btn:not(:disabled) { background: #FF7B2C; color: #fff; }
+.pp-query-btn:not(:disabled) { background: #1A1A1A; color: #fff; }
 .pp-query-btn:not(:disabled):active { opacity: 0.8; }
 .pp-query-btn:disabled { opacity: 0.5; }
 
 .pp-error {
-  background: rgba(244,67,54,0.1); border: 1px solid rgba(244,67,54,0.3);
-  color: #EF5350; font-size: 13px; padding: 10px 14px; border-radius: 10px;
+  background: #1A1A1A; border: 1px solid #767676;
+  color: #818181; font-size: 13px; padding: 10px 14px; border-radius: 10px;
   margin-bottom: 16px; text-align: center;
 }
 
@@ -172,11 +172,11 @@ async function doPay() {
 .pps-divider { height: 1px; background: #2E2E2E; margin: 0 16px; }
 .pps-fee { display: flex; justify-content: space-between; padding: 18px 16px; align-items: center; }
 .pps-fee-label { font-size: 16px; font-weight: 600; color: #F0F0F0; }
-.pps-fee-val { font-size: 28px; font-weight: 800; color: #FF7B2C; }
+.pps-fee-val { font-size: 28px; font-weight: 800; color: #999999; }
 
 .pp-pay-btn {
   width: 100%; padding: 16px; border: none; border-radius: 12px;
-  background: #FF7B2C; color: #fff; font-size: 17px; font-weight: 700;
+  background: #1A1A1A; color: #fff; font-size: 17px; font-weight: 700;
   cursor: pointer; font-family: inherit; transition: opacity 0.15s;
 }
 .pp-pay-btn:active { opacity: 0.8; }
@@ -187,11 +187,11 @@ async function doPay() {
   text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 .pp-paid-icon {
-  width: 48px; height: 48px; border-radius: 50%; background: #4CAF50;
+  width: 48px; height: 48px; border-radius: 50%; background: #1A1A1A;
   color: #fff; font-size: 24px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto 12px;
 }
-.pp-paid-text { font-size: 18px; font-weight: 700; color: #4CAF50; margin-bottom: 8px; }
+.pp-paid-text { font-size: 18px; font-weight: 700; color: #878787; margin-bottom: 8px; }
 .pp-paid-detail { font-size: 13px; color: #999; }
 </style>

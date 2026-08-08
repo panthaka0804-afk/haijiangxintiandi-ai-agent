@@ -7,9 +7,9 @@
         </div>
         <el-menu
           default-active="1"
-          background-color="#304156"
-          text-color="#bfcbd9"
-          active-text-color="#FF7B2C"
+          background-color="#3E3E3E"
+          text-color="#C9C9C9"
+          active-text-color="#999999"
         >
           <el-menu-item index="1">
             <el-icon><OfficeBuilding /></el-icon>
@@ -142,7 +142,7 @@ onMounted(loadTenants)
 
 <style scoped>
 .sidebar {
-  background: #304156;
+  background: #1A1A1A;
 }
 
 .sidebar-header {
@@ -160,7 +160,7 @@ onMounted(loadTenants)
 }
 
 .top-header {
-  background: #fff;
+  background: #1A1A1A;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -169,6 +169,6 @@ onMounted(loadTenants)
 }
 
 .main-content {
-  background: #f0f2f5;
+  background: #1A1A1A;
 }
 </style>

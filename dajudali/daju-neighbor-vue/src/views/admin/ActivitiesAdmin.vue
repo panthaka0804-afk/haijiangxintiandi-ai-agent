@@ -42,7 +42,7 @@
           <label>价格 (元)</label><input type="number" v-model="form.price" />
           <label>积分兑换</label><input type="number" v-model="form.points_cost" />
           <label>总名额</label><input type="number" v-model="form.capacity" />
-          <label>渐变色</label><input v-model="form.gradient" placeholder="例: linear-gradient(135deg, #667eea, #764ba2)" />
+          <label>渐变色</label><input v-model="form.gradient" placeholder="例: linear-gradient(135deg, #838383, #626262)" />
           <label>封面图 URL</label><input v-model="form.cover_url" />
           <label>状态</label>
           <select v-model="form.status">
@@ -158,41 +158,41 @@ onMounted(loadActivities)
 <style scoped>
 .activities-admin { padding: 0; }
 .aa-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.aa-header h2 { margin: 0; color: #333; font-size: 18px; }
-.aa-add-btn { padding: 8px 20px; background: #FF7B2C; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+.aa-header h2 { margin: 0; color: #F0F0F0; font-size: 18px; }
+.aa-add-btn { padding: 8px 20px; background: #1A1A1A; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
 
-.aa-table-wrap { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.aa-table-wrap { background: #1A1A1A; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .aa-table { width: 100%; border-collapse: collapse; }
-.aa-table th { text-align: left; padding: 12px 16px; background: #fafafa; color: #666; font-size: 13px; font-weight: 600; border-bottom: 1px solid #eee; }
-.aa-table td { padding: 10px 16px; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #333; }
+.aa-table th { text-align: left; padding: 12px 16px; background: #1A1A1A; color: #BBBBBB; font-size: 13px; font-weight: 600; border-bottom: 1px solid #eee; }
+.aa-table td { padding: 10px 16px; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #F0F0F0; }
 .aa-table tr:last-child td { border-bottom: none; }
 .aa-tag { padding: 2px 10px; border-radius: 10px; font-size: 12px; }
-.aa-tag.open { background: #e8f5e9; color: #388e3c; }
-.aa-tag.closed { background: #fce4ec; color: #c62828; }
-.aa-tag.draft { background: #f3e5f5; color: #7b1fa2; }
+.aa-tag.open { background: #1A1A1A; color: #BBBBBB; }
+.aa-tag.closed { background: #1A1A1A; color: #BBBBBB; }
+.aa-tag.draft { background: #1A1A1A; color: #BBBBBB; }
 .aa-empty { padding: 40px; text-align: center; color: #999; font-size: 14px; }
 
-.aa-btn-sm { padding: 4px 12px; border: 1px solid #e0e0e0; background: #fff; border-radius: 6px; cursor: pointer; font-size: 12px; color: #666; margin-right: 4px; }
-.aa-btn-sm:hover { border-color: #FF7B2C; color: #FF7B2C; }
-.aa-btn-warn { color: #e6a23c; border-color: #f5dab1; }
-.aa-btn-danger { color: #f56c6c; border-color: #fbc4c4; }
+.aa-btn-sm { padding: 4px 12px; border: 1px solid #e0e0e0; background: #1A1A1A; border-radius: 6px; cursor: pointer; font-size: 12px; color: #BBBBBB; margin-right: 4px; }
+.aa-btn-sm:hover { border-color: #999999; color: #999999; }
+.aa-btn-warn { color: #ABABAB; border-color: #DDDDDD; }
+.aa-btn-danger { color: #BBBBBB; border-color: #D4D4D4; }
 
 /* Modal */
 .aa-modal { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; }
 .aa-modal-mask { position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
-.aa-modal-body { position: relative; background: #fff; border-radius: 16px; padding: 24px; width: 90%; max-width: 560px; max-height: 85vh; overflow-y: auto; }
-.aa-modal-body h3 { margin: 0 0 16px; color: #333; }
+.aa-modal-body { position: relative; background: #1A1A1A; border-radius: 16px; padding: 24px; width: 90%; max-width: 560px; max-height: 85vh; overflow-y: auto; }
+.aa-modal-body h3 { margin: 0 0 16px; color: #F0F0F0; }
 
 .aa-form { display: flex; flex-direction: column; gap: 8px; }
-.aa-form label { font-size: 13px; color: #666; font-weight: 600; margin-top: 4px; }
-.aa-form input, .aa-form textarea, .aa-form select { padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; color: #333; background: #fafafa; }
-.aa-form input:focus, .aa-form textarea:focus, .aa-form select:focus { outline: none; border-color: #FF7B2C; }
+.aa-form label { font-size: 13px; color: #BBBBBB; font-weight: 600; margin-top: 4px; }
+.aa-form input, .aa-form textarea, .aa-form select { padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; color: #F0F0F0; background: #1A1A1A; }
+.aa-form input:focus, .aa-form textarea:focus, .aa-form select:focus { outline: none; border-color: #999999; }
 
 .aa-sessions { border-top: 1px solid #eee; padding-top: 8px; margin-top: 4px; }
 .aa-session-item { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
 .aa-session-item input { flex: 1; }
 
 .aa-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
-.aa-btn { padding: 8px 24px; border: 1px solid #e0e0e0; background: #fff; border-radius: 8px; cursor: pointer; font-size: 14px; color: #666; }
-.aa-btn-primary { background: #FF7B2C; color: #fff; border-color: #FF7B2C; }
+.aa-btn { padding: 8px 24px; border: 1px solid #e0e0e0; background: #1A1A1A; border-radius: 8px; cursor: pointer; font-size: 14px; color: #BBBBBB; }
+.aa-btn-primary { background: #1A1A1A; color: #fff; border-color: #999999; }
 </style>

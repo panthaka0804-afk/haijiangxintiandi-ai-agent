@@ -23,13 +23,13 @@ import SvgIcon from './SvgIcon.vue'
 defineEmits(['quickSend'])
 
 const topRow = [
-  { icon: 'calendar', label: '找活动', sub: '亲子/夜市/夜校', action: '最近有什么活动', color: '#FF6B6B' },
-  { icon: 'tag', label: '找优惠', sub: '折扣/满减/积分', action: '有什么优惠', color: '#FF8C00' },
+  { icon: 'calendar', label: '找活动', sub: '亲子/夜市/夜校', action: '最近有什么活动', color: '#979797' },
+  { icon: 'tag', label: '找优惠', sub: '折扣/满减/积分', action: '有什么优惠', color: '#9E9E9E' },
 ]
 
 const bottomRow = [
-  { icon: 'shop', label: '找店铺', sub: '餐厅/商店/品牌', action: '附近有什么好吃的', color: '#4ECDC4' },
-  { icon: 'parking', label: '停车缴费', sub: '收费/优惠/位置', action: '停车场怎么收费', color: '#45B7D1' },
+  { icon: 'shop', label: '找店铺', sub: '餐厅/商店/品牌', action: '附近有什么好吃的', color: '#A6A6A6' },
+  { icon: 'parking', label: '停车缴费', sub: '收费/优惠/位置', action: '停车场怎么收费', color: '#989898' },
 ]
 </script>
 
@@ -46,7 +46,7 @@ const bottomRow = [
 
 .wc-card {
   flex: 1;
-  background: #fff;
+  background: #1A1A1A;
   border-radius: 14px;
   padding: 14px 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -58,7 +58,7 @@ const bottomRow = [
 
 .wc-card:active {
   transform: scale(0.96);
-  background: #fff8f0;
+  background: #1A1A1A;
 }
 
 .wc-icon {
@@ -70,7 +70,7 @@ const bottomRow = [
 .wc-text {
   font-size: 14px;
   font-weight: 700;
-  color: #333;
+  color: #F0F0F0;
 }
 
 .wc-sub {

@@ -56,23 +56,23 @@ const avatarText = computed(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(135deg, #FFF8F0, #FFF3E0);
+  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
   padding: 14px 16px;
   border-radius: 16px;
   margin: 4px 4px 10px;
-  box-shadow: 0 2px 12px rgba(255, 107, 0, 0.12);
+  box-shadow: 0 2px 12px #8B8B8B;
   flex-shrink: 0;
 }
 
 /* 未登录版 */
 .mb-bar--guest {
   cursor: pointer;
-  background: linear-gradient(135deg, #f5f5f5, #eee);
+  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .mb-bar--guest .mb-name {
-  color: #FF7B2C;
+  color: #999999;
 }
 
 .mb-bar--guest .mb-meta {
@@ -84,7 +84,7 @@ const avatarText = computed(() => {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FF6B00, #E65100);
+  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
   color: #fff;
   display: flex;
   align-items: center;
@@ -95,7 +95,7 @@ const avatarText = computed(() => {
 }
 
 .mb-avatar--guest {
-  background: linear-gradient(135deg, #ccc, #aaa);
+  background: linear-gradient(135deg, #1A1A1A, #aaa);
 }
 
 /* 信息区 */
@@ -107,13 +107,13 @@ const avatarText = computed(() => {
 .mb-name {
   font-size: 15px;
   font-weight: 700;
-  color: #333;
+  color: #F0F0F0;
   line-height: 1.3;
 }
 
 .mb-meta {
   font-size: 11px;
-  color: #888;
+  color: #BBBBBB;
   margin-top: 2px;
 }
 
@@ -131,15 +131,15 @@ const avatarText = computed(() => {
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  background: #fff;
-  color: #E65100;
-  border: 1px solid #FFE0B2;
+  background: #1A1A1A;
+  color: #BBBBBB;
+  border: 1px solid #E4E4E4;
   font-family: inherit;
   white-space: nowrap;
 }
 
 .mb-actions button:active {
-  background: #FFF3E0;
+  background: #1A1A1A;
 }
 
 /* 展开动画 */

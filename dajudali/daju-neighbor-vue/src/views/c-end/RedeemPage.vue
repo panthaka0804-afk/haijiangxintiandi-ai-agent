@@ -76,16 +76,16 @@ const filtered = computed(() => activeCat.value === '全部' ? goods.value : goo
 .rp-page { padding: 8px 12px; min-height: 100vh; background: #1A1A1A; }
 
 .loading-state, .empty-state {
-  text-align: center; padding: 40px 20px; color: #666; font-size: 14px;
+  text-align: center; padding: 40px 20px; color: #BBBBBB; font-size: 14px;
 }
 
 .rp-pts-card {
-  background: linear-gradient(135deg, #FF7B2C, #E85D04);
+  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
   border-radius: 16px; padding: 24px; position: relative; overflow: hidden; margin-bottom: 16px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   text-align: center;
 }
-.rp-pts-shine { position: absolute; top: -50px; right: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%); border-radius: 50%; }
+.rp-pts-shine { position: absolute; top: -50px; right: -30px; width: 120px; height: 120px; background: radial-gradient(circle, #1A1A1A 0%, transparent 70%); border-radius: 50%; }
 .rp-pts-ring { position: absolute; right: -10px; bottom: -8px; width: 80px; height: 40px; border: 2px solid rgba(255,255,255,0.1); border-radius: 50%; transform: rotate(-10deg); }
 .rp-pts-level { position: relative; z-index: 1; font-size: 14px; color: rgba(255,255,255,0.7); }
 .rp-pts-num { position: relative; z-index: 1; font-size: 42px; font-weight: 800; color: #fff; margin-top: 6px; }
@@ -99,7 +99,7 @@ const filtered = computed(() => activeCat.value === '全部' ? goods.value : goo
   background: #222222; color: #999;
   transition: all 0.15s;
 }
-.rp-cat-btn.active { background: #FF7B2C; color: #fff; border-color: #FF7B2C; }
+.rp-cat-btn.active { background: #1A1A1A; color: #fff; border-color: #999999; }
 
 .rp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .rp-item {
@@ -111,10 +111,10 @@ const filtered = computed(() => activeCat.value === '全部' ? goods.value : goo
 .rp-item-img { height: 90px; display: flex; align-items: center; justify-content: center; }
 .rp-item-info { padding: 10px 12px 8px; }
 .rp-item-name { font-size: 14px; font-weight: 600; color: #F0F0F0; }
-.rp-item-pts { font-size: 12px; color: #FF7B2C; font-weight: 600; margin-top: 3px; }
+.rp-item-pts { font-size: 12px; color: #999999; font-weight: 600; margin-top: 3px; }
 .rp-item-btn {
   margin: 0 12px 12px; width: calc(100% - 24px); padding: 8px 0;
-  border: none; border-radius: 12px; background: #FF7B2C; color: #fff;
+  border: none; border-radius: 12px; background: #1A1A1A; color: #fff;
   font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
   transition: opacity 0.15s;
 }

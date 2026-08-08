@@ -15,7 +15,7 @@
           :class="{ 'cpn-card--used': c.claimed }"
         >
           <!-- 水印 -->
-          <div class="cpn-watermark"><SvgIcon name="tag" :size="40" color="rgba(255,107,0,0.08)" /></div>
+          <div class="cpn-watermark"><SvgIcon name="tag" :size="40" color="#8B8B8B" /></div>
 
           <!-- 顶部：金额 + 标题 -->
           <div class="cpn-top">
@@ -90,7 +90,7 @@ function claim(c) {
 }
 
 .cpn-sheet {
-  background: #fff;
+  background: #1A1A1A;
   border-radius: 20px;
   width: 340px;
   max-width: 90vw;
@@ -105,13 +105,13 @@ function claim(c) {
   text-align: center;
   margin: 0 0 16px;
   font-size: 18px;
-  color: #333;
+  color: #F0F0F0;
 }
 
 /* 优惠券卡片 */
 .cpn-card {
   position: relative;
-  background: linear-gradient(135deg, #FF7B2C, #FF5E3A);
+  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
   color: #fff;
   border-radius: 14px;
   padding: 16px;
@@ -174,8 +174,8 @@ function claim(c) {
 /* 领取按钮 */
 .cpn-btn {
   display: inline-block;
-  background: #fff;
-  color: #FF7B2C;
+  background: #1A1A1A;
+  color: #999999;
   border: none;
   border-radius: 20px;
   padding: 6px 20px;
@@ -202,11 +202,11 @@ function claim(c) {
   display: block;
   width: 100%;
   padding: 10px;
-  background: #eee;
+  background: #1A1A1A;
   border: none;
   border-radius: 10px;
   margin-top: 12px;
-  color: #666;
+  color: #BBBBBB;
   font-size: 14px;
   cursor: pointer;
   font-family: inherit;

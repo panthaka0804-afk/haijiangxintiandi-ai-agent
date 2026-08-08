@@ -7,7 +7,7 @@
 
     <div class="pb-list">
       <div v-for="(p, i) in plates" :key="i" class="pb-card">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
         <span class="pb-plate">{{ p }}</span>
         <button class="pb-del" @click="plates.splice(i, 1)">删除</button>
       </div>
@@ -51,14 +51,14 @@ function addPlate() {
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 .pb-plate { flex: 1; font-size: 18px; font-weight: 700; color: #F0F0F0; letter-spacing: 1px; }
-.pb-del { padding: 6px 14px; border: none; border-radius: 10px; background: #3A2020; color: #e55555; font-size: 13px; cursor: pointer; font-family: inherit; }
+.pb-del { padding: 6px 14px; border: none; border-radius: 10px; background: #1A1A1A; color: #808080; font-size: 13px; cursor: pointer; font-family: inherit; }
 
 .pb-add-section { margin-bottom: 16px; }
 .pb-input-wrap {
   background: #2A2A2A; border: 1px solid #444; border-radius: 12px;
   margin-bottom: 12px; transition: border-color 0.15s;
 }
-.pb-input-wrap:focus-within { border-color: #FF7B2C; }
+.pb-input-wrap:focus-within { border-color: #999999; }
 .pb-input { width: 100%; padding: 16px; border: none; background: none; outline: none; font-size: 22px; font-weight: 700; color: #F0F0F0; text-align: center; font-family: inherit; }
 .pb-add-actions { display: flex; gap: 10px; }
 .pb-cancel, .pb-confirm {
@@ -66,7 +66,7 @@ function addPlate() {
   font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
 }
 .pb-cancel { background: #2A2A2A; color: #999; }
-.pb-confirm { background: #FF7B2C; color: #fff; }
+.pb-confirm { background: #1A1A1A; color: #fff; }
 .pb-confirm:active { opacity: 0.8; }
 .pb-confirm:disabled { background: #444; color: #777; cursor: not-allowed; }
 

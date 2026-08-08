@@ -67,7 +67,7 @@ watch(activeCat, () => { loadActs() })
   background: #222222; color: #999;
   transition: all 0.15s;
 }
-.act-btn.active { background: #FF7B2C; color: #fff; border-color: #FF7B2C; }
+.act-btn.active { background: #1A1A1A; color: #fff; border-color: #999999; }
 
 .act-list { display: flex; flex-direction: column; gap: 14px; }
 .act-card {
@@ -80,7 +80,7 @@ watch(activeCat, () => { loadActs() })
 .act-img:after {
   content: ''; position: absolute; top: 10px; right: 16px;
   width: 40px; height: 40px;
-  background: radial-gradient(circle, rgba(255,255,255,0.2) 1px, transparent 1px);
+  background: radial-gradient(circle, #1A1A1A 1px, transparent 1px);
   background-size: 10px 10px;
 }
 .act-img-text { font-size: 18px; font-weight: 700; color: #fff; }
@@ -90,7 +90,7 @@ watch(activeCat, () => { loadActs() })
 .act-info-meta { display: flex; gap: 16px; margin-top: 6px; font-size: 13px; color: #999; }
 .act-reg-btn {
   margin: 0 18px 16px; padding: 10px 0; width: calc(100% - 36px);
-  border: none; border-radius: 12px; background: #FF7B2C; color: #fff;
+  border: none; border-radius: 12px; background: #1A1A1A; color: #fff;
   font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
   transition: opacity 0.15s;
 }

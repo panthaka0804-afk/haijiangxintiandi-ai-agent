@@ -44,14 +44,14 @@ import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const goodsMap = {
-  'g1': { name: '星巴克中杯券', points: 1000, gradient: 'linear-gradient(135deg, #00704A, #00A85A)' },
-  'g2': { name: '蜀大侠50元代金券', points: 3000, gradient: 'linear-gradient(135deg, #C41E3A, #E8809E)' },
-  'g3': { name: 'UNIQLO 30元券', points: 2500, gradient: 'linear-gradient(135deg, #E60012, #FF5A60)' },
-  'g4': { name: '万达影城电影票', points: 2000, gradient: 'linear-gradient(135deg, #E85D04, #FFB347)' },
-  'g5': { name: '停车券 10元', points: 500, gradient: 'linear-gradient(135deg, #4A90D9, #7DB8F0)' },
-  'g6': { name: '棒约翰双人餐券', points: 5000, gradient: 'linear-gradient(135deg, #FFB347, #FF7B2C)' },
-  'g7': { name: '名创优品礼品卡', points: 1500, gradient: 'linear-gradient(135deg, #E8809E, #F0AAC0)' },
-  'g8': { name: '亲子乐园门票', points: 5000, gradient: 'linear-gradient(135deg, #4CAF50, #81C784)' },
+  'g1': { name: '星巴克中杯券', points: 1000, gradient: 'linear-gradient(135deg, #4A4A4A, #6D6D6D)' },
+  'g2': { name: '蜀大侠50元代金券', points: 3000, gradient: 'linear-gradient(135deg, #535353, #A3A3A3)' },
+  'g3': { name: 'UNIQLO 30元券', points: 2500, gradient: 'linear-gradient(135deg, #474747, #8C8C8C)' },
+  'g4': { name: '万达影城电影票', points: 2000, gradient: 'linear-gradient(135deg, #7C7C7C, #BDBDBD)' },
+  'g5': { name: '停车券 10元', points: 500, gradient: 'linear-gradient(135deg, #838383, #ADADAD)' },
+  'g6': { name: '棒约翰双人餐券', points: 5000, gradient: 'linear-gradient(135deg, #BDBDBD, #999999)' },
+  'g7': { name: '名创优品礼品卡', points: 1500, gradient: 'linear-gradient(135deg, #A3A3A3, #C1C1C1)' },
+  'g8': { name: '亲子乐园门票', points: 5000, gradient: 'linear-gradient(135deg, #878787, #AAAAAA)' },
 }
 const goods = ref(goodsMap[route.params.id] || { name: '兑换商品', points: 0, gradient: '#999' })
 </script>
@@ -64,7 +64,7 @@ const goods = ref(goodsMap[route.params.id] || { name: '兑换商品', points: 0
 
 .rd-body { padding: 20px 12px 0; }
 .rd-name { font-size: 22px; font-weight: 700; color: #F0F0F0; text-align: center; }
-.rd-pts { font-size: 28px; font-weight: 800; color: #FF7B2C; text-align: center; margin-top: 6px; }
+.rd-pts { font-size: 28px; font-weight: 800; color: #999999; text-align: center; margin-top: 6px; }
 
 .rd-card {
   margin-top: 16px; background: #222222; border-radius: 12px; padding: 4px 0;
@@ -73,7 +73,7 @@ const goods = ref(goodsMap[route.params.id] || { name: '兑换商品', points: 0
 .rd-row { display: flex; justify-content: space-between; padding: 14px 16px; font-size: 14px; color: #999; }
 .rd-row:not(:last-child) { border-bottom: 0.5px solid #2E2E2E; }
 .rd-row-val { color: #F0F0F0; font-weight: 500; }
-.rd-cost { color: #FF7B2C; font-weight: 700; }
+.rd-cost { color: #999999; font-weight: 700; }
 
 .rd-desc-card { margin-top: 12px; background: #222222; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 .rd-desc-title { font-size: 14px; font-weight: 600; color: #999; margin-bottom: 8px; }
@@ -82,6 +82,6 @@ const goods = ref(goodsMap[route.params.id] || { name: '兑换商品', points: 0
 .rd-actions { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px 20px; display: flex; gap: 12px; background: linear-gradient(transparent, #1A1A1A 40%); }
 .rd-cancel, .rd-confirm { flex: 1; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
 .rd-cancel { background: #2A2A2A; color: #999; }
-.rd-confirm { background: #FF7B2C; color: #fff; }
+.rd-confirm { background: #1A1A1A; color: #fff; }
 .rd-cancel:active, .rd-confirm:active { opacity: 0.8; }
 </style>
