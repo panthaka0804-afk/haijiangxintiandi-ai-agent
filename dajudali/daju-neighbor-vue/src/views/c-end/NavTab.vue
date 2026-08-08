@@ -10,66 +10,50 @@
     <div v-if="searchResults.length" class="search-drop">
       <div v-for="r in searchResults" :key="r.id" class="sd-item" @click="onSearchItem(r)">
         <span>{{ r.name }}</span>
-        <span class="sd-floor">{{ r.floor }}F · {{ r.category }}</span>
+        <span class="sd-floor">{{ r.zone }} · {{ r.floor }}F · {{ r.category }}</span>
       </div>
     </div>
 
-    <!-- 分段控制器 -->
+    <!-- 区块分段控制器 -->
     <div class="seg-bar">
-      <div class="seg-bg" :style="segStyle"></div>
-      <button v-for="f in floors" :key="f" class="seg-btn" :class="{ active: activeFloor === f }" @click="activeFloor = f">{{ f }}F</button>
+      <div class="seg-bg" :style="blockSegStyle"></div>
+      <button v-for="b in blocks" :key="b" class="seg-btn" :class="{ active: activeBlock === b }" @click="onBlockChange(b)">{{ b }}</button>
+    </div>
+    <!-- 楼层分段控制器 -->
+    <div class="seg-bar">
+      <div class="seg-bg" :style="floorSegStyle"></div>
+      <button v-for="f in floorsForBlock" :key="f" class="seg-btn" :class="{ active: activeFloor === f }" @click="activeFloor = f">{{ f }}F</button>
     </div>
 
     <!-- 地图区域 -->
     <div class="map-section" ref="mapRef">
-      <div class="floor-label">{{ activeFloor }}F</div>
-      <!-- 每个楼层的地图占位 + 标记点 -->
+      <div class="floor-label">{{ activeBlock }} · {{ activeFloor }}F</div>
       <div class="floor-map">
-        <svg width="100%" height="100%" viewBox="0 0 400 500" class="floor-svg">
+        <svg width="100%" height="100%" :viewBox="`0 0 ${layout.W} ${layout.H}`" class="floor-svg" preserveAspectRatio="xMidYMid meet">
           <!-- 建筑轮廓 -->
-          <rect x="10" y="10" width="380" height="480" rx="14" fill="#2A2A2A" stroke="#333" stroke-width="1" />
-          <!-- 中庭 -->
-          <rect :x="150" :y="90" :width="100" :height="floorLayout.length > 4 ? 320 : 200" rx="8" fill="none" stroke="#444" stroke-dasharray="6 3" />
+          <rect x="4" y="4" :width="layout.W - 8" :height="layout.H - 8" rx="14" fill="#232323" stroke="#3A3A3A" stroke-width="1.5" />
+          <!-- 中庭通道（仅层数较多时显示） -->
+          <rect v-if="layout.rows >= 5" :x="layout.W/2 - 6" y="14" width="12" :height="layout.H - 28" rx="6" fill="#1B1B1B" stroke="#333" stroke-width="1" />
           <!-- 商铺标记 -->
-          <g v-for="(s, i) in floorLayout" :key="s.id" @click="toggleShop(s.id)">
-            <rect :x="s.x" :y="s.y" :width="s.w" :height="s.h" rx="6" :fill="highlightId === s.id ? s.color : '#333'" :stroke="highlightId === s.id ? s.color : '#444'" stroke-width="1.5" style="transition: all 0.3s; cursor: pointer;" />
-            <text :x="s.x + s.w/2" :y="s.y + s.h/2 + 4" text-anchor="middle" :fill="highlightId === s.id ? '#fff' : '#AAA'" font-size="11" font-weight="600" font-family="inherit" style="transition: all 0.3s; pointer-events: none;">{{ s.name.slice(0,3) }}</text>
+          <g v-for="s in layout.items" :key="s.id" @click="toggleShop(s.id)">
+            <rect :x="s.x" :y="s.y" :width="s.w" :height="s.h" rx="7" :fill="highlightId === s.id ? s.color : '#2E2E2E'" :stroke="highlightId === s.id ? s.color : '#3D3D3D'" stroke-width="1.5" style="transition: all 0.25s; cursor: pointer;" />
+            <text :x="s.x + s.w/2" :y="s.y + s.h/2 + 4" text-anchor="middle" :fill="highlightId === s.id ? '#fff' : '#BBB'" font-size="11" font-weight="600" font-family="inherit" style="transition: all 0.25s; pointer-events: none;">{{ s.name.slice(0,3) }}</text>
           </g>
-          <!-- 出入口 -->
-          <g v-for="ex in exits" :key="ex.label">
-            <rect :x="ex.x - 12" :y="ex.y" :width="24" :height="16" rx="4" fill="#999999" />
-            <text :x="ex.x" :y="ex.y + 12" text-anchor="middle" fill="#fff" font-size="10" font-weight="600" font-family="inherit">{{ ex.label }}</text>
+          <!-- 入口标记 -->
+          <g>
+            <rect :x="18" :y="10" width="34" height="16" rx="4" fill="#555" />
+            <text :x="35" :y="22" text-anchor="middle" fill="#fff" font-size="10" font-weight="600" font-family="inherit">入口</text>
           </g>
-          <!-- 扶梯 -->
-          <rect x="40" y="200" width="16" height="80" rx="8" fill="#2A2A2A" stroke="#444" stroke-width="1" />
-          <text x="48" y="245" text-anchor="middle" fill="#666" font-size="9" font-family="inherit">梯</text>
-          <rect x="344" y="200" width="16" height="80" rx="8" fill="#2A2A2A" stroke="#444" stroke-width="1" />
-          <text x="352" y="245" text-anchor="middle" fill="#666" font-size="9" font-family="inherit">梯</text>
-          <!-- 卫生间 -->
-          <rect x="30" y="420" width="50" height="28" rx="6" fill="#333" stroke="#444" stroke-width="1" />
-          <text x="55" y="438" text-anchor="middle" fill="#666" font-size="11" font-family="inherit">🚻</text>
-          <rect x="320" y="420" width="50" height="28" rx="6" fill="#333" stroke="#444" stroke-width="1" />
-          <text x="345" y="438" text-anchor="middle" fill="#666" font-size="11" font-family="inherit">🚻</text>
           <!-- 导航路线 -->
           <polyline v-if="routePath.length >= 2"
             :points="routePath.map(p => `${p.x},${p.y}`).join(' ')"
-            fill="none" stroke="#999999" stroke-width="2.5" stroke-dasharray="8,4"
+            fill="none" stroke="#FF7B2C" stroke-width="2.5" stroke-dasharray="8,4"
             stroke-linecap="round" stroke-linejoin="round"
           >
             <animate attributeName="stroke-dashoffset" from="24" to="0" dur="1s" repeatCount="indefinite" />
           </polyline>
-          <!-- 路线起点标记 -->
-          <circle v-if="routePath.length" :cx="routePath[0].x" :cy="routePath[0].y" r="6" fill="#878787" stroke="#fff" stroke-width="2" />
-          <!-- 路线终点标记 -->
-          <circle v-if="routePath.length" :cx="routePath[routePath.length-1].x" :cy="routePath[routePath.length-1].y" r="6" fill="#999999" stroke="#fff" stroke-width="2" />
-          <!-- 电梯标记 -->
-          <g v-for="(ep, ei) in elevatorPositions[String(activeFloor)] || []" :key="'e'+ei">
-            <rect :x="ep.x - 6" :y="ep.y - 6" width="12" height="12" rx="3" fill="#767676" stroke="#fff" stroke-width="1" />
-            <text :x="ep.x" :y="ep.y + 4" text-anchor="middle" fill="#fff" font-size="8" font-family="inherit">梯</text>
-          </g>
-          <!-- 入口 -->
-          <rect :x="entrancePos.x - 8" :y="entrancePos.y - 8" width="16" height="16" rx="4" fill="#878787" stroke="#fff" stroke-width="1" />
-          <text :x="entrancePos.x" :y="entrancePos.y + 4" text-anchor="middle" fill="#fff" font-size="8" font-family="inherit">入</text>
+          <circle v-if="routePath.length" :cx="routePath[0].x" :cy="routePath[0].y" r="6" fill="#FF7B2C" stroke="#fff" stroke-width="2" />
+          <circle v-if="routePath.length" :cx="routePath[routePath.length-1].x" :cy="routePath[routePath.length-1].y" r="6" fill="#FF7B2C" stroke="#fff" stroke-width="2" />
         </svg>
       </div>
       <!-- 地图上的浮层提示 -->
@@ -77,15 +61,15 @@
         <div class="mt-icon" :style="{background: highlightShop.color}">{{ highlightShop.name[0] }}</div>
         <div class="mt-info">
           <div class="mt-name">{{ highlightShop.name }}</div>
-          <div class="mt-meta">{{ highlightShop.floor }}F · {{ highlightShop.category }}</div>
+          <div class="mt-meta">{{ highlightShop.zone }} · {{ highlightShop.floor }}F · {{ highlightShop.category }}</div>
         </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
 
       <!-- 步行指引面板 -->
       <div v-if="showRoute && routeSteps.length" class="route-panel">
         <div class="rp-header">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           <span class="rp-title">{{ routeTarget ? '前往 ' + routeTarget.name : '步行指引' }}</span>
           <button class="rp-close" @click="showRoute=false;highlightId=null;routePath=[]">✕</button>
         </div>
@@ -104,7 +88,7 @@
         <div class="sheet-pill"></div>
       </div>
       <div class="sheet-header">
-        <span class="sheet-title">{{ activeFloor }}F 商铺</span>
+        <span class="sheet-title">{{ activeBlock }} · {{ activeFloor }}F 商铺</span>
         <span class="sheet-count">{{ floorShops.length }} 家</span>
       </div>
       <div class="sheet-list">
@@ -115,7 +99,7 @@
             <div class="si-tags">{{ s.tags?.join(' · ') }} · {{ s.category }}</div>
           </div>
           <div class="si-extra">
-            <span class="si-area">{{ (s.zone || s.area || '') + (s.floor ? ' · ' + s.floor + 'F' : '') }}</span>
+            <span class="si-area">{{ s.zone + ' · ' + s.floor + 'F' }}</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
         </div>
@@ -141,74 +125,104 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const searchQuery = ref('')
 const searchResults = ref([])
+const activeBlock = ref('')
 const activeFloor = ref(1)
 const sheetOpen = ref(true)
 const largeFont = ref(false)
 const highlightId = ref(null)
-const showRoute = ref(false)  // 是否显示路径指引面板
-const routePath = ref([])  // 路线坐标点
-const routeSteps = ref([])  // 文字步骤
-const routeTarget = ref(null)  // 导航目标
-const floors = [5, 4, 3, 2, 1, 'B1']
+const showRoute = ref(false)
+const routePath = ref([])
+const routeSteps = ref([])
+const routeTarget = ref(null)
 
 import shopsData from '@/data/shops.js'
-
 const route = useRoute()
 const shops = shopsData
 
-const exits = computed(() => {
-  if (activeFloor.value === 1) return [{ label: '入口', x: 200, y: 490 }, { label: '西门', x: 50, y: 470 }, { label: '东门', x: 350, y: 470 }]
-  if (activeFloor.value === 5) return [{ label: '天台', x: 200, y: 490 }]
-  return []
+// 区块列表（按数据出现的顺序）
+const blocks = computed(() => [...new Set(shops.map(s => s.zone))])
+if (!activeBlock.value && blocks.value.length) activeBlock.value = blocks.value[0]
+
+// 当前区块下的楼层列表（数值排序，跳过不存在的楼层）
+const floorsForBlock = computed(() => {
+  const fs = shops.filter(s => s.zone === activeBlock.value).map(s => Number(s.floor))
+  return [...new Set(fs)].sort((a, b) => a - b)
 })
 
-const floorLayout = computed(() => {
-  const f = activeFloor.value
-  const base = shops.filter(s => String(s.floor) === String(f))
-  const positions = {
-    1: [{x:20,y:30,w:100,h:55},{x:140,y:30,w:120,h:55},{x:280,y:30,w:100,h:55}],
-    2: [{x:20,y:50,w:100,h:50},{x:140,y:50,w:120,h:50},{x:280,y:50,w:100,h:50}],
-    3: [{x:20,y:40,w:100,h:55},{x:140,y:40,w:120,h:55},{x:280,y:40,w:100,h:55}],
-    4: [{x:20,y:60,w:100,h:50},{x:140,y:60,w:120,h:50},{x:280,y:60,w:100,h:50}],
-    5: [{x:20,y:30,w:160,h:70},{x:200,y:30,w:180,h:70}],
-  }
-  return base.map((s, i) => ({ ...s, ...positions[f]?.[i] || {x:20+i*130,y:40,w:110,h:60} }))
+// 切换区块时，重置到该区块首层
+function onBlockChange(b) {
+  activeBlock.value = b
+  const fs = floorsForBlock.value
+  if (fs.length && !fs.includes(Number(activeFloor.value))) activeFloor.value = fs[0]
+}
+
+// 当前区块+楼层的网格布局
+const layout = computed(() => {
+  const list = shops.filter(s => s.zone === activeBlock.value && String(s.floor) === String(activeFloor.value))
+  const n = list.length
+  const cols = n <= 4 ? 2 : n <= 12 ? 3 : 4
+  const rows = Math.max(1, Math.ceil(n / cols))
+  const W = 400
+  const pad = 14
+  const cellW = (W - pad * 2) / cols
+  const cellH = 64
+  const gap = 6
+  const items = list.map((s, i) => {
+    const c = i % cols
+    const r = Math.floor(i / cols)
+    const x = pad + c * cellW + gap / 2
+    const y = pad + r * cellH + gap / 2
+    const w = cellW - gap
+    const h = cellH - gap
+    return { ...s, x, y, w, h, cx: x + w / 2, cy: y + h / 2 }
+  })
+  const H = pad * 2 + rows * cellH
+  return { items, W, H, cols, rows, n }
 })
 
-const floorShops = computed(() => shops.filter(s => String(s.floor) === String(activeFloor.value)))
+// 底部抽屉列表
+const floorShops = computed(() => shops.filter(s => s.zone === activeBlock.value && String(s.floor) === String(activeFloor.value)))
 const highlightShop = computed(() => {
   if (!highlightId.value) return null
   return shops.find(s => s.id === highlightId.value)
 })
 
-const segStyle = computed(() => {
-  const i = floors.indexOf(activeFloor.value)
-  return { left: `${i * 100 / floors.length}%`, width: `${100 / floors.length}%` }
-})
+// 分段滑块样式
+function segStyleFor(list, active) {
+  const i = list.indexOf(active)
+  const w = 100 / list.length
+  return { left: `${i * w}%`, width: `${w}%` }
+}
+const blockSegStyle = computed(() => segStyleFor(blocks.value, activeBlock.value))
+const floorSegStyle = computed(() => segStyleFor(floorsForBlock.value, Number(activeFloor.value)))
 
 function onSearch() {
   if (!searchQuery.value) { searchResults.value = []; return }
   const q = searchQuery.value.toLowerCase()
   searchResults.value = shops.filter(s =>
-    s.name.toLowerCase().includes(q) || s.category.includes(q) || s.tags?.some(t => t.includes(q)) || String(s.floor).includes(q)
+    s.name.toLowerCase().includes(q) || s.category.includes(q) || s.tags?.some(t => t.toLowerCase().includes(q)) || String(s.floor).includes(q) || (s.zone || '').includes(q)
   )
 }
 
 function onSearchItem(shop) {
-  activeFloor.value = shop.floor
+  activeBlock.value = shop.zone
+  const fs = floorsForBlock.value
+  if (!fs.includes(Number(shop.floor))) activeFloor.value = fs[0]
+  else activeFloor.value = Number(shop.floor)
   highlightId.value = shop.id
   searchResults.value = []
   searchQuery.value = ''
-  setTimeout(() => { highlightId.value = null }, 3000)
+  setTimeout(() => { if (highlightId.value === shop.id) highlightId.value = null }, 3000)
 }
 
 function locateMe() {
-  activeFloor.value = 1
+  if (blocks.value.length) activeBlock.value = blocks.value[0]
+  if (floorsForBlock.value.length) activeFloor.value = floorsForBlock.value[0]
   sheetOpen.value = true
 }
 
@@ -222,81 +236,34 @@ function toggleShop(id) {
     return
   }
   highlightId.value = id
-  // 生成路径
   generateRoute(id)
 }
 
-// 3部电梯的坐标（每个楼层都有，简化为固定行列位置）
-const elevatorPositions = {
-  1: [{x:195,y:405},{x:435,y:775},{x:845,y:405}],
-  2: [{x:245,y:405},{x:435,y:775},{x:645,y:405}],
-  3: [{x:135,y:405},{x:435,y:775},{x:535,y:405}],
-  4: [{x:135,y:405},{x:285,y:775},{x:535,y:405}],
-  5: [{x:135,y:405},{x:285,y:775},{x:535,y:405}],
-  'B1': [{x:195,y:405},{x:435,y:775},{x:845,y:405}],
-}
-
-// 入口大厅（服务台）坐标
-const entrancePos = { x: 40, y: 490 }
+// 入口坐标（SVG 内）
+const entrancePos = { x: 35, y: 18 }
 
 function generateRoute(shopId) {
   const shop = shops.find(s => s.id === shopId)
   if (!shop) return
   routeTarget.value = shop
-
-  const f = activeFloor.value
-  const layout = floorLayout.value
-  const target = layout.find(s => s.id === shopId)
+  const target = layout.value.items.find(s => s.id === shopId)
   if (!target) return
 
-  // 目标店铺中心坐标
-  const tx = target.x + target.w / 2
-  const ty = target.y + target.h / 2
-
-  // 入口坐标
+  const tx = target.cx
+  const ty = target.cy
   const sx = entrancePos.x
   const sy = entrancePos.y
 
-  // 找最近的电梯
-  const elevators = elevatorPositions[String(f)] || elevatorPositions[1]
-  let bestElev = elevators[0]
-  let bestDist = Infinity
-  for (const e of elevators) {
-    const d = Math.abs(e.x - tx) + Math.abs(e.y - ty)
-    if (d < bestDist) { bestDist = d; bestElev = e }
-  }
-
   const steps = []
   const path = []
-
-  // 起点
   path.push({ x: sx, y: sy })
+  steps.push(`${activeBlock} ${activeFloor}F 入口处，进入楼层`)
 
-  // 生成路径
-  const midX = (sx + bestElev.x) / 2
-  const midY = (bestElev.y + ty) / 2
-
-  // 先走到大厅中央 → 扶梯区域
-  path.push({ x: 200, y: 490 })
-  steps.push('从大厅入口直行约30米')
-
-  // 扶梯/电梯
-  path.push({ x: bestElev.x, y: bestElev.y })
-  if (String(f) !== '1') {
-    steps.push(`乘坐电梯/扶梯到 ${f}F`)
-  }
-
-  // 电梯到目标
-  path.push({ x: bestElev.x + (tx > bestElev.x ? 60 : -60), y: bestElev.y })
-  steps.push(`出电梯后${tx > bestElev.x ? '向右' : '向左'}转`)
-
-  // 经过店铺
-  path.push({ x: tx, y: bestElev.y })
-  steps.push('沿通道直行')
-
-  // 到达
+  // 先横向走到目标列，再纵向到目标
+  path.push({ x: tx, y: sy })
+  steps.push('沿主通道直行至目标商铺所在区域')
   path.push({ x: tx, y: ty })
-  steps.push(`到达【${shop.name}】`)
+  steps.push(`到达【${shop.name}】（${shop.zone} · ${shop.floor}F）`)
 
   routePath.value = path
   routeSteps.value = steps
@@ -309,9 +276,10 @@ onMounted(() => {
   if (shopId) {
     const s = shops.find(s => s.id === shopId)
     if (s) {
-      activeFloor.value = typeof s.floor === 'string' ? parseInt(s.floor) || 1 : s.floor
+      activeBlock.value = s.zone
+      const fs = floorsForBlock.value
+      activeFloor.value = fs.includes(Number(s.floor)) ? Number(s.floor) : fs[0]
       sheetOpen.value = true
-      // 延迟等布局渲染完再生成路线
       setTimeout(() => {
         highlightId.value = shopId
         generateRoute(shopId)
@@ -329,7 +297,7 @@ onMounted(() => {
   display: flex; align-items: center; gap: 10px; padding: 6px 14px; margin: 8px 12px;
   background: #2A2A2A; border: 1px solid transparent; border-radius: 12px; transition: border-color 0.15s;
 }
-.nav-search:focus-within { border-color: #999999; background: #2A2A2A; }
+.nav-search:focus-within { border-color: #FF7B2C; background: #2A2A2A; }
 .nav-search input { flex: 1; border: none; background: none; outline: none; font-size: 15px; color: #F0F0F0; font-family: inherit; }
 .nav-search input::placeholder { color: #666; }
 .search-clear { border: none; background: none; font-size: 16px; color: #666; cursor: pointer; padding: 0 4px; }
@@ -353,13 +321,13 @@ onMounted(() => {
 }
 .seg-btn {
   flex: 1; border: none; background: none; padding: 8px 0; font-size: 15px; font-weight: 600;
-  color: #777; cursor: pointer; position: relative; z-index: 1; transition: color 0.25s; font-family: inherit;
+  color: #777; cursor: pointer; position: relative; z-index: 1; transition: color 0.25s; font-family: inherit; white-space: nowrap;
 }
-.seg-btn.active { color: #999999; }
+.seg-btn.active { color: #FF7B2C; }
 
 /* 地图 */
-.map-section { flex: 1; margin: 0 12px; position: relative; }
-.floor-label { position: absolute; top: 12px; right: 12px; font-size: 24px; font-weight: 800; color: #444; z-index: 1; }
+.map-section { flex: 1; margin: 0 12px; position: relative; overflow: hidden; }
+.floor-label { position: absolute; top: 12px; right: 12px; font-size: 20px; font-weight: 800; color: #444; z-index: 1; }
 .floor-map { width: 100%; height: 100%; }
 .floor-svg { width: 100%; height: 100%; }
 
@@ -406,7 +374,7 @@ onMounted(() => {
   padding: 8px; border: none; border-radius: 12px; background: #2A2A2A; color: #999;
   font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
-.na-btn.on { background: #1A1A1A; color: #999999; }
+.na-btn.on { background: #1A1A1A; color: #FF7B2C; }
 .na-btn:active { opacity: 0.7; }
 
 /* 路线指引面板 */
@@ -437,8 +405,7 @@ onMounted(() => {
   background: #333; color: #999; font-size: 12px; font-weight: 700;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.rps-dot.start { background: #1A1A1A; color: #fff; }
-.rps-dot.end { background: #1A1A1A; color: #fff; }
+.rps-dot.start { background: #FF7B2C; color: #fff; }
+.rps-dot.end { background: #FF7B2C; color: #fff; }
 .rps-text { font-size: 14px; color: #CCC; line-height: 1.6; padding-top: 3px; }
-
 </style>

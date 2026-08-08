@@ -16,7 +16,7 @@
             <td>{{ a.title }}</td>
             <td>{{ a.start_date }} ~ {{ a.end_date }}</td>
             <td><span class="aa-tag" :class="a.status">{{ statusMap[a.status] }}</span></td>
-            <td>{{ a.enrolled || 0 }}/{{ a.capacity || '-' }}</td>
+            <td>{{ a.enrolled || 0 }}/{{ a.max_people || '-' }}</td>
             <td>
               <button class="aa-btn-sm" @click="editActivity(a)">编辑</button>
               <button class="aa-btn-sm aa-btn-warn" @click="toggleStatus(a)">{{ a.status === 'open' ? '关闭' : '开启' }}</button>
@@ -35,13 +35,13 @@
         <h3>{{ editId ? '编辑活动' : '新建活动' }}</h3>
         <div class="aa-form">
           <label>标题</label><input v-model="form.title" />
-          <label>描述</label><textarea v-model="form.description" rows="2"></textarea>
-          <label>地点</label><input v-model="form.location" />
+          <label>描述</label><textarea v-model="form.desc" rows="2"></textarea>
+          <label>地点</label><input v-model="form.venue" />
           <label>开始日期</label><input type="date" v-model="form.start_date" />
           <label>结束日期</label><input type="date" v-model="form.end_date" />
           <label>价格 (元)</label><input type="number" v-model="form.price" />
-          <label>积分兑换</label><input type="number" v-model="form.points_cost" />
-          <label>总名额</label><input type="number" v-model="form.capacity" />
+          <label>积分兑换</label><input type="number" v-model="form.points_price" />
+          <label>总名额</label><input type="number" v-model="form.max_people" />
           <label>渐变色</label><input v-model="form.gradient" placeholder="例: linear-gradient(135deg, #838383, #626262)" />
           <label>封面图 URL</label><input v-model="form.cover_url" />
           <label>状态</label>
@@ -55,10 +55,10 @@
           <div class="aa-sessions">
             <label>场次 <button type="button" class="aa-btn-sm" @click="addSession">+ 添加</button></label>
             <div v-for="(s, i) in form.sessions" :key="i" class="aa-session-item">
-              <input type="date" v-model="s.date" />
-              <input v-model="s.time" placeholder="时间" style="width:80px" />
-              <input v-model="s.location" placeholder="地点" style="flex:1" />
-              <input type="number" v-model="s.capacity" placeholder="名额" style="width:60px" />
+              <input type="date" v-model="s.session_date" />
+              <input v-model="s.session_time" placeholder="时间" style="width:80px" />
+              <input v-model="s.venue" placeholder="地点" style="flex:1" />
+              <input type="number" v-model="s.max_people" placeholder="名额" style="width:60px" />
               <button type="button" class="aa-btn-sm aa-btn-danger" @click="form.sessions.splice(i,1)">x</button>
             </div>
           </div>
@@ -83,8 +83,8 @@ const statusMap = { open: '开放', closed: '关闭', draft: '草稿' }
 
 function resetForm() {
   form.value = {
-    title: '', description: '', location: '', start_date: '', end_date: '',
-    price: 0, points_cost: 0, capacity: 0, gradient: '', cover_url: '', status: 'open',
+    title: '', desc: '', venue: '', start_date: '', end_date: '',
+    price: 0, points_price: 0, max_people: 0, gradient: '', cover_url: '', status: 'open',
     sessions: []
   }
 }
@@ -101,12 +101,14 @@ async function loadActivities() {
 function editActivity(a) {
   editId.value = a.id
   form.value = {
-    title: a.title, description: a.description || '', location: a.location || '',
+    title: a.title, desc: a.desc || '', venue: a.venue || '',
     start_date: a.start_date || '', end_date: a.end_date || '',
-    price: a.price || 0, points_cost: a.points_cost || 0,
-    capacity: a.capacity || 0, gradient: a.gradient || '', cover_url: a.cover_url || '',
+    price: a.price || 0, points_price: a.points_price || 0,
+    max_people: a.max_people || 0, gradient: a.gradient || '', cover_url: a.cover_url || '',
     status: a.status || 'open',
-    sessions: a.sessions ? [...a.sessions] : []
+    sessions: (a.sessions && a.sessions.length)
+      ? a.sessions.map(s => ({ session_date: s.session_date || '', session_time: s.session_time || '', venue: s.venue || '', max_people: s.max_people || 0 }))
+      : []
   }
   showForm.value = true
 }
@@ -114,11 +116,16 @@ function editActivity(a) {
 async function saveActivity() {
   const url = editId.value ? `/api/admin/activities/${editId.value}` : '/api/admin/activities'
   const method = editId.value ? 'PUT' : 'POST'
+  // 编辑时若未加载到场次（原列表不含场次），不提交 sessions 以免清空已有场次
+  const body = { ...form.value }
+  if (editId.value && (!body.sessions || body.sessions.length === 0)) {
+    delete body.sessions
+  }
   try {
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
+      body: JSON.stringify(body)
     })
     const d = await res.json()
     if (d.ok) { showForm.value = false; loadActivities() }
@@ -149,7 +156,7 @@ async function deleteActivity(id) {
 
 function addSession() {
   if (!form.value.sessions) form.value.sessions = []
-  form.value.sessions.push({ date: '', time: '', location: '', capacity: 0 })
+  form.value.sessions.push({ session_date: '', session_time: '', venue: '', max_people: 0 })
 }
 
 onMounted(loadActivities)

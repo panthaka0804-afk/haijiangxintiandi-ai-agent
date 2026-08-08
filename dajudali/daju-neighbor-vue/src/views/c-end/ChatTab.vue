@@ -1,5 +1,12 @@
 <template>
   <div class="chat-tab">
+    <!-- 顶部标题（与首页/我的/优惠统一） -->
+    <div class="chat-header">
+      <div class="section-label">
+        <span class="section-en">Service</span>
+        <span class="section-cn">在线客服</span>
+      </div>
+    </div>
     <!-- 聊天消息 -->
     <div class="chat-messages" ref="msgContainer">
       <div
@@ -12,7 +19,7 @@
           <div class="msg-bubble user-bubble">{{ msg.content }}</div>
         </template>
         <template v-else>
-          <div class="msg-avatar"><SvgIcon name="message" :size="22" color="#9E9E9E" /></div>
+          <div class="msg-avatar"><svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#1A1A1A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 25 C4 22 8 16 15 15 C24 14 32 17 35 21 C37 21 39 18 42 15 C44 13 46 15 44 18 C46 21 43 23 40 24 C38 28 35 36 27 37 C18 38 10 35 8 29 C6 27 5 26 5 25 Z" fill="#FFFFFF"/><path d="M5 25 C8 26 11 26 13 25"/><circle cx="15" cy="20" r="1.8" fill="#1A1A1A" stroke="none"/><path d="M18 33 C17 37 20 39 22 36"/></svg></div>
           <div class="msg-bubble ai-bubble" v-html="formatMsg(msg.content)"></div>
           <!-- 智能快捷操作按钮 -->
           <div v-if="getQuickActions(msg.content).length" class="quick-actions-row">
@@ -20,6 +27,7 @@
               v-for="(act, ai) in getQuickActions(msg.content)"
               :key="ai"
               class="quick-action-btn"
+              :class="'qa-sw-' + (ai % 6)"
               @click="doQuickAction(act)"
             >
               <svg class="qa-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -71,7 +79,7 @@
 
       <!-- 打字动画 -->
       <div class="message-wrapper ai" v-if="typing">
-        <div class="msg-avatar"><SvgIcon name="message" :size="22" color="#9E9E9E" /></div>
+        <div class="msg-avatar"><svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#1A1A1A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 25 C4 22 8 16 15 15 C24 14 32 17 35 21 C37 21 39 18 42 15 C44 13 46 15 44 18 C46 21 43 23 40 24 C38 28 35 36 27 37 C18 38 10 35 8 29 C6 27 5 26 5 25 Z" fill="#FFFFFF"/><path d="M5 25 C8 26 11 26 13 25"/><circle cx="15" cy="20" r="1.8" fill="#1A1A1A" stroke="none"/><path d="M18 33 C17 37 20 39 22 36"/></svg></div>
         <div class="msg-bubble ai-bubble typing-bubble">
           <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         </div>
@@ -88,64 +96,79 @@
             <span v-for="i in 5" :key="i" class="wave-bar-inline" :style="{ animationDelay: (i * 0.12) + 's' }"></span>
           </div>
         </div>
-        <div class="voice-label" v-else>按住 说话</div>
-        <button
-          class="voice-btn"
-          @touchstart.prevent="startVoice"
-          @touchend.prevent="stopVoice"
-          @mousedown.prevent="startVoice"
-          @mouseup.prevent="stopVoice"
-          @touchcancel.prevent="stopVoice"
-          @contextmenu.prevent
-        >
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" :stroke="recording ? '#fff' : '#9E9E9E'" stroke-width="1.5" stroke-linecap="round">
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            <line x1="12" y1="19" x2="12" y2="23"/>
-            <line x1="8" y1="23" x2="16" y2="23"/>
+        <div class="voice-row">
+          <div
+            class="voice-hold-btn"
+            :class="{ recording }"
+            @touchstart.prevent="startVoice"
+            @touchend.prevent="stopVoice"
+            @mousedown.prevent="startVoice"
+            @mouseup.prevent="stopVoice"
+            @touchcancel.prevent="stopVoice"
+            @contextmenu.prevent
+          >
+            <svg class="voice-mic" viewBox="0 0 24 24" fill="none" :stroke="recording ? '#fff' : '#9E9E9E'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="3" width="6" height="11" rx="3"/>
+              <path d="M6 11a6 6 0 0 0 12 0"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+              <line x1="8.5" y1="21" x2="15.5" y2="21"/>
+            </svg>
+            <span class="voice-hold-text">{{ recording ? '松开 结束' : '按住 说话' }}</span>
+          </div>
+          <svg class="voice-toggle" @click="voiceMode = false" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#9E9E9E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="5" width="20" height="14" rx="2"/>
+            <line x1="6" y1="9" x2="6" y2="9.01"/>
+            <line x1="10" y1="9" x2="10" y2="9.01"/>
+            <line x1="14" y1="9" x2="14" y2="9.01"/>
+            <line x1="18" y1="9" x2="18" y2="9.01"/>
+            <line x1="6" y1="13" x2="6" y2="13.01"/>
+            <line x1="10" y1="13" x2="10" y2="13.01"/>
+            <line x1="14" y1="13" x2="14" y2="13.01"/>
+            <line x1="18" y1="13" x2="18" y2="13.01"/>
+            <line x1="8" y1="17" x2="16" y2="17"/>
           </svg>
-        </button>
-        <!-- 语音模式下也保留文字输入 -->
-        <div class="voice-text-input-row">
-          <input
-            v-model="inputText"
-            class="voice-mini-input"
-            type="text"
-            placeholder="或直接打字..."
-            @keyup.enter="sendMsg"
-          />
-          <button v-if="inputText.trim()" class="wx-send-btn" @click="sendMsg" :disabled="!inputText.trim()">发送</button>
         </div>
-        <svg class="voice-toggle" @click="voiceMode = false" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2" stroke-linecap="round">
-          <rect x="3" y="3" width="18" height="18" rx="2"/>
-          <line x1="3" y1="9" x2="21" y2="9"/>
-          <line x1="9" y1="21" x2="9" y2="9"/>
-        </svg>
       </div>
       <!-- 文字模式 微信风格 -->
-      <div v-else class="text-input wx-input">
-        <svg v-if="!inputText.trim()" class="wx-voice-icon" @click="enterVoiceMode" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" stroke-linecap="round">
-          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-          <line x1="12" y1="19" x2="12" y2="23"/>
-          <line x1="8" y1="23" x2="16" y2="23"/>
+      <div v-else class="text-input">
+        <!-- 左：语音切换（喇叭，始终显示） -->
+        <svg class="wx-voice-icon" @click="enterVoiceMode" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#9E9E9E" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 5 6 9H3v6h3l5 4V5z"/>
+          <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+          <path d="M18.5 6a8 8 0 0 1 0 12"/>
         </svg>
+        <!-- 中：输入框 -->
         <input
           v-model="inputText"
           ref="textInputRef"
           class="wx-input-field"
           type="text"
-          placeholder="按住 说话"
+          inputmode="text"
+          enterkeyhint="send"
+          placeholder="发送消息"
           @keyup.enter="sendMsg"
           :disabled="chatStore.loading"
         />
+        <!-- 右：表情 -->
+        <svg class="wx-emoji-icon" :class="{ active: showEmoji }" @click="toggleEmoji" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#9E9E9E" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M8 14c1.5 1.5 6.5 1.5 8 0"/>
+          <circle cx="9" cy="9.5" r="1" fill="#9E9E9E" stroke="none"/>
+          <circle cx="15" cy="9.5" r="1" fill="#9E9E9E" stroke="none"/>
+        </svg>
+        <!-- 右2：发送 或 展开键盘(倒三角) -->
         <button v-if="inputText.trim()" class="wx-send-btn" @click="sendMsg" :disabled="chatStore.loading || !inputText.trim()">
           {{ chatStore.loading ? '...' : '发送' }}
         </button>
-        <svg v-if="inputText.trim()" class="wx-voice-icon-right" @click="inputText = ''" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" stroke-linecap="round">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
+        <svg v-else class="wx-plus-icon" @click="focusInput" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="6,9 18,9 12,16" fill="none"/>
         </svg>
+      </div>
+      <!-- emoji 面板 -->
+      <div v-if="!voiceMode && showEmoji" class="emoji-panel">
+        <div class="emoji-grid">
+          <button v-for="(e, i) in emojiList" :key="i" class="emoji-item" @click="insertEmoji(e)">{{ e }}</button>
+        </div>
       </div>
     </div>
   </div>
@@ -167,6 +190,20 @@ const msgContainer = ref(null)
 // 语音识别
 const voiceMode = ref(false)
 const recording = ref(false)
+const showEmoji = ref(false)
+const textInputRef = ref(null)
+const emojiList = [
+  '😊','😂','🥰','😍','😘','😎','🤔','😅','😭','😡','🥺','😴',
+  '👍','👏','🙏','💪','🤝','👌','🎉','✨','🔥','💯','⭐','🌟',
+  '❤️','💔','🌹','💡','📍','💰','🛍️','🎁','🍔','☕','🚗','🐬'
+]
+function toggleEmoji() {
+  showEmoji.value = !showEmoji.value
+}
+function insertEmoji(e) {
+  inputText.value += e
+  nextTick(() => textInputRef.value && textInputRef.value.focus())
+}
 const liveText = ref('')
 
 // 非微信环境：Web Speech API
@@ -478,7 +515,19 @@ async function processWxVoice(serverId) {
   }
 }
 
+function focusInput() {
+  const el = textInputRef.value
+  if (el) {
+    // 同步聚焦（在点击手势内），确保移动端软键盘弹出
+    el.focus({ preventScroll: false })
+    try { el.scrollIntoView({ block: 'nearest' }) } catch (e) {}
+  } else {
+    nextTick(() => { if (textInputRef.value) textInputRef.value.focus() })
+  }
+}
+
 function enterVoiceMode() {
+  showEmoji.value = false
   // 微信环境：切到带语音属性输入框，微信键盘自带语音输入
   if (isWechat) {
     voiceMode.value = true
@@ -521,6 +570,7 @@ async function sendMsg() {
 
   chatStore.addMessage({ role: 'user', content: text, time: now() })
   inputText.value = ''
+  showEmoji.value = false
   typing.value = true
   chatStore.loading = true
   await scrollBottom()
@@ -617,14 +667,43 @@ watch(() => chatStore.messages.length, () => {
   flex: 1;
   min-height: 0;
   height: 100%;
-  background: #1A1A1A;
+  background: #000000;
+}
+
+/* ── 顶部标题（与首页/我的/优惠统一） ── */
+.chat-header {
+  flex-shrink: 0;
+  padding: 8px 0 4px;
+  background: #000000;
+}
+.section-label {
+  display: flex;
+  flex-direction: column;
+  margin: 10px 16px 6px;
+}
+.section-en {
+  font-family: 'Gayathri', var(--font-primary);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  line-height: 1.2;
+  color: rgba(255,255,255,0.92);
+  text-transform: capitalize;
+  -webkit-text-stroke: 0.5px rgba(255,255,255,0.3);
+}
+.section-cn {
+  font-size: var(--fs-headline);
+  font-weight: 400;
+  color: #FFFFFF;
+  margin-top: 6px;
+  text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.18);
 }
 
 /* ===== 聊天消息 ===== */
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 16px 20px;
+  padding: 8px 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -651,18 +730,18 @@ watch(() => chatStore.messages.length, () => {
 }
 
 .msg-avatar {
-  width: 32px;
-  height: 32px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  background: #222222;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background: #FFFFFF;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
-  margin-bottom: 2px;
+  align-self: flex-start;
   flex-shrink: 0;
 }
+.msg-avatar svg { width: 100%; height: 100%; display: block; }
 
 .msg-bubble {
   max-width: 78%;
@@ -673,17 +752,19 @@ watch(() => chatStore.messages.length, () => {
 }
 
 .user-bubble {
-  background: #1A1A1A;
+  background: linear-gradient(135deg, #FF7B2C, #E85D04);
   color: #FFFFFF;
   border-radius: 18px 18px 4px 18px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(232,93,4,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+  text-shadow: 0 -1px 1px rgba(0,0,0,0.25), 0 1px 1px rgba(255,255,255,0.2);
 }
 
 .ai-bubble {
   background: #2A2A2A;
   color: #F0F0F0;
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 18px 18px 18px 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 .msg-time {
@@ -705,7 +786,7 @@ watch(() => chatStore.messages.length, () => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #999;
+  background: #FF7B2C;
   animation: bounce 1.4s infinite ease-in-out;
 }
 
@@ -719,29 +800,34 @@ watch(() => chatStore.messages.length, () => {
 
 /* ===== 输入区域 ===== */
 .input-area {
-  background: rgba(26,26,26,0.92);
+  background: rgba(20,20,20,0.96);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-top: none;
+  border-top: 1px solid rgba(255,255,255,0.08);
   flex-shrink: 0;
   padding-bottom: env(safe-area-inset-bottom, 8px);
 }
 
 /* 语音模式 */
 .voice-input {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
   padding: 8px 16px 12px;
-  gap: 8px;
-  position: relative;
+  gap: 10px;
+}
+.voice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
 }
 
 /* 实时文字白框 */
 .voice-text-panel {
   width: 100%;
-  background: #1A1A1A;
+  background: #000000;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 0.5px solid rgba(255,255,255,0.15);
@@ -778,37 +864,42 @@ watch(() => chatStore.messages.length, () => {
   100% { height: 20px; }
 }
 
-.voice-btn {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  border: none;
-  background: #222222;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+.voice-hold-btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 24px;
+  background: #2A2A2A;
+  border: 1px solid rgba(255,255,255,0.12);
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   cursor: pointer;
-  transition: all 0.2s ease-out;
+  transition: background 0.15s ease, border-color 0.15s ease;
   touch-action: manipulation;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
 }
-.voice-btn:active {
-  background: #1A1A1A;
-  box-shadow: none;
-  transform: scale(0.95);
+.voice-hold-btn:active,
+.voice-hold-btn.recording {
+  background: #444444;
+  border-color: rgba(255,255,255,0.22);
 }
-
-.voice-label {
-  position: absolute;
-  top: -22px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 13px;
-  color: #999;
-  white-space: nowrap;
+.voice-mic {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.voice-hold-text {
+  font-size: 16px;
+  color: #BBBBBB;
+  font-family: 'PingFang SC', -apple-system, sans-serif;
+  letter-spacing: 0.5px;
+}
+.voice-hold-btn:active .voice-hold-text,
+.voice-hold-btn.recording .voice-hold-text {
+  color: #FFFFFF;
 }
 .voice-toggle {
   flex-shrink: 0;
@@ -819,27 +910,22 @@ watch(() => chatStore.messages.length, () => {
 .text-input {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 4px;
-}
-/* 微信风格输入框 */
-.text-input.wx-input {
-  background: #2A2A2A;
-  border-radius: 24px;
-  padding: 6px 12px;
-  gap: 10px;
-  height: 44px;
-  flex: 1;
+  gap: 8px;
+  padding: 8px 12px;
 }
 .wx-input-field {
   flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
+  background: #3A3A3A;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 20px;
+  padding: 9px 16px;
+  height: 38px;
   font-size: 16px;
-  color: #D4D4D4;
+  color: #F0F0F0;
+  text-align: center;
   font-family: 'PingFang SC', -apple-system, sans-serif;
-  padding: 0;
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
   min-width: 0;
 }
 .wx-input-field::placeholder {
@@ -848,24 +934,31 @@ watch(() => chatStore.messages.length, () => {
 .wx-input-field:disabled {
   opacity: 0.6;
 }
-.wx-voice-icon {
+.wx-voice-icon, .wx-plus-icon {
   flex-shrink: 0;
   cursor: pointer;
-  padding: 4px;
+  padding: 7px;
   border-radius: 50%;
-  transition: background 0.15s;
+  transition: background 0.15s, transform 0.15s;
 }
-.wx-voice-icon:active {
+.wx-voice-icon:active, .wx-plus-icon:active {
+  background: #3A3A3A;
+  transform: scale(0.92);
+}
+.wx-emoji-icon {
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 7px;
+  border-radius: 50%;
+  transition: background 0.15s, transform 0.15s;
+}
+.wx-emoji-icon:active {
+  background: #3A3A3A;
+  transform: scale(0.92);
+}
+.wx-emoji-icon.active {
   background: #3A3A3A;
 }
-.wx-voice-icon-right {
-  flex-shrink: 0;
-  cursor: pointer;
-  padding: 2px;
-  border-radius: 50%;
-  opacity: 0.6;
-}
-
 /* 微信语音替代输入框 */
 .voice-input.wx-voice-alt {
   display: flex;
@@ -897,40 +990,21 @@ watch(() => chatStore.messages.length, () => {
   width: 100%;
   padding: 0 4px;
 }
-.voice-mini-input {
-  flex: 1;
-  background: #333;
-  border: 1px solid #444;
-  border-radius: 18px;
-  padding: 8px 14px;
-  font-size: 15px;
-  color: #D4D4D4;
-  font-family: 'PingFang SC', -apple-system, sans-serif;
-  outline: none;
-  min-width: 0;
-}
-.voice-mini-input::placeholder {
-  color: #BBBBBB;
-  font-size: 14px;
-}
-.voice-mini-input:focus {
-  border-color: #9E9E9E;
-}
 
 /* 快捷操作按钮 */
 .quick-actions-row {
   display: flex;
   gap: 8px;
-  padding: 6px 0 4px 44px;
+  padding: 6px 0 4px 60px;
   flex-wrap: wrap;
 }
 .quick-action-btn {
   background: #2A2A2A;
-  border: 1px solid #444;
-  border-radius: 8px;
+  border: 3px solid #6A6A6E;
+  border-radius: 20px;
   padding: 7px 14px;
   font-size: 13px;
-  color: #CCC;
+  color: #FFFFFF;
   font-family: 'PingFang SC', -apple-system, sans-serif;
   cursor: pointer;
   white-space: nowrap;
@@ -938,35 +1012,72 @@ watch(() => chatStore.messages.length, () => {
   display: flex;
   align-items: center;
   gap: 5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
 .qa-icon {
   flex-shrink: 0;
-  color: #9E9E9E;
+  color: #FFFFFF;
 }
 .quick-action-btn:active {
-  background: #1A1A1A;
-  color: #fff;
-  border-color: #9E9E9E;
+  filter: brightness(1.12);
+  transform: scale(0.97);
 }
-.quick-action-btn:active .qa-icon {
-  color: #fff;
-}
+/* 快捷按钮按首页6色轮询穿插（与优惠页一致） */
+.qa-sw-0 { background:#C4923A; border-color:#9A7425; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45); }
+.qa-sw-1 { background:#D4A59A; border-color:#A67D72; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(212,165,154,0.45); }
+.qa-sw-2 { background:#9B4A3E; border-color:#6E332A; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(155,74,62,0.45); }
+.qa-sw-3 { background:#C9956C; border-color:#A87C48; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(201,149,108,0.45); }
+.qa-sw-4 { background:#8B8B90; border-color:#6A6A6E; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(139,139,144,0.45); }
+.qa-sw-5 { background:#6B6E64; border-color:#4E5049; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(107,110,100,0.45); }
 .wx-send-btn {
   flex-shrink: 0;
-  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
+  background: linear-gradient(135deg, #FF7B2C, #E85D04);
   color: #fff;
   border: none;
   border-radius: 18px;
   padding: 6px 16px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: 'PingFang SC', -apple-system, sans-serif;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.25), inset -2px -2px 5px rgba(255,255,255,0.2);
 }
 .wx-send-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+/* emoji 面板 */
+.emoji-panel {
+  background: #1E1E1E;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 10px 12px;
+  max-height: 210px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+}
+.emoji-item {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  height: 42px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, transform 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.emoji-item:active {
+  background: #333333;
+  transform: scale(0.88);
 }
 /* 兼容旧 Vant 样式 */
 .text-input .van-field {
@@ -992,11 +1103,12 @@ watch(() => chatStore.messages.length, () => {
 /* ===== 结构化卡片 ===== */
 .ai-card {
   background: #2A2A2A;
-  border-radius: 16px;
+  border: 3px solid #E85D04;
+  border-radius: 18px;
   overflow: hidden;
   margin: 4px 0 0;
   max-width: 280px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
 }
 .ai-card-item {
   display: flex;

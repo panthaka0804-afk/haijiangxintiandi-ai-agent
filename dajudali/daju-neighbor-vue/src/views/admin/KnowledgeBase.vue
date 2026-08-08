@@ -124,7 +124,7 @@ async function loadData() {
   loading.value = true
   try {
     const params = { page: page.value, limit: 20 }
-    if (searchQuery.value) params.q = searchQuery.value
+    if (searchQuery.value) params.search = searchQuery.value
     if (searchCategory.value) params.category = searchCategory.value
 
     const res = await getKnowledgeBase(params)

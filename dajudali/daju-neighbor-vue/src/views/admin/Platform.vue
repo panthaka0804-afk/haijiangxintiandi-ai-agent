@@ -90,9 +90,7 @@ async function loadTenants() {
   loading.value = true
   try {
     const res = await getTenants()
-    if (res.ok) {
-      tenants.value = res.tenants || []
-    }
+    tenants.value = Array.isArray(res) ? res : (res.tenants || [])
   } catch {
     ElMessage.error('加载失败')
   } finally {

@@ -1,166 +1,119 @@
-// 海江新天地 — 商户数据（统一数据源）
+// 海江新天地 — 商户数据（来源：旭惠·海江新天地 招商落位2026.5 实际落位）
+// 由 gen_shops.py 从招商落位清单生成，字段驱动 室内导航 / 商户列表 / 商户详情
 
-const shops = [
-  {
-    id: 's1', name: '星巴克', floor: 1, zone: 'A区', category: '餐饮',
-    tags: ['咖啡', '轻食'], color: '#00704A',
-    hours: '07:00 - 22:00', phone: '021-6598 5001',
-    desc: '全球知名咖啡品牌，精选阿拉比卡咖啡豆，手工调制每一杯。经典拿铁、美式、星冰乐，快来打卡吧！',
-    has_coupon: true, coupon_condition: 60, coupon_amount: 15, coupon_expire: '2026-12-31',
-    features: ['免费WiFi', '户外座位', '可带宠物']
-  },
-  {
-    id: 's2', name: '蜀大侠火锅', floor: 4, zone: 'B区', category: '餐饮',
-    tags: ['火锅', '川菜'], color: '#C41E3A',
-    hours: '11:00 - 23:00', phone: '021-6598 5002',
-    desc: '正宗成都火锅，牛油锅底浓郁鲜香。毛肚、鹅肠、黄喉样样新鲜，江湖气息满满，大侠请上座！',
-    has_coupon: true, coupon_condition: 200, coupon_amount: 50, coupon_expire: '2026-12-31',
-    features: ['包间可预订', '独家蘸料', '夜宵营业']
-  },
-  {
-    id: 's3', name: '棒约翰', floor: 'B1', zone: 'A区', category: '餐饮',
-    tags: ['披萨', '亲子'], color: '#FFB347',
-    hours: '10:00 - 21:30', phone: '021-6598 5003',
-    desc: '全球三大披萨品牌之一，"更好的馅料，更好的披萨"。手工现做，芝士拉丝超长，小朋友的最爱！',
-    has_coupon: true, coupon_condition: 100, coupon_amount: 20, coupon_expire: '2026-11-30',
-    features: ['亲子套餐', '外卖配送', '会员日特惠']
-  },
-  {
-    id: 's4', name: 'UNIQLO', floor: 1, zone: 'A区', category: '零售',
-    tags: ['服饰', '日系'], color: '#E60012',
-    hours: '10:00 - 22:00', phone: '021-6598 5004',
-    desc: '日本快时尚品牌，简约优质、价格亲民。UT系列、轻薄羽绒服、AIRism科技面料持续热卖。',
-    has_coupon: true, coupon_condition: 299, coupon_amount: 30, coupon_expire: '2026-11-30',
-    features: ['免费改裤长', '线上线下同价', '每周三上新']
-  },
-  {
-    id: 's5', name: '名创优品', floor: 2, zone: 'B区', category: '零售',
-    tags: ['百货', '生活'], color: '#E8809E',
-    hours: '10:00 - 22:00', phone: '021-6598 5005',
-    desc: '年轻人都爱逛的生活好物集合店。美妆、数码、家居、零食一应俱全，每次都有新发现~',
-    has_coupon: true, coupon_condition: 50, coupon_amount: 10, coupon_expire: '2026-12-31',
-    features: ['全球IP联名', '盲盒专区', '会员积分']
-  },
-  {
-    id: 's6', name: '万达影城', floor: 5, zone: 'C区', category: '娱乐',
-    tags: ['电影', 'IMAX'], color: '#E85D04',
-    hours: '09:00 - 02:00', phone: '021-6598 5006',
-    desc: '万达院线旗舰影城，IMAX巨幕厅、杜比全景声、4D动感厅，沉浸式观影体验。会员购票折上折！',
-    has_coupon: true, coupon_condition: 80, coupon_amount: 20, coupon_expire: '2026-12-31',
-    features: ['IMAX厅', '杜比全景声', '情侣座']
-  },
-  {
-    id: 's7', name: '玩具反斗城', floor: 3, zone: 'B区', category: '亲子',
-    tags: ['玩具', '儿童'], color: '#FFB347',
-    hours: '10:00 - 21:00', phone: '021-6598 5007',
-    desc: '全球最大玩具零售商，乐高、芭比、变形金刚、奥特曼，孩子们的梦想乐园。定期举办亲子活动！',
-    has_coupon: true, coupon_condition: 200, coupon_amount: 40, coupon_expire: '2026-12-31',
-    features: ['免费试玩区', '亲子活动', '生日派对']
-  },
-  {
-    id: 's8', name: '海底捞', floor: 4, zone: 'A区', category: '餐饮',
-    tags: ['火锅', '服务'], color: '#D32F2F',
-    hours: '11:00 - 03:00', phone: '021-6598 5008',
-    desc: '以极致服务闻名的火锅品牌。四种锅底随心搭，等位时免费美甲擦鞋，过生日还有惊喜表演！',
-    has_coupon: true, coupon_condition: 300, coupon_amount: 80, coupon_expire: '2026-12-31',
-    features: ['免费美甲', '等位小食', '生日惊喜', '深夜食堂']
-  },
-  {
-    id: 's9', name: '全家便利店', floor: 1, zone: 'C区', category: '生活服务',
-    tags: ['24h', '便利店'], color: '#4A90D9',
-    hours: '24小时营业', phone: '021-6598 5009',
-    desc: '24小时不打烊的便利好邻居。关东煮、饭团、便当、咖啡，随时为你补充能量~',
-    has_coupon: true, coupon_condition: 20, coupon_amount: 5, coupon_expire: '2026-12-31',
-    features: ['24小时', '代收快递', '交通卡充值']
-  },
-  {
-    id: 's10', name: '喜茶', floor: 1, zone: 'A区', category: '餐饮',
-    tags: ['奶茶', '果茶'], color: '#3E8E41',
-    hours: '10:00 - 22:00', phone: '021-6598 5010',
-    desc: '新茶饮开创者，真奶真果真茶。多肉葡萄、芝芝莓莓、烤黑糖波波，每一杯都颜值爆表！',
-    has_coupon: true, coupon_condition: 30, coupon_amount: 8, coupon_expire: '2026-12-31',
-    features: ['线上点单', '季节限定', '会员买一送一']
-  },
-  {
-    id: 's11', name: '大疆体验店', floor: 2, zone: 'B区', category: '零售',
-    tags: ['科技', '无人机'], color: '#000',
-    hours: '10:00 - 21:30', phone: '021-6598 5011',
-    desc: '全球无人机领导者，来店里亲手试飞！Mini、Air、Mavic系列全都有，还有手持云台和运动相机。',
-    has_coupon: false,
-    features: ['飞行体验', '以旧换新', '免费培训']
-  },
-  {
-    id: 's12', name: '李宁', floor: 2, zone: 'A区', category: '零售',
-    tags: ['运动', '国潮'], color: '#C41E3A',
-    hours: '10:00 - 22:00', phone: '021-6598 5012',
-    desc: '中国领先运动品牌，国潮设计引爆潮流。韦德之道、䨻科技跑鞋、中国李宁系列，又潮又能打！',
-    has_coupon: true, coupon_condition: 399, coupon_amount: 50, coupon_expire: '2026-12-31',
-    features: ['会员折扣', '限量发售', '运动社区']
-  },
-  {
-    id: 's13', name: '金宝贝早教', floor: 3, zone: 'C区', category: '亲子',
-    tags: ['早教', '启蒙'], color: '#4A90D9',
-    hours: '09:00 - 18:30', phone: '021-6598 5013',
-    desc: '全球早教领导品牌，0-6岁儿童早期教育专家。音乐、艺术、育乐课程，给宝宝一个更好的开始！',
-    has_coupon: true, coupon_condition: 500, coupon_amount: 100, coupon_expire: '2026-12-31',
-    features: ['免费体验课', '小班教学', '双语环境']
-  },
-  {
-    id: 's14', name: '瑞幸咖啡', floor: 'B1', zone: 'C区', category: '餐饮',
-    tags: ['咖啡', '快取'], color: '#0051A8',
-    hours: '07:00 - 21:00', phone: '021-6598 5014',
-    desc: '新零售咖啡品牌，大师咖啡品质、平民价格。生椰拿铁、厚乳拿铁火遍全网，App下单到店秒取。',
-    has_coupon: true, coupon_condition: 25, coupon_amount: 7, coupon_expire: '2026-12-31',
-    features: ['线上点单', '外卖配送', '企业团购']
-  },
-  {
-    id: 's15', name: '屈臣氏', floor: 1, zone: 'B区', category: '零售',
-    tags: ['美妆', '健康'], color: '#00A651',
-    hours: '10:00 - 22:00', phone: '021-6598 5015',
-    desc: '亚洲领先的保健与美妆零售商。护肤品、彩妆、健康食品、个人护理一站式购齐，会员享专属折扣。',
-    has_coupon: true, coupon_condition: 100, coupon_amount: 15, coupon_expire: '2026-12-31',
-    features: ['会员积分', '品牌试用', '健康咨询']
-  },
-  {
-    id: 's16', name: '超级猩猩', floor: 5, zone: 'B区', category: '娱乐',
-    tags: ['健身', '团课'], color: '#FFD700',
-    hours: '07:00 - 23:00', phone: '021-6598 5016',
-    desc: '不办年卡的健身品牌，按次付费超自由！搏击操、动感单车、瑜伽、TRX，100+种团课任选。',
-    has_coupon: true, coupon_condition: 0, coupon_amount: 50, coupon_expire: '2026-12-31',
-    features: ['按次付费', '线上约课', '淋浴储物']
-  },
-  {
-    id: 's17', name: '汉堡王', floor: 'B1', zone: 'B区', category: '餐饮',
-    tags: ['快餐', '汉堡'], color: '#FF6B00',
-    hours: '10:00 - 22:00', phone: '021-6598 5017',
-    desc: '皇堡美味火烤，真正的牛肉饼！薯条、鸡翅、甜筒，经典快餐的不二之选，小朋友还送小玩具哦。',
-    has_coupon: true, coupon_condition: 40, coupon_amount: 10, coupon_expire: '2026-12-31',
-    features: ['儿童套餐', '外卖配送', '自助点餐']
-  },
-  {
-    id: 's18', name: '西西弗书店', floor: 3, zone: 'A区', category: '零售',
-    tags: ['书店', '文创'], color: '#2B6040',
-    hours: '10:00 - 21:30', phone: '021-6598 5018',
-    desc: '一家有人情味的书店。暖黄灯光、木质书架，咖啡香伴着书页翻动的声音。精选好书、文创好物，阅读是最美的时光。',
-    has_coupon: true, coupon_condition: 100, coupon_amount: 20, coupon_expire: '2026-12-31',
-    features: ['矢量咖啡', '文创商品', '阅读区']
-  },
-  {
-    id: 's19', name: '小米之家', floor: 2, zone: 'C区', category: '零售',
-    tags: ['电子', '智能'], color: '#FF6900',
-    hours: '10:00 - 22:00', phone: '021-6598 5019',
-    desc: '小米官方直营店，手机、电视、笔记本、智能家居全品类体验。价格透明，线上线下同价，来摸摸真机吧！',
-    has_coupon: false,
-    features: ['以旧换新', '现场体验', '售后维修']
-  },
-  {
-    id: 's20', name: 'KKV', floor: 2, zone: 'A区', category: '零售',
-    tags: ['彩妆', '零食'], color: '#FFC0CB',
-    hours: '10:00 - 22:00', phone: '021-6598 5020',
-    desc: '网红美妆集合店，一整面的面膜墙超好拍！零食、文具、小家电、饰品，少女心炸裂的购物天堂。',
-    has_coupon: true, coupon_condition: 80, coupon_amount: 15, coupon_expire: '2026-12-31',
-    features: ['网红打卡', '面膜墙', '会员精选']
-  }
+const raw = [
+  { id:'s001', name:'瑞幸咖啡', floor:1, zone:'1区', category:'餐饮', tags:['咖啡', '快取'], color:'#0051A8' },
+  { id:'s002', name:'多乐之日', floor:1, zone:'1区', category:'餐饮', tags:['烘焙', '面包'], color:'#8B5A2B' },
+  { id:'s003', name:'麦当劳', floor:1, zone:'1区', category:'餐饮', tags:['快餐', '汉堡'], color:'#D52B1E' },
+  { id:'s004', name:'秀目眼镜', floor:1, zone:'1区', category:'零售', tags:['眼镜', '验光'], color:'#4A90D9' },
+  { id:'s005', name:'霸王茶姬', floor:1, zone:'1区', category:'餐饮', tags:['茶饮', '新茶饮'], color:'#6E4B3A' },
+  { id:'s006', name:'小杨生煎', floor:1, zone:'1区', category:'餐饮', tags:['生煎', '小吃'], color:'#C0392B' },
+  { id:'s007', name:'新贝乐', floor:1, zone:'1区', category:'餐饮', tags:['本帮菜', '家常菜'], color:'#E85D04' },
+  { id:'s008', name:'手心兔小吐司', floor:1, zone:'1区', category:'餐饮', tags:['吐司', '烘焙'], color:'#C9975A' },
+  { id:'s009', name:'贵华嫂', floor:1, zone:'1区', category:'餐饮', tags:['小吃', '面点'], color:'#E85D04' },
+  { id:'s010', name:'成都你六姐', floor:1, zone:'1区', category:'餐饮', tags:['川菜', '江湖菜'], color:'#C2185B' },
+  { id:'s011', name:'晨光文具', floor:1, zone:'1区', category:'零售', tags:['文具', '办公'], color:'#4A90D9' },
+  { id:'s012', name:'老盛兴汤包馆', floor:1, zone:'1区', category:'餐饮', tags:['汤包', '小吃'], color:'#C0392B' },
+  { id:'s013', name:'烧饼文化', floor:1, zone:'1区', category:'餐饮', tags:['烧饼', '小吃'], color:'#E85D04' },
+  { id:'s014', name:'潮纪', floor:1, zone:'1区', category:'餐饮', tags:['潮汕', '牛肉'], color:'#C2185B' },
+  { id:'s015', name:'喜姐炸串', floor:1, zone:'1区', category:'餐饮', tags:['炸串', '小吃'], color:'#E85D04' },
+  { id:'s016', name:'临榆炸鸡腿', floor:1, zone:'1区', category:'餐饮', tags:['炸鸡', '小吃'], color:'#D52B1E' },
+  { id:'s017', name:'银流咖啡', floor:1, zone:'1区', category:'餐饮', tags:['咖啡', '轻食'], color:'#6F4E37' },
+  { id:'s018', name:'海江食集', floor:1, zone:'1区', category:'餐饮', tags:['美食广场', '小吃集合'], color:'#E85D04' },
+  { id:'s019', name:'万酒堂', floor:1, zone:'1区', category:'零售', tags:['酒水', '零售'], color:'#4A90D9' },
+  { id:'s020', name:'诺家智慧大药房', floor:1, zone:'1区', category:'生活服务', tags:['药房', '健康'], color:'#3E8E41' },
+  { id:'s021', name:'古康元', floor:1, zone:'1区', category:'生活服务', tags:['理疗', '养生'], color:'#3E8E41' },
+  { id:'s022', name:'美甲美睫', floor:1, zone:'1区', category:'生活服务', tags:['美甲', '美睫'], color:'#3E8E41' },
+  { id:'s023', name:'美肤盾', floor:1, zone:'1区', category:'生活服务', tags:['护肤', '美容'], color:'#3E8E41' },
+  { id:'s024', name:'通信钟表', floor:1, zone:'1区', category:'生活服务', tags:['通讯', '钟表'], color:'#3E8E41' },
+  { id:'s025', name:'体彩', floor:1, zone:'1区', category:'生活服务', tags:['彩票', '便民'], color:'#3E8E41' },
+  { id:'s026', name:'福彩', floor:1, zone:'1区', category:'生活服务', tags:['彩票', '便民'], color:'#3E8E41' },
+  { id:'s027', name:'泡泡米儿童', floor:2, zone:'1区', category:'亲子', tags:['儿童娱乐', '亲子'], color:'#E8809E' },
+  { id:'s028', name:'小荧星艺校', floor:2, zone:'1区', category:'亲子', tags:['艺术培训', '舞蹈'], color:'#E8809E' },
+  { id:'s029', name:'海江活动艺术中心', floor:2, zone:'1区', category:'娱乐', tags:['艺术中心', '演出'], color:'#9B7BD4' },
+  { id:'s030', name:'雀王棋牌', floor:3, zone:'1区', category:'娱乐', tags:['棋牌', '休闲'], color:'#9B7BD4' },
+  { id:'s031', name:'哇咔健身', floor:3, zone:'1区', category:'娱乐', tags:['健身', '团课'], color:'#9B7BD4' },
+  { id:'s032', name:'锦光星耀桌球俱乐部', floor:3, zone:'1区', category:'娱乐', tags:['桌球', '台球'], color:'#9B7BD4' },
+  { id:'s033', name:'尊柜KTV/棋牌室', floor:4, zone:'1区', category:'娱乐', tags:['KTV', '棋牌'], color:'#9B7BD4' },
+  { id:'s034', name:'徐妈串串', floor:1, zone:'3区', category:'餐饮', tags:['串串', '川味'], color:'#E85D04' },
+  { id:'s035', name:'泰士多', floor:1, zone:'3区', category:'餐饮', tags:['东南亚', '料理'], color:'#E85D04' },
+  { id:'s036', name:'刘栋梁大排档', floor:1, zone:'3区', category:'餐饮', tags:['大排档', '夜宵'], color:'#E85D04' },
+  { id:'s037', name:'星巴克', floor:1, zone:'3区', category:'餐饮', tags:['咖啡', '第三空间'], color:'#00704A' },
+  { id:'s038', name:'味千拉面', floor:1, zone:'3区', category:'餐饮', tags:['拉面', '日式'], color:'#E60012' },
+  { id:'s039', name:'小灶湘', floor:1, zone:'3区', category:'餐饮', tags:['湘菜', '剁椒'], color:'#C2185B' },
+  { id:'s040', name:'朱光玉火锅', floor:1, zone:'3区', category:'餐饮', tags:['火锅', '重庆'], color:'#C2185B' },
+  { id:'s041', name:'扬春茶社', floor:1, zone:'3区', category:'餐饮', tags:['茶馆', '茶饮'], color:'#6E4B3A' },
+  { id:'s042', name:'肖记公安牛杂', floor:1, zone:'3区', category:'餐饮', tags:['牛杂', '湖北'], color:'#E85D04' },
+  { id:'s043', name:'大城小野', floor:2, zone:'3区', category:'餐饮', tags:['料理', '创意菜'], color:'#C2185B' },
+  { id:'s044', name:'伴月楼', floor:2, zone:'3区', category:'餐饮', tags:['杭帮菜', '本帮'], color:'#C0392B' },
+  { id:'s045', name:'星巴克', floor:2, zone:'3区', category:'餐饮', tags:['咖啡', '第三空间'], color:'#00704A' },
+  { id:'s046', name:'汇通棋牌', floor:3, zone:'3区', category:'娱乐', tags:['棋牌', '休闲'], color:'#9B7BD4' },
+  { id:'s047', name:'苏宁易购', floor:1, zone:'4区', category:'零售', tags:['电器', '数码'], color:'#E60012' },
+  { id:'s048', name:'华为/迪信通', floor:1, zone:'4区', category:'零售', tags:['手机', '数码'], color:'#4A90D9' },
+  { id:'s049', name:'足浴养生', floor:3, zone:'4区', category:'生活服务', tags:['足浴', '养生'], color:'#3E8E41' },
+  { id:'s050', name:'民谣星烧烤酒馆', floor:1, zone:'6区', category:'餐饮', tags:['烧烤', '音乐'], color:'#E85D04' },
+  { id:'s051', name:'戴海川·美蛙', floor:1, zone:'6区', category:'餐饮', tags:['美蛙', '川味'], color:'#C2185B' },
+  { id:'s052', name:'暴走牛牛·碳火烧肉', floor:1, zone:'6区', category:'餐饮', tags:['烧肉', '日式'], color:'#C0392B' },
+  { id:'s053', name:'鱼石尚云南蒸石锅鱼', floor:1, zone:'6区', category:'餐饮', tags:['蒸汽石锅鱼', '云南菜'], color:'#3E8E41' },
+  { id:'s054', name:'福海面馆', floor:1, zone:'6区', category:'餐饮', tags:['面', '快餐'], color:'#E60012' },
+  { id:'s055', name:'Jenga精酿啤酒馆', floor:1, zone:'6区', category:'餐饮', tags:['精酿', '啤酒'], color:'#C9975A' },
+  { id:'s056', name:'潮汕·草根活鱼火锅', floor:1, zone:'6区', category:'餐饮', tags:['火锅', '潮汕'], color:'#C2185B' },
+  { id:'s057', name:'阿国烤局', floor:1, zone:'6区', category:'餐饮', tags:['烤串', '夜宵'], color:'#E85D04' },
+  { id:'s058', name:'深夜食堂', floor:1, zone:'6区', category:'餐饮', tags:['夜宵', '小炒'], color:'#E85D04' },
+  { id:'s059', name:'汽石锅鱼', floor:1, zone:'6区', category:'餐饮', tags:['石锅鱼', '川味'], color:'#3E8E41' },
+  { id:'s060', name:'牛肉档', floor:1, zone:'6区', category:'餐饮', tags:['牛肉', '火锅'], color:'#C0392B' },
+  { id:'s061', name:'合一瑜伽健身', floor:2, zone:'6区', category:'娱乐', tags:['瑜伽', '健身'], color:'#9B7BD4' },
+  { id:'s062', name:'合一瑜伽普拉提', floor:2, zone:'6区', category:'娱乐', tags:['普拉提', '健身'], color:'#9B7BD4' },
+  { id:'s063', name:'L服饰', floor:2, zone:'6区', category:'零售', tags:['服饰', '服装'], color:'#4A90D9' },
+  { id:'s064', name:'网鱼电竞酒店', floor:2, zone:'6区', category:'娱乐', tags:['电竞', '酒店'], color:'#9B7BD4' },
+  { id:'s065', name:'屿汀美容spa', floor:2, zone:'6区', category:'生活服务', tags:['美容', 'SPA'], color:'#3E8E41' },
+  { id:'s066', name:'弘文书馆', floor:2, zone:'6区', category:'生活服务', tags:['书店', '文创'], color:'#3E8E41' },
+  { id:'s067', name:'康友四季', floor:2, zone:'6区', category:'生活服务', tags:['洗浴', '汗蒸'], color:'#3E8E41' },
+  { id:'s068', name:'新鸳鸯', floor:3, zone:'6区', category:'餐饮', tags:['火锅', '川味'], color:'#C2185B' },
+  { id:'s069', name:'功夫汪宠物乐园', floor:1, zone:'7区', category:'亲子', tags:['宠物', '亲子'], color:'#E8809E' },
+  { id:'s070', name:'东煜画室', floor:1, zone:'7区', category:'亲子', tags:['绘画', '美术'], color:'#E8809E' },
+  { id:'s071', name:'卡卡海洋', floor:1, zone:'7区', category:'亲子', tags:['亲子乐园', '探索'], color:'#E8809E' },
+  { id:'s072', name:'招商银行', floor:1, zone:'7区', category:'生活服务', tags:['银行', '金融'], color:'#4A90D9' },
+  { id:'s073', name:'壹品培优', floor:1, zone:'7区', category:'亲子', tags:['培优', '托管'], color:'#E8809E' },
+  { id:'s074', name:'舞林园', floor:1, zone:'7区', category:'亲子', tags:['舞蹈', '培训'], color:'#E8809E' },
+  { id:'s075', name:'OX牛排', floor:1, zone:'7区', category:'餐饮', tags:['牛排', '西餐'], color:'#C0392B' },
+  { id:'s076', name:'MANNER', floor:1, zone:'7区', category:'餐饮', tags:['咖啡', '精品咖啡'], color:'#B8915C' },
+  { id:'s077', name:'赛百味', floor:1, zone:'7区', category:'餐饮', tags:['三明治', '轻食'], color:'#2E8B57' },
+  { id:'s078', name:'海鲜餐厅', floor:1, zone:'7区', category:'餐饮', tags:['海鲜', '粤菜'], color:'#3E8E41' },
+  { id:'s079', name:'大墨蒲公英', floor:2, zone:'7区', category:'亲子', tags:['儿童绘画', '美术'], color:'#E8809E' },
+  { id:'s080', name:'菁英之伽', floor:2, zone:'7区', category:'娱乐', tags:['瑜伽', '健身'], color:'#9B7BD4' },
+  { id:'s081', name:'招商银行', floor:2, zone:'7区', category:'生活服务', tags:['银行', '金融'], color:'#4A90D9' },
+  { id:'s082', name:'健身房', floor:2, zone:'7区', category:'娱乐', tags:['健身', '器械'], color:'#9B7BD4' },
+  { id:'s083', name:'东方好艺考', floor:2, zone:'7区', category:'亲子', tags:['艺考', '培训'], color:'#E8809E' },
+  { id:'s084', name:'POP兔', floor:2, zone:'7区', category:'亲子', tags:['早教', '托育'], color:'#E8809E' },
+  { id:'s085', name:'音乐教室', floor:2, zone:'7区', category:'亲子', tags:['音乐', '培训'], color:'#E8809E' },
+  { id:'s086', name:'南京银行', floor:2, zone:'7区', category:'生活服务', tags:['银行', '金融'], color:'#4A90D9' },
+  { id:'s087', name:'诚之书院', floor:2, zone:'7区', category:'亲子', tags:['书院', '国学'], color:'#E8809E' },
+  { id:'s088', name:'嘻戏英语', floor:2, zone:'7区', category:'亲子', tags:['英语', '培训'], color:'#E8809E' },
+  { id:'s089', name:'沪小胖', floor:3, zone:'7区', category:'餐饮', tags:['小龙虾', '夜宵'], color:'#E60012' },
+  { id:'s090', name:'SFC上影影城', floor:3, zone:'7区', category:'娱乐', tags:['影院', '电影'], color:'#E85D04' },
 ]
 
+const CAT_INTRO = {"餐饮": "汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。", "零售": "精选好物与品牌，打造舒适惬意的购物体验。", "生活服务": "贴心周到的生活服务，便捷周边日常所需。", "亲子": "亲子同乐的成长空间，陪伴孩子快乐探索世界。", "娱乐": "潮流娱乐聚场，释放精彩的昼夜生活。"}
+const HOURS = {"餐饮": "10:00 - 22:00", "零售": "10:00 - 22:00", "生活服务": "10:00 - 21:00", "亲子": "10:00 - 21:00", "娱乐": "10:00 - 22:00"}
+const HOURS_SPECIAL = {"生活服务,银行": "09:00 - 17:00", "娱乐,KTV": "18:00 - 02:00", "娱乐,棋牌": "10:00 - 24:00"}
+const FEATURES = {"餐饮": ["可堂食", "外卖配送", "支持扫码点单"], "零售": ["线上线下同价", "支持退换", "会员积分"], "生活服务": ["专业服务", "可预约"], "亲子": ["亲子友好", "可免费体验"], "娱乐": ["可预约", "适合聚会"]}
+const COUPON = {"餐饮": [50, 10], "零售": [200, 30], "生活服务": [0, 5], "亲子": [100, 20], "娱乐": [0, 30]}
+const CAT_COLOR = {"餐饮": "#E85D04", "零售": "#4A90D9", "生活服务": "#3E8E41", "亲子": "#E8809E", "娱乐": "#9B7BD4"}
+const PHONE = '021-5656 8888'
+const EXPIRE = '2026-12-31'
+
+function build(s) {
+  const c = s.color || CAT_COLOR[s.category]
+  const hours = HOURS_SPECIAL[s.category + ',' + s.tags[0]] || HOURS[s.category]
+  const [cond, amt] = COUPON[s.category]
+  const desc = `${s.name}位于海江新天地${s.zone} ${s.floor}F，主营${s.tags[0]}、${s.tags.length>1?s.tags[s.tags.length-1]:s.tags[0]}。${CAT_INTRO[s.category]}`
+  return {
+    ...s, color: c, hours, phone: PHONE, desc, description: desc,
+    has_coupon: 1, coupon_condition: cond, coupon_amount: amt, coupon_expire: EXPIRE,
+    features: FEATURES[s.category],
+  }
+}
+
+const shops = raw.map(build)
 export default shops

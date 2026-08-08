@@ -69,8 +69,9 @@ const apiKeys = ref({ ds_api_key: '', secret_key: '' })
 onMounted(async () => {
   try {
     const res = await getTenants()
-    if (res.ok && res.tenants?.length) {
-      const t = res.tenants[0]
+    const arr = Array.isArray(res) ? res : (res.tenants || [])
+    if (arr.length) {
+      const t = arr[0]
       tenantForm.value = { name: t.name || '', phone: t.phone || '', address: t.address || '' }
     }
   } catch {}

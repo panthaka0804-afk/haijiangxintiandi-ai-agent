@@ -146,6 +146,13 @@ const showMyRegs = ref(false)
 const myRegs = ref([])
 const memberInfo = ref(null)
 
+// 本地兜底（后台异常时也能展示详情）
+const FALLBACK_DETAIL = {
+  1: { id: 1, title: '夏日亲子嘉年华', desc: '带上宝贝来海江新天地玩！趣味游戏、DIY手工、亲子运动会，赢取精美礼品。', venue: '中庭广场', start_date: '2026-08-07', end_date: '2026-08-16', gradient: 'linear-gradient(135deg, #00704A, #00A85A)', price: 0, points_price: 0 },
+  2: { id: 2, title: '美食节·川味专场', desc: '麻辣鲜香，一口入魂。川味品牌联合推出限定套餐。', venue: 'B1美食广场', start_date: '2026-08-18', end_date: '2026-08-22', gradient: 'linear-gradient(135deg, #C41E3A, #EF5350)', price: 0, points_price: 0 },
+  7: { id: 7, title: '周末瑜伽体验', desc: '专业导师带你放松身心，零基础也可参与。', venue: '5F 活动空间', start_date: '2026-08-23', end_date: '2026-08-23', gradient: 'linear-gradient(135deg, #6A5B8C, #9B8BC0)', price: 39, points_price: 390 },
+}
+
 const form = reactive({ name: '', phone: '', count: 1, payMethod: 'pay' })
 const statusMap = { confirmed: '已确认', refunding: '退款中', cancelled: '已取消' }
 
@@ -172,9 +179,20 @@ async function loadDetail() {
   try {
     const id = route.params.id
     const res = await api.get(`/api/activities/${id}`)
-    activity.value = res.activity || activity.value
-    sessions.value = res.sessions || []
-  } catch(e) { console.error(e) }
+    if (res && res.activity) {
+      activity.value = res.activity
+      sessions.value = res.sessions || []
+    } else {
+      const fb = FALLBACK_DETAIL[id] || { id, title: '活动详情', desc: '精彩活动即将开始，敬请期待。', venue: '海江新天地', start_date: '2026-08-01', end_date: '2026-08-31', gradient: '#333', price: 0, points_price: 0 }
+      activity.value = fb
+      sessions.value = res && res.sessions ? res.sessions : [{ id: 1, session_date: fb.start_date, session_time: '14:00', venue: fb.venue, max_people: 50, enrolled: 0 }]
+    }
+  } catch(e) {
+    console.error(e)
+    const fb = FALLBACK_DETAIL[route.params.id] || { id: route.params.id, title: '活动详情', desc: '精彩活动即将开始，敬请期待。', venue: '海江新天地', start_date: '2026-08-01', end_date: '2026-08-31', gradient: '#333', price: 0, points_price: 0 }
+    activity.value = fb
+    sessions.value = [{ id: 1, session_date: fb.start_date, session_time: '14:00', venue: fb.venue, max_people: 50, enrolled: 0 }]
+  }
 }
 
 async function checkMember(phone) {

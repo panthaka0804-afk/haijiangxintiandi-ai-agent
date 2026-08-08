@@ -20,6 +20,13 @@ const routes = [
   { path: '/redeem', name: 'redeem', component: () => import('@/views/c-end/RedeemPage.vue'), meta: { title: '积分商城 - 海江新天地' } },
   { path: '/redeem/:id', name: 'redeem-detail', component: () => import('@/views/c-end/RedeemDetail.vue'), meta: { title: '兑换详情 - 海江新天地' } },
   { path: '/merchant', name: 'merchant', component: () => import('@/views/c-end/MerchantPage.vue'), meta: { title: '招商合作 - 海江新天地' } },
+  // 旧独立登录页已并入首页，重定向避免黑屏
+  { path: '/login', redirect: '/' },
+  // 法律协议
+  { path: '/user-agreement', name: 'user-agreement', component: () => import('@/views/c-end/UserAgreement.vue'), meta: { title: '用户协议 - 海江新天地' } },
+  { path: '/privacy-policy', name: 'privacy-policy', component: () => import('@/views/c-end/PrivacyPolicy.vue'), meta: { title: '隐私政策 - 海江新天地' } },
+  { path: '/about', name: 'about', component: () => import('@/views/c-end/AboutUs.vue'), meta: { title: '关于我们 - 海江新天地' } },
+  { path: '/settings', name: 'settings', component: () => import('@/views/c-end/Settings.vue'), meta: { title: '设置 - 海江新天地' } },
   // 活动管理 - 独立页面，自带登录
   { path: '/act-admin', name: 'act-admin', component: () => import('@/views/admin/ActivitiesAdmin.vue'), meta: { title: '活动管理 - 海江新天地' } },
 
@@ -38,6 +45,9 @@ const routes = [
       { path: 'settings', name: 'admin-settings', component: () => import('@/views/admin/Settings.vue'), meta: { title: '系统设置' } },
       { path: 'figma', name: 'admin-figma', component: () => import('@/views/admin/FigmaDesign.vue'), meta: { title: 'Figma协作' } },
       { path: 'activities', name: 'admin-activities', component: () => import('@/views/admin/ActivitiesAdmin.vue'), meta: { title: '活动管理' } },
+      { path: 'shops', name: 'admin-shops', component: () => import('@/views/admin/ShopsAdmin.vue'), meta: { title: '商户管理' } },
+      { path: 'offers', name: 'admin-offers', component: () => import('@/views/admin/OffersAdmin.vue'), meta: { title: '优惠券管理' } },
+      { path: 'redeem', name: 'admin-redeem', component: () => import('@/views/admin/RedeemAdmin.vue'), meta: { title: '积分商城管理' } },
     ],
   },
   { path: '/platform', name: 'platform', component: () => import('@/views/admin/Platform.vue'), meta: { title: '平台管理 - 海江新天地', requiresSuperAdmin: true } },

@@ -5,7 +5,7 @@
 
 :root {
   /* 暗黑主题色 */
-  --neu-bg: #1A1A1A;
+  --neu-bg: #000000;
   --neu-card: #222222;
   --neu-shadow-raise: 0 2px 8px rgba(0,0,0,0.3);
   --neu-shadow-inset: inset 0 2px 4px rgba(0,0,0,0.3);
@@ -43,9 +43,17 @@
   --radius-neu-lg: 20px;
   --radius-neu-pill: 999px;
 
-  /* 字体 */
-  --font-ios: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', sans-serif;
+  /* 字体 — 设计规范：中文 PingFang SC / 英文 SF UI Display */
+  --font-primary: 'SF UI Display', 'PingFang SC', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
   --font-mono: 'SF Mono', 'Menlo', 'Consolas', monospace;
+
+  /* 字号规范（pt ≈ px @1x） */
+  --fs-headline: 18px;    /* 大标题 */
+  --fs-button: 16px;      /* 按钮 */
+  --fs-body: 17px;        /* 列表及主要内容 */
+  --fs-secondary: 14px;   /* 次要内容 */
+  --fs-aux: 12px;         /* 辅助信息 */
+  --fs-deco: 10px;        /* 装饰性信息 */
 
   /* 间距系统 */
   --spacing-1: 4px;
@@ -56,7 +64,7 @@
   --spacing-6: 24px;
   --spacing-8: 32px;
 
-  font-family: var(--font-ios);
+  font-family: var(--font-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: var(--text-primary);
@@ -92,7 +100,7 @@ html, body {
 /* ========== Vant 暗黑覆盖 ========== */
 :root {
   --van-primary-color: #FF7B2C;
-  --van-nav-bar-background: #1A1A1A;
+  --van-nav-bar-background: #000000;
   --van-nav-bar-title-text-color: #F0F0F0;
   --van-nav-bar-icon-color: #FF7B2C;
   --van-button-primary-background: #FF7B2C;
@@ -105,7 +113,7 @@ html, body {
   --van-cell-line-height: 22px;
   --van-cell-font-size: 17px;
   --van-cell-text-color: #F0F0F0;
-  --van-tabbar-background: #1A1A1A;
+  --van-tabbar-background: #000000;
   --van-tabbar-item-text-color: #777777;
   --van-tabbar-item-active-color: #FF7B2C;
   --van-tabs-nav-background: #222222;
@@ -183,7 +191,7 @@ html, body {
 .el-container,
 .admin-layout,
 .admin-layout * {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', sans-serif !important;
+  font-family: 'SF UI Display', 'PingFang SC', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
 /* ========== Element Plus 暗色主题覆盖（黑白灰统一） ========== */
@@ -203,7 +211,7 @@ html, body {
   --el-color-info: #8A8A8A;
 
   --el-bg-color: #1F1F1F;
-  --el-bg-color-page: #1A1A1A;
+  --el-bg-color-page: #000000;
   --el-bg-color-overlay: #262626;
 
   --el-text-color-primary: #F0F0F0;

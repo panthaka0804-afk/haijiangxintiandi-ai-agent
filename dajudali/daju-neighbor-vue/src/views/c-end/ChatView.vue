@@ -1,11 +1,6 @@
 <template>
   <div class="app-shell">
-    <!-- App Bar -->
-    <div class="app-bar">
-      <span class="app-bar-title">{{ barTitle }}</span>
-    </div>
-
-    <!-- 内容区 KeepAlive -->
+    <!-- 内容区 KeepAlive（已移除全局顶栏 .app-bar，由各页标题块代替） -->
     <div class="tab-content">
       <KeepAlive>
         <HomeTab v-if="activeTab === 'home'" key="home" @quickSend="onQuickSend" @switchTab="activeTab = $event" />
@@ -45,7 +40,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import HomeTab from './HomeTab.vue'
 import OffersTab from './OffersTab.vue'
 import ChatTab from './ChatTab.vue'
@@ -56,14 +51,8 @@ const tabs = [
   { key: 'home', label: '首页', icon: 'home' },
   { key: 'offers', label: '优惠', icon: 'ticket' },
   { key: 'chat', label: '客服', icon: 'chat' },
-  { key: 'profile', label: '我的', icon: 'person' },
+  { key: 'profile', label: '更多', icon: 'person' },
 ]
-
-const barTitle = computed(() => {
-  const t = tabs.find(t => t.key === activeTab.value)
-  if (t && t.key === 'home') return '海江新天地'
-  return t ? t.label : '海江新天地'
-})
 
 function onQuickSend(msg) {
   if (typeof msg === 'string' && msg.startsWith('?')) {
@@ -81,14 +70,6 @@ function onSwitchTab(tab) {
 
 <style scoped>
 .app-shell { display: flex; flex-direction: column; height: 100vh; background: #1A1A1A; }
-
-/* App Bar — 暗黑底 + 底部分割线 */
-.app-bar {
-  height: 48px; display: flex; align-items: center; padding: 0 16px;
-  background: #1A1A1A; flex-shrink: 0;
-  border-bottom: 0.5px solid #333;
-}
-.app-bar-title { font-size: 17px; font-weight: 700; color: #F0F0F0; }
 
 /* 内容 */
 .tab-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }

@@ -42,14 +42,25 @@ const loading = ref(true)
 const goods = ref([])
 const memberInfo = ref({ points: null, level: '', discount: '' })
 
+// 本地兜底（后台异常时也能展示）
+const FALLBACK_GOODS = [
+  { id: 'g1', name: '星巴克中杯券', points: 1000, category: '餐饮', gradient: 'linear-gradient(135deg, #00704A, #00A85A)' },
+  { id: 'g7', name: '名创优品礼品卡', points: 1500, category: '购物', gradient: 'linear-gradient(135deg, #E8809E, #F0AAC0)' },
+  { id: 'g4', name: '万达影城电影票', points: 1200, category: '娱乐', gradient: 'linear-gradient(135deg, #E85D04, #FFB347)' },
+  { id: 'g5', name: '停车券 10元', points: 500, category: '停车', gradient: 'linear-gradient(135deg, #4A90D9, #7DB8F0)' },
+]
+
 onMounted(async () => {
   try {
     const resp = await getRedeemGoods()
-    if (resp.ok && resp.data) {
+    if (resp.ok && resp.data && resp.data.length) {
       goods.value = resp.data
+    } else {
+      goods.value = FALLBACK_GOODS
     }
   } catch (e) {
     console.error('Failed to load redeem goods:', e)
+    goods.value = FALLBACK_GOODS
   } finally {
     loading.value = false
   }

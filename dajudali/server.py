@@ -1597,7 +1597,7 @@ def api_tenant_update(tid):
     data = request.get_json()
     conn = get_db()
     sets = []; vals = []
-    for f in ['name','contact','plan','monthly_quota','status']:
+    for f in ['name','contact','plan','monthly_quota','status','phone','address']:
         if f in data:
             sets.append(f'{f}=?')
             vals.append(data[f])
@@ -1925,6 +1925,21 @@ def _baidu_asr(wav_path):
 @app.route('/static/<path:path>')
 def serve_static(path):
     return send_from_directory(os.path.join(HERE, 'static'), path)
+
+def migrate_db():
+    """幂等迁移：补齐历史表可能缺失的列，保证前后端字段契约一致。"""
+    conn = get_db()
+    try:
+        for col in ['phone', 'address']:
+            try:
+                conn.execute(f"ALTER TABLE tenants ADD COLUMN {col} TEXT")
+            except Exception:
+                pass
+        conn.commit()
+    finally:
+        conn.close()
+
+migrate_db()
 
 if __name__ == '__main__':
     sys.stdout.reconfigure(encoding='utf-8')

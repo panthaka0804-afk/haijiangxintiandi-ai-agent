@@ -9,9 +9,9 @@
       <el-table :data="list" stripe v-loading="loading" style="width: 100%;">
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="display_name" label="姓名" width="120" />
-        <el-table-column prop="username" label="手机号" width="130">
+        <el-table-column prop="phone" label="手机号" width="130">
           <template #default="{ row }">
-            {{ row.username?.replace('m', '') || '-' }}
+            {{ row.phone || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="membership_level" label="等级" width="100">
@@ -46,6 +46,12 @@
     <!-- 编辑弹窗 -->
     <el-dialog v-model="dialogVisible" title="编辑会员" width="500px">
       <el-form ref="formRef" :model="form" label-width="80px">
+        <el-form-item label="姓名">
+          <el-input v-model="form.display_name" placeholder="会员姓名" />
+        </el-form-item>
+        <el-form-item label="手机号">
+          <el-input v-model="form.phone" placeholder="手机号" />
+        </el-form-item>
         <el-form-item label="等级">
           <el-select v-model="form.membership_level" style="width: 100%;">
             <el-option label="普卡" value="普卡" />
@@ -56,9 +62,6 @@
         </el-form-item>
         <el-form-item label="积分">
           <el-input-number v-model="form.points" :min="0" style="width: 100%;" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" type="textarea" :rows="3" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -94,12 +97,12 @@ async function loadData() {
   loading.value = true
   try {
     const params = { page: page.value, limit: 20 }
-    if (searchPhone.value) params.phone = searchPhone.value
+    if (searchPhone.value) params.search = searchPhone.value
 
     const res = await getAdminMembers(params)
     if (res.ok) {
       list.value = res.members || res.items || []
-      total.value = res.total || 0
+      total.value = res.total || (res.members ? res.members.length : 0)
     }
   } catch {
     ElMessage.error('加载失败')
@@ -111,9 +114,10 @@ async function loadData() {
 function editRow(row) {
   editingId.value = row.id
   form.value = {
+    display_name: row.display_name || '',
+    phone: row.phone || '',
     membership_level: row.membership_level,
-    points: row.points,
-    remark: row.remark || ''
+    points: row.points
   }
   dialogVisible.value = true
 }

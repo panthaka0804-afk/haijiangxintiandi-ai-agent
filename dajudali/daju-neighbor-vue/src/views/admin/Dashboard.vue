@@ -84,6 +84,9 @@ const superTabs = [
   { key: '/admin/kb', label: '知识库' },
   { key: '/admin/members', label: '会员' },
   { key: '/admin/activities', label: '活动' },
+  { key: '/admin/shops', label: '商户' },
+  { key: '/admin/offers', label: '优惠券' },
+  { key: '/admin/redeem', label: '积分商城' },
   { key: '/admin/users', label: '用户' },
   { key: '/admin/settings', label: '设置' },
 ]

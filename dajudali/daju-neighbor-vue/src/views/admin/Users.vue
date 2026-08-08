@@ -78,9 +78,7 @@ async function loadData() {
   loading.value = true
   try {
     const res = await getUsers()
-    if (res.ok) {
-      list.value = res.users || res.items || []
-    }
+    list.value = Array.isArray(res) ? res : (res.users || res.items || [])
   } catch {
     ElMessage.error('加载失败')
   } finally {

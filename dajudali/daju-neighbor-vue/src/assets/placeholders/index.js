@@ -3,7 +3,7 @@
 
 export const placeholderImages = {
   // 首页顶部 Banner（商场外观/内部全景）
-  mallBanner: new URL('@/assets/placeholders/mall-banner.png', import.meta.url).href,
+  mallBanner: new URL('@/assets/placeholders/mall-banner.jpg', import.meta.url).href,
 
   // Banner 中间 Logo
   logoHero: new URL('@/assets/placeholders/logo-hero.png', import.meta.url).href,
