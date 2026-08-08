@@ -43,20 +43,14 @@
       </template>
 
       <div v-else class="member-logged">
-        <!-- 橙色纹理装饰层（衬在卡片最底层） -->
+        <!-- 橙色纹理：纯圆点贴卡片边缘（部分溢出被裁切），无线条 -->
         <div class="mc-texture-wrap" aria-hidden="true">
-          <svg class="mc-texture" viewBox="0 0 320 210" preserveAspectRatio="xMaxYMin slice" focusable="false">
-            <circle cx="296" cy="14" r="70" fill="rgba(255,138,61,0.12)"/>
-            <circle cx="272" cy="42" r="44" fill="rgba(255,111,15,0.09)"/>
-            <circle cx="18" cy="190" r="54" fill="rgba(255,138,61,0.08)"/>
-            <circle cx="148" cy="200" r="26" fill="rgba(255,111,15,0.05)"/>
-            <path d="M-10 148 Q160 104 330 148" stroke="rgba(255,138,61,0.15)" stroke-width="2" fill="none"/>
-            <path d="M-10 162 Q160 120 330 162" stroke="rgba(255,111,15,0.09)" stroke-width="1.5" fill="none"/>
-            <circle cx="90" cy="28" r="3" fill="rgba(255,138,61,0.22)"/>
-            <circle cx="112" cy="20" r="2" fill="rgba(255,138,61,0.16)"/>
-            <circle cx="62" cy="48" r="2.5" fill="rgba(255,111,15,0.18)"/>
-            <circle cx="150" cy="14" r="2" fill="rgba(255,138,61,0.14)"/>
-          </svg>
+          <span class="mc-dot mc-dot-1"></span>
+          <span class="mc-dot mc-dot-2"></span>
+          <span class="mc-dot mc-dot-3"></span>
+          <span class="mc-dot mc-dot-4"></span>
+          <span class="mc-dot mc-dot-5"></span>
+          <span class="mc-dot mc-dot-6"></span>
         </div>
         <div class="mcard">
           <!-- 上半区：左名 + 右上大圆按钮 & 胶囊 -->
@@ -514,9 +508,15 @@ function go(route) {
 }
 .member-logged { padding: 0; position: relative; }
 
-/* 橙色纹理装饰层：铺满卡片、裁剪圆角、衬在最底层 */
+/* 橙色纹理：圆点贴卡片边缘（负值溢出被圆角裁切），无线条 */
 .mc-texture-wrap { position: absolute; inset: 0; border-radius: 20px; overflow: hidden; z-index: 0; pointer-events: none; }
-.mc-texture { width: 100%; height: 100%; display: block; }
+.mc-dot { position: absolute; border-radius: 50%; display: block; }
+.mc-dot-1 { width: 132px; height: 132px; right: -46px; top: -46px; background: radial-gradient(circle at 32% 32%, rgba(255,138,61,0.18), rgba(255,111,15,0.05)); }
+.mc-dot-2 { width: 84px; height: 84px; right: 34px; top: 66px; background: rgba(255,138,61,0.10); }
+.mc-dot-3 { width: 104px; height: 104px; left: -48px; bottom: -48px; background: radial-gradient(circle at 60% 30%, rgba(255,138,61,0.14), rgba(255,111,15,0.05)); }
+.mc-dot-4 { width: 54px; height: 54px; left: 70px; bottom: 26px; background: rgba(255,111,15,0.08); }
+.mc-dot-5 { width: 9px; height: 9px; right: 158px; top: 34px; background: rgba(255,138,61,0.32); }
+.mc-dot-6 { width: 6px; height: 6px; right: 176px; top: 52px; background: rgba(255,111,15,0.26); }
 
 .mcard { position: relative; z-index: 1; padding: 22px 20px 20px; overflow: visible; }
 
