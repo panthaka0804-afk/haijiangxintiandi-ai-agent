@@ -323,6 +323,35 @@ function go(route) { if (route) router.push(route) }
 }
 .benefit-red { background-color: #9B4A3E; border: 3px solid #6E332A; }
 
+/* ── 高端纹理：织纹 + 斜向光泽（叠加在实色之上，颜色透过透明处显示，营造金属压纹/烫印质感） ── */
+.mem-card,
+.tier-card,
+.benefit-red {
+  background-image:
+    linear-gradient(135deg,
+      rgba(255,255,255,0.24) 0%,
+      rgba(255,255,255,0.06) 16%,
+      rgba(255,255,255,0) 40%,
+      rgba(0,0,0,0.14) 100%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.085) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,0.07) 0 1px, transparent 1px 6px);
+  background-blend-mode: normal;
+}
+/* 卡片内再叠一层极淡的细点阵，增加"磨砂烫金"层次 */
+.mem-card::after,
+.tier-card::after,
+.benefit-red::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1.4px);
+  background-size: 9px 9px;
+  mix-blend-mode: screen;
+  opacity: 0.5;
+}
+
 /* ── 海江之友：可切换等级轮播 ── */
 .benefit-cards, .tier-carousel, .tier-viewport, .tier-slide {
   background: transparent !important;
