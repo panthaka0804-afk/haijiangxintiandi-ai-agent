@@ -543,8 +543,9 @@ function go(route) {
 .quick-links { display: flex; justify-content: space-around; margin: 20px 16px 20px; }
 .qlink { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .qlink:active { opacity: 0.7; }
-.qlink-icon { width: 48px; height: 48px; border-radius: 14px; background: #2A2A2E; display: flex; align-items: center; justify-content: center; color: #999; transition: all 0.2s; }
-.qlink-icon.active { color: #E8E8E8; background: rgba(255,255,255,0.10); }
+.qlink-icon { width: 48px; height: 48px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; color: #fff; transition: all 0.2s; }
+.qlink-icon svg { filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.6)) drop-shadow(0 1px 1px rgba(255,255,255,0.3)); }
+.qlink-icon.active { color: #fff; background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
 .qlink-label { font-size: 12px; color: #AAA; }
 
 .daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background: linear-gradient(135deg, #2E2E2E, #1E1A1A); border: 0.5px solid rgba(255,123,44,0.2); border-radius: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
