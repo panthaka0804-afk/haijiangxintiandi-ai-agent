@@ -120,7 +120,7 @@
     <div class="quick-links">
       <div class="qlink" v-for="e in entries" :key="e.label" @click="go(e.route)">
         <div class="qlink-icon" :class="{ active: e.active }">
-          <svg v-html="e.icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></svg>
+          <svg v-html="e.icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></svg>
         </div>
         <span class="qlink-label">{{ e.label }}</span>
       </div>
@@ -540,10 +540,10 @@ function go(route) {
 .mc-round { width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.22); }
 .mc-round:active { background: rgba(255,255,255,0.1); }
 
-.quick-links { display: flex; justify-content: space-around; margin: 20px 16px 20px; }
+.quick-links { display: flex; justify-content: space-around; margin: 22px 12px 22px; }
 .qlink { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .qlink:active { opacity: 0.7; }
-.qlink-icon { width: 48px; height: 48px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; color: #fff; transition: all 0.2s; }
+.qlink-icon { width: 58px; height: 58px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; color: #fff; transition: all 0.2s; }
 .qlink-icon svg { filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.6)) drop-shadow(0 1px 1px rgba(255,255,255,0.3)); }
 .qlink-icon.active { color: #fff; background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
 .qlink-label { font-size: 12px; color: #AAA; }
