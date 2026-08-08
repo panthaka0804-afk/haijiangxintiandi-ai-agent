@@ -184,7 +184,7 @@
           <div class="shop-name">{{ s.name }}</div>
           <div class="shop-meta">{{ s.floor }} · {{ s.category }}</div>
         </div>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <svg class="shop-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>
     <div class="spacer"></div>
@@ -571,13 +571,16 @@ function go(route) {
 .qr-tip { font-size: 13px; color: #888; }
 
 .section-label { font-size: 16px; font-weight: 700; color: #F0F0F0; margin: 0 16px 12px; }
-.shop-list { margin: 0 16px; display: flex; flex-direction: column; gap: 8px; }
-.shop-card { display: flex; align-items: center; gap: 12px; padding: 14px; background: #2A2A2E; border-radius: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.shop-card:active { opacity: 0.8; }
-.shop-avatar { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: 700; flex-shrink: 0; }
-.shop-info { flex: 1; }
-.shop-name { font-size: 15px; font-weight: 600; color: #F0F0F0; }
+.shop-list { margin: 0 0; padding: 4px 16px 10px; display: flex; flex-direction: row; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+.shop-list::-webkit-scrollbar { display: none; }
+.shop-list { scrollbar-width: none; }
+.shop-card { flex: 0 0 150px; scroll-snap-align: start; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); border-radius: 16px; box-shadow: inset 0 3px 8px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.22); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.shop-card:active { background: rgba(255,255,255,0.1); }
+.shop-avatar { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: 700; flex-shrink: 0; background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.22); }
+.shop-info { flex: 1; min-width: 0; }
+.shop-name { font-size: 15px; font-weight: 600; color: #F0F0F0; text-shadow: 0 1px 1px rgba(0,0,0,0.6), 0 -1px 1px rgba(255,255,255,0.15); }
 .shop-meta { font-size: 12px; color: #888; margin-top: 2px; }
+.shop-arrow { align-self: flex-end; margin-top: auto; }
 .spacer { height: 20px; }
 
 /* ── 业务版块 ── */
