@@ -491,17 +491,17 @@ function go(route) {
 .mc-light {
   background-color: transparent !important;
   background-image:
-    linear-gradient(150deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 241, 224, 0.08) 100%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.42) 30%, rgba(255, 255, 255, 0.34) 60%, rgba(255, 255, 255, 0.46) 100%);
+    linear-gradient(150deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.44) 30%, rgba(255, 255, 255, 0.36) 60%, rgba(255, 255, 255, 0.48) 100%);
   background-origin: padding-box, border-box;
   background-clip: padding-box, border-box;
   border: 1.5px solid transparent;
   border-radius: 24px;
-  backdrop-filter: blur(6px) saturate(150%);
-  -webkit-backdrop-filter: blur(6px) saturate(150%);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   box-shadow:
-    0 10px 34px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.20);
+    0 8px 30px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 .member-logged { padding: 0; position: relative; }
 
