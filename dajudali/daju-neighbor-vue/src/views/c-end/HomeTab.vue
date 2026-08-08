@@ -548,14 +548,15 @@ function go(route) {
 .qlink-icon.active { color: #fff; background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
 .qlink-label { font-size: 12px; color: #AAA; }
 
-.daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background: linear-gradient(135deg, #2E2E2E, #1E1A1A); border: 0.5px solid rgba(255,123,44,0.2); border-radius: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.daily-deal:active { opacity: 0.85; }
-.dd-icon-box { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.10); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; box-shadow: inset 0 3px 8px rgba(0,0,0,0.55), inset 0 -2px 5px rgba(255,255,255,0.10); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.daily-deal:active { background: rgba(255,255,255,0.07); }
+.dd-icon-box { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dd-icon-box svg { filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.6)) drop-shadow(0 1px 1px rgba(255,255,255,0.3)); }
 .dd-left { flex: 1; min-width: 0; }
-.dd-title { font-size: 15px; font-weight: 700; color: #E8E8E8; margin-bottom: 2px; }
+.dd-title { font-size: 15px; font-weight: 700; color: #E8E8E8; margin-bottom: 2px; text-shadow: 0 -1px 1px rgba(0,0,0,0.6), 0 1px 1px rgba(255,255,255,0.12); }
 .dd-desc { font-size: 12px; color: #888; }
 .dd-right { flex-shrink: 0; }
-.dd-btn { display: inline-block; padding: 8px 18px; background: linear-gradient(135deg, #4A4A4A, #2E2E2E); color: #fff; font-size: 14px; font-weight: 600; border-radius: 20px; white-space: nowrap; }
+.dd-btn { display: inline-block; padding: 8px 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.18); color: #fff; font-size: 14px; font-weight: 600; border-radius: 20px; white-space: nowrap; }
 
 .qr-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); animation: qrFadeIn 0.2s ease; }
 @keyframes qrFadeIn { from { opacity: 0 } to { opacity: 1 } }
