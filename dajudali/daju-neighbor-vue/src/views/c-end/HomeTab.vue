@@ -43,63 +43,58 @@
       </template>
 
       <div v-else class="member-logged">
-        <!-- 收起 / 展开 -->
-        <div class="ml-toggle" @click="memberExpanded = !memberExpanded">
-          <div class="ml-top">
-            <div class="ml-avatar" @click.stop="triggerUpload">
-              <img v-if="avatarUrl" :src="avatarUrl" alt="" />
-              <span v-else>{{ (displayName || '?')[0] }}</span>
-              <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="onAvatarFile" />
+        <div class="mcard">
+          <!-- 上半区：左名 + 右上大圆按钮 & 胶囊 -->
+          <div class="mc-upper">
+            <div class="mc-left">
+              <div class="mc-name">{{ displayName }}</div>
+              <div class="mc-upgrade" v-if="needPoints > 0">升级到{{ nextLevelName }}还需 <b>{{ needPoints }}</b></div>
+              <div class="mc-upgrade" v-else-if="memberInfo && memberRank === 'L5'">已是最高等级 · 至尊之选</div>
             </div>
-            <div class="ml-id">
-              <div class="ml-name">{{ displayName }} <svg class="ml-edit" @click.stop="editName" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
-              <div class="ml-upgrade" v-if="upgradeHint">{{ upgradeHint }}</div>
+            <div class="mc-right">
+              <button class="mc-big-round" @click="triggerUpload" title="更换头像">
+                <img v-if="avatarUrl" :src="avatarUrl" alt="" />
+                <svg v-else width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+                <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="onAvatarFile" />
+              </button>
+              <div class="mc-pill">{{ memberInfo && memberInfo.membership_level || '普卡' }}</div>
             </div>
-            <div class="ml-level">{{ memberInfo && memberInfo.membership_level || '普卡' }}</div>
-            <svg class="ml-chevron" :class="{ open: memberExpanded }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
 
-          <div class="ml-arc" v-if="upgradeHint">
-            <svg class="ml-arc-svg" viewBox="0 0 300 40" preserveAspectRatio="none">
-              <path d="M6 36 Q150 -10 294 36" fill="none" stroke="#FFE3C7" stroke-width="6" stroke-linecap="round"/>
-              <path d="M6 36 Q150 -10 294 36" fill="none" stroke="#FF7B2C" stroke-width="6" stroke-linecap="round" :stroke-dasharray="arcLen" :stroke-dashoffset="arcDash"/>
-              <circle :cx="arcDotX" :cy="arcDotY" r="6" fill="#FF7B2C"/>
+          <!-- 弧形进度条 -->
+          <div class="mc-arc" v-if="memberInfo">
+            <svg class="mc-arc-svg" viewBox="0 0 300 44" preserveAspectRatio="none">
+              <path d="M10 38 Q150 -6 290 38" fill="none" stroke="#F0E3D6" stroke-width="7" stroke-linecap="round"/>
+              <path d="M10 38 Q150 -6 290 38" fill="none" stroke="#FF7B2C" stroke-width="7" stroke-linecap="round" :stroke-dasharray="arcLen" :stroke-dashoffset="arcDash"/>
+              <circle :cx="arcDotX" :cy="arcDotY" r="7" fill="#fff" stroke="#FF7B2C" stroke-width="3"/>
             </svg>
           </div>
-        </div>
 
-        <!-- 展开区 -->
-        <div v-show="memberExpanded" class="ml-expand">
-          <div class="ml-stats">
-            <div class="ml-stat">
-              <div class="ml-stat-num">{{ memberInfo && memberInfo.balance != null ? memberInfo.balance : 0 }}</div>
-              <div class="ml-stat-label">账户余额</div>
+          <!-- 底部：三列数据 + 右侧三个圆形按钮 -->
+          <div class="mc-lower">
+            <div class="mc-cols">
+              <div class="mc-col" @click="emit('switchTab', 'profile')">
+                <div class="mc-col-num">{{ memberInfo && memberInfo.balance != null ? memberInfo.balance : 0 }}</div>
+                <div class="mc-col-label">账户余额</div>
+              </div>
+              <div class="mc-col" @click="emit('switchTab', 'offers')">
+                <div class="mc-col-num">{{ memberInfo && memberInfo.coupon_count != null ? memberInfo.coupon_count : 0 }}</div>
+                <div class="mc-col-label">优惠券</div>
+              </div>
+              <div class="mc-col" @click="emit('switchTab', 'profile')">
+                <div class="mc-col-num">{{ memberInfo && memberInfo.timescard_count != null ? memberInfo.timescard_count : 0 }}</div>
+                <div class="mc-col-label">次卡</div>
+              </div>
             </div>
-            <div class="ml-stat">
-              <div class="ml-stat-num">{{ memberInfo && memberInfo.coupon_count != null ? memberInfo.coupon_count : 0 }}</div>
-              <div class="ml-stat-label">优惠券</div>
-            </div>
-            <div class="ml-stat">
-              <div class="ml-stat-num">{{ memberInfo && memberInfo.timescard_count != null ? memberInfo.timescard_count : 0 }}</div>
-              <div class="ml-stat-label">次卡</div>
-            </div>
-          </div>
-
-          <div class="ml-bottom">
-            <div class="ml-links">
-              <div class="ml-link" @click="openQrCode">会员码</div>
-              <div class="ml-link" @click="emit('switchTab', 'offers')">优惠券</div>
-              <div class="ml-link" @click="emit('switchTab', 'profile')">会员中心</div>
-            </div>
-            <div class="ml-rounds">
-              <button class="ml-round" @click="openQrCode" title="会员码">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M21 14v3a1 1 0 01-1 1h-3M14 21h3a1 1 0 001-1v-3"/></svg>
+            <div class="mc-rounds">
+              <button class="mc-round" @click="emit('switchTab', 'profile')" title="会员中心">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
               </button>
-              <button class="ml-round" @click="emit('switchTab', 'offers')" title="优惠券">
+              <button class="mc-round" @click="emit('switchTab', 'offers')" title="优惠券">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="M22 7H2v5h20z"/></svg>
               </button>
-              <button class="ml-round ml-round-danger" @click="doLogout" title="退出">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              <button class="mc-round" @click="openQrCode" title="会员码">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M21 14v3a1 1 0 01-1 1h-3M14 21h3a1 1 0 001-1v-3"/></svg>
               </button>
             </div>
           </div>
@@ -241,6 +236,19 @@ const upgradeNextLevel = {
   'L4': { name: '钻石卡', need: 20000 },
 }
 
+// 图片样式：升级到 X 还需 N 分
+const nextLevelName = computed(() => {
+  if (!memberInfo.value) return ''
+  const next = upgradeNextLevel[memberRank.value]
+  return next ? next.name : ''
+})
+const needPoints = computed(() => {
+  if (!memberInfo.value) return 0
+  const next = upgradeNextLevel[memberRank.value]
+  if (!next) return 0
+  return Math.max(0, next.need - (memberInfo.value.points || 0))
+})
+
 const upgradeHint = computed(() => {
   if (!memberInfo.value) return ''
   const rank = memberRank.value
@@ -268,15 +276,10 @@ const upgradePercent = computed(() => {
 
 // 弧形进度条几何（沿二次贝塞尔 Q150,-10 在 viewBox 300x40 上）
 const arcLen = computed(() => {
-  // 近似弧长：弦长 + 拱高修正
-  const p0 = [6, 36], p1 = [150, -10], p2 = [294, 36]
-  const approx = (a, b, c) => {
-    const ab = Math.hypot(b[0] - a[0], b[1] - a[1])
-    const bc = Math.hypot(c[0] - b[0], c[1] - b[1])
-    const ac = Math.hypot(c[0] - a[0], c[1] - a[1])
-    return ab + bc // 折线近似
-  }
-  return approx(p0, p1, p2)
+  const p0 = [10, 38], p1 = [150, -6], p2 = [290, 38]
+  const ab = Math.hypot(p1[0] - p0[0], p1[1] - p0[1])
+  const bc = Math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+  return ab + bc // 折线近似弧长
 })
 const arcDash = computed(() => {
   const len = arcLen.value
@@ -286,7 +289,7 @@ const arcDash = computed(() => {
 const arcDot = computed(() => {
   const pct = Math.min(0.999, Math.max(0.001, upgradePercent.value / 100))
   // 二次贝塞尔点：B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
-  const P0 = [6, 36], P1 = [150, -10], P2 = [294, 36]
+  const P0 = [10, 38], P1 = [150, -6], P2 = [290, 38]
   const mt = 1 - pct
   const x = mt * mt * P0[0] + 2 * mt * pct * P1[0] + pct * pct * P2[0]
   const y = mt * mt * P0[1] + 2 * mt * pct * P1[1] + pct * pct * P2[1]
@@ -491,44 +494,38 @@ function go(route) {
 .mc-agree-text { font-size: 13px; color: #777; line-height: 1.6; }
 .mc-link { color: #FF7B2C; }
 
-/* 登录态：浅色卡片 + 橙色主调（保留项目品牌色，非图片蓝绿） */
-.mc-light { background: linear-gradient(160deg, #FFFFFF 0%, #FFF6EE 100%) !important; box-shadow: 0 -4px 20px rgba(255, 123, 44, 0.18); }
+/* 登录态：照图样式，浅色暖橙卡片（保留品牌橙 #FF7B2C） */
+.mc-light { background: linear-gradient(160deg, #FFF7EE 0%, #FFEEDC 100%) !important; box-shadow: 0 -4px 20px rgba(255, 123, 44, 0.22); }
 .member-logged { padding: 0; }
 
-/* 收起/展开头部 */
-.ml-toggle { cursor: pointer; }
-.ml-top { display: flex; align-items: center; gap: 12px; }
-.ml-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; cursor: pointer; box-shadow: 0 2px 8px rgba(255,123,44,0.4); }
-.ml-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.ml-id { flex: 1; min-width: 0; }
-.ml-name { font-size: 17px; font-weight: 700; color: #1A1A1A; display: flex; align-items: center; gap: 5px; }
-.ml-edit { flex-shrink: 0; cursor: pointer; opacity: 0.55; }
-.ml-edit:active { opacity: 1; }
-.ml-upgrade { font-size: 12px; color: #999; margin-top: 3px; }
-.ml-level { background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 12px; border-radius: 12px; flex-shrink: 0; letter-spacing: 1px; }
-.ml-chevron { flex-shrink: 0; transition: transform 0.25s ease; }
-.ml-chevron.open { transform: rotate(180deg); }
+.mcard { position: relative; padding: 16px 18px 16px; overflow: visible; }
+
+/* 上半区：左名 + 右上大圆按钮 & 胶囊 */
+.mc-upper { display: flex; align-items: flex-start; justify-content: space-between; }
+.mc-left { flex: 1; min-width: 0; padding-top: 8px; }
+.mc-name { font-size: 19px; font-weight: 800; color: #1A1A1A; }
+.mc-upgrade { font-size: 12px; color: #9A8B7A; margin-top: 8px; }
+.mc-upgrade b { color: #E85D04; font-weight: 700; font-size: 14px; }
+
+.mc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.mc-big-round { width: 66px; height: 66px; border-radius: 50%; border: 3px solid #FFF7EE; background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 14px rgba(232, 93, 4, 0.45); margin-top: -46px; position: relative; overflow: hidden; flex-shrink: 0; }
+.mc-big-round img { width: 100%; height: 100%; object-fit: cover; }
+.mc-big-round:active { opacity: 0.9; }
+.mc-pill { background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 11px; font-weight: 700; padding: 4px 16px; border-radius: 14px; letter-spacing: 1px; }
 
 /* 弧形进度条 */
-.ml-arc { margin: 14px 0 6px; }
-.ml-arc-svg { width: 100%; height: 40px; display: block; }
+.mc-arc { margin: 12px 2px 4px; }
+.mc-arc-svg { width: 100%; height: 44px; display: block; }
 
-/* 展开区 */
-.ml-expand { animation: mlFade 0.25s ease; }
-@keyframes mlFade { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-.ml-stats { display: flex; justify-content: space-around; margin: 16px 4px 14px; padding: 14px 8px; background: rgba(255,123,44,0.06); border-radius: 14px; }
-.ml-stat { text-align: center; flex: 1; }
-.ml-stat-num { font-size: 20px; font-weight: 800; color: #E85D04; line-height: 1.2; }
-.ml-stat-label { font-size: 12px; color: #888; margin-top: 4px; }
-
-.ml-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px solid rgba(255,123,44,0.12); }
-.ml-links { display: flex; gap: 14px; }
-.ml-link { font-size: 13px; color: #666; cursor: pointer; }
-.ml-link:active { color: #FF7B2C; }
-.ml-rounds { display: flex; gap: 10px; }
-.ml-round { width: 40px; height: 40px; border-radius: 50%; border: none; background: linear-gradient(135deg, #FF7B2C, #E85D04); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(255,123,44,0.35); }
-.ml-round:active { opacity: 0.85; }
-.ml-round-danger { background: linear-gradient(135deg, #999, #777); box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+/* 底部：三列数据 + 三个圆形按钮 */
+.mc-lower { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 14px; }
+.mc-cols { display: flex; gap: 26px; }
+.mc-col { cursor: pointer; }
+.mc-col-num { font-size: 19px; font-weight: 800; color: #1A1A1A; line-height: 1.2; }
+.mc-col-label { font-size: 12px; color: #9A8B7A; margin-top: 4px; }
+.mc-rounds { display: flex; gap: 10px; }
+.mc-round { width: 40px; height: 40px; border-radius: 50%; border: none; background: linear-gradient(135deg, #FF7B2C, #E85D04); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(232, 93, 4, 0.35); }
+.mc-round:active { opacity: 0.85; }
 
 .quick-links { display: flex; justify-content: space-around; margin: 20px 16px 20px; }
 .qlink { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
