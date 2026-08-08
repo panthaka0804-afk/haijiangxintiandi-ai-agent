@@ -43,15 +43,6 @@
       </template>
 
       <div v-else class="member-logged">
-        <!-- 橙色纹理：纯圆点贴卡片边缘（部分溢出被裁切），无线条 -->
-        <div class="mc-texture-wrap" aria-hidden="true">
-          <span class="mc-dot mc-dot-1"></span>
-          <span class="mc-dot mc-dot-2"></span>
-          <span class="mc-dot mc-dot-3"></span>
-          <span class="mc-dot mc-dot-4"></span>
-          <span class="mc-dot mc-dot-5"></span>
-          <span class="mc-dot mc-dot-6"></span>
-        </div>
         <div class="mcard">
           <!-- 上半区：左名 + 右上大圆按钮 & 胶囊 -->
           <div class="mc-upper">
@@ -496,28 +487,18 @@ function go(route) {
 .mc-link { color: #FF7B2C; }
 
 /* 登录态：橙色渐变 + 清透感（浅亮、通透、有呼吸感） */
-/* iOS 毛玻璃：半透明橙 + 背景模糊 + 顶部内高光 + 极细玻璃描边（无生硬边框） */
+/* 清透玻璃：浅橙白为主 + 低模糊 + 顶部内高光（无生硬边框、无装饰） */
 .mc-light {
-  background: linear-gradient(150deg, rgba(255, 247, 238, 0.66) 0%, rgba(255, 228, 198, 0.55) 100%) !important;
-  backdrop-filter: blur(22px) saturate(160%);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  background: linear-gradient(150deg, rgba(255, 252, 248, 0.88) 0%, rgba(255, 241, 224, 0.82) 100%) !important;
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
   border: none;
   box-shadow:
-    0 10px 34px rgba(232, 93, 4, 0.14),
-    inset 0 1px 1px rgba(255, 255, 255, 0.65),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+    0 10px 30px rgba(232, 93, 4, 0.13),
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.38);
 }
 .member-logged { padding: 0; position: relative; }
-
-/* 橙色纹理：圆点贴卡片边缘（负值溢出被圆角裁切），无线条 */
-.mc-texture-wrap { position: absolute; inset: 0; border-radius: 20px; overflow: hidden; z-index: 0; pointer-events: none; }
-.mc-dot { position: absolute; border-radius: 50%; display: block; }
-.mc-dot-1 { width: 132px; height: 132px; right: -46px; top: -46px; background: radial-gradient(circle at 32% 32%, rgba(255,138,61,0.18), rgba(255,111,15,0.05)); }
-.mc-dot-2 { width: 84px; height: 84px; right: 34px; top: 66px; background: rgba(255,138,61,0.10); }
-.mc-dot-3 { width: 104px; height: 104px; left: -48px; bottom: -48px; background: radial-gradient(circle at 60% 30%, rgba(255,138,61,0.14), rgba(255,111,15,0.05)); }
-.mc-dot-4 { width: 54px; height: 54px; left: 70px; bottom: 26px; background: rgba(255,111,15,0.08); }
-.mc-dot-5 { width: 9px; height: 9px; right: 158px; top: 34px; background: rgba(255,138,61,0.32); }
-.mc-dot-6 { width: 6px; height: 6px; right: 176px; top: 52px; background: rgba(255,111,15,0.26); }
 
 .mcard { position: relative; z-index: 1; padding: 22px 20px 20px; overflow: visible; }
 
