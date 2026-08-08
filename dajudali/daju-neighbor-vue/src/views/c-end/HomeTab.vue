@@ -16,7 +16,7 @@
       <template v-if="!loggedIn">
         <div class="mc-top">
           <div class="mc-logo-circle">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           </div>
           <div>
             <div class="mc-title">海江新天地</div>
@@ -36,7 +36,7 @@
         </button>
         <div class="mc-agree" @click="agreed = !agreed">
           <span class="mc-agree-box" :class="{ checked: agreed }">
-            <svg v-if="agreed" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg v-if="agreed" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
           </span>
           <span class="mc-agree-text">登录即表示同意<span class="mc-link">《用户协议》</span>和<span class="mc-link">《隐私政策》</span></span>
         </div>
@@ -69,8 +69,8 @@
               <!-- 槽底反光（下移，形成凹陷明暗差） -->
               <path d="M10 39.5 Q150 -4.5 290 39.5" fill="none" stroke="rgba(255,255,255,0.26)" stroke-width="9" stroke-linecap="round"/>
               <!-- 进度填充（嵌在槽内） -->
-              <path d="M10 38 Q150 -6 290 38" fill="none" stroke="#FF8A3D" stroke-width="5" stroke-linecap="round" :stroke-dasharray="arcLen" :stroke-dashoffset="arcDash"/>
-              <circle :cx="arcDotX" :cy="arcDotY" r="6.5" fill="#FF8A3D" stroke="#fff" stroke-width="2"/>
+              <path d="M10 38 Q150 -6 290 38" fill="none" stroke="#E0E0E0" stroke-width="5" stroke-linecap="round" :stroke-dasharray="arcLen" :stroke-dashoffset="arcDash"/>
+              <circle :cx="arcDotX" :cy="arcDotY" r="6.5" fill="#E0E0E0" stroke="#fff" stroke-width="2"/>
             </svg>
           </div>
 
@@ -128,7 +128,7 @@
 
     <div class="daily-deal" @click="$router.push('/offers')">
       <div class="dd-icon-box">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
         </svg>
       </div>
@@ -407,7 +407,7 @@ const bizModules = [
     label: '美食天地',
     desc: 'B1美食广场',
     route: '/shops',
-    grad: 'linear-gradient(135deg, #E85D04 0%, #FF7B2C 60%, #FFB347 100%)',
+    grad: 'linear-gradient(135deg, #2E2E2E 0%, #4A4A4A 60%, #D8D8D8 100%)',
     icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
     illus: '<circle cx="90" cy="30" r="28" fill="rgba(255,255,255,0.08)"/><circle cx="100" cy="70" r="14" fill="rgba(255,255,255,0.06)"/><rect x="75" y="40" width="30" height="45" rx="6" fill="rgba(255,255,255,0.12)"/><rect x="50" y="55" width="18" height="20" rx="3" fill="rgba(255,255,255,0.08)"/><circle cx="85" cy="52" r="5" fill="rgba(255,255,255,0.15)"/><circle cx="95" cy="48" r="3" fill="rgba(255,255,255,0.1)"/>'
   },
@@ -415,7 +415,7 @@ const bizModules = [
     label: '亲子乐园',
     desc: '3F儿童游乐',
     route: '/shops?floor=3',
-    grad: 'linear-gradient(135deg, #7C3AED 0%, #8B5CF6 60%, #C4B5FD 100%)',
+    grad: 'linear-gradient(135deg, #3A3A3A 0%, #4A4A4A 60%, #C8C8C8 100%)',
     icon: '<circle cx="12" cy="8" r="4"/><path d="M8 21v-1a6 6 0 0112 0v1"/>',
     illus: '<circle cx="85" cy="25" r="22" fill="rgba(255,255,255,0.08)"/><circle cx="100" cy="65" r="18" fill="rgba(255,255,255,0.05)"/><rect x="70" y="35" width="35" height="40" rx="8" fill="rgba(255,255,255,0.1)"/><circle cx="82" cy="50" r="6" fill="rgba(255,255,255,0.15)"/><circle cx="92" cy="46" r="4" fill="rgba(255,255,255,0.1)"/><circle cx="78" cy="60" r="3" fill="rgba(255,255,255,0.08)"/><circle cx="88" cy="58" r="3" fill="rgba(255,255,255,0.08)"/>'
   },
@@ -423,7 +423,7 @@ const bizModules = [
     label: '生活服务',
     desc: '洗衣美甲维修',
     route: '/shops?floor=2',
-    grad: 'linear-gradient(135deg, #059669 0%, #10B981 60%, #6EE7B7 100%)',
+    grad: 'linear-gradient(135deg, #3A3A3A 0%, #4A4A4A 60%, #C8C8C8 100%)',
     icon: '<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>',
     illus: '<circle cx="90" cy="30" r="20" fill="rgba(255,255,255,0.08)"/><circle cx="100" cy="70" r="12" fill="rgba(255,255,255,0.05)"/><rect x="72" y="38" width="28" height="35" rx="5" fill="rgba(255,255,255,0.1)"/><rect x="55" y="48" width="12" height="18" rx="2" fill="rgba(255,255,255,0.08)"/><circle cx="80" cy="48" r="3" fill="rgba(255,255,255,0.12)"/><circle cx="90" cy="52" r="2" fill="rgba(255,255,255,0.1)"/>'
   },
@@ -431,7 +431,7 @@ const bizModules = [
     label: '停车缴费',
     desc: '在线缴费出场',
     route: '#',
-    grad: 'linear-gradient(135deg, #2563EB 0%, #3B82F6 60%, #93C5FD 100%)',
+    grad: 'linear-gradient(135deg, #3A3A3A 0%, #4A4A4A 60%, #C8C8C8 100%)',
     icon: '<rect x="3" y="10" width="18" height="10" rx="2"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M6 10V6a2 2 0 012-2h8a2 2 0 012 2v4"/>',
     illus: '<circle cx="85" cy="25" r="24" fill="rgba(255,255,255,0.07)"/><circle cx="100" cy="65" r="15" fill="rgba(255,255,255,0.04)"/><rect x="60" y="40" width="45" height="25" rx="6" fill="rgba(255,255,255,0.1)"/><rect x="68" y="48" width="10" height="8" rx="2" fill="rgba(255,255,255,0.12)"/><rect x="82" y="48" width="10" height="8" rx="2" fill="rgba(255,255,255,0.12)"/><circle cx="70" cy="60" r="3" fill="rgba(255,255,255,0.15)"/><circle cx="92" cy="60" r="3" fill="rgba(255,255,255,0.15)"/>'
   }
@@ -471,7 +471,7 @@ function go(route) {
 
 .member-card { margin: -60px 12px 0; background: #1C1C1E; border-radius: 20px; padding: 24px 20px 22px; position: relative; z-index: 3; box-shadow: 0 -4px 20px rgba(0,0,0,0.5); }
 .mc-top { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
-.mc-logo-circle { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,123,44,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.mc-logo-circle { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.10); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .mc-title { font-size: 18px; font-weight: 700; color: #F0F0F0; display: flex; align-items: center; gap: 6px; }
 .mc-subtitle { font-size: 13px; color: #999; margin-top: 2px; }
 .mc-phone-row { margin-bottom: 14px; }
@@ -479,16 +479,16 @@ function go(route) {
 .mc-prefix { font-size: 15px; font-weight: 600; color: #AAA; margin-right: 10px; border-right: 1px solid #3A3A3E; padding-right: 10px; }
 .mc-input { flex: 1; background: transparent; border: none; outline: none; font-size: 16px; color: #F0F0F0; font-family: inherit; }
 .mc-input::placeholder { color: #555; }
-.mc-btn { width: 100%; height: 48px; border: none; border-radius: 24px; background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; letter-spacing: 1px; }
+.mc-btn { width: 100%; height: 48px; border: none; border-radius: 24px; background: linear-gradient(135deg, #4A4A4A, #2E2E2E); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; letter-spacing: 1px; }
 .mc-btn:active { opacity: 0.85; }
 .mc-btn:disabled { opacity: 0.5; }
 .mc-btn-wx { background: #07C160 !important; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.mc-btn-outline { background: transparent !important; border: 1px solid #FF7B2C !important; color: #FF7B2C !important; }
+.mc-btn-outline { background: transparent !important; border: 1px solid #E8E8E8 !important; color: #E8E8E8 !important; }
 .mc-agree { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; cursor: pointer; }
 .mc-agree-box { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #555; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 2px; transition: all 0.2s; }
-.mc-agree-box.checked { border-color: #FF7B2C; background: rgba(255,123,44,0.1); }
+.mc-agree-box.checked { border-color: #E8E8E8; background: rgba(255,255,255,0.08); }
 .mc-agree-text { font-size: 13px; color: #777; line-height: 1.6; }
-.mc-link { color: #FF7B2C; }
+.mc-link { color: #E8E8E8; }
 
 /* 登录态：橙色渐变 + 清透感（浅亮、通透、有呼吸感） */
 /* iOS 玻璃边框：双层背景，border-box 渐变边(顶部亮→侧透→底微光)，大圆角 */
@@ -520,7 +520,7 @@ function go(route) {
 .mc-upgrade b { color: rgba(255, 178, 122, 0.85); font-weight: 700; font-size: 15px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.3); }
 
 .mc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-.mc-big-round { width: 92px; height: 92px; border-radius: 50%; border: 4px solid #FFF6EC; background: linear-gradient(135deg, #FF8A3D, #FF6F0F); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 8px 22px rgba(232, 93, 4, 0.45); margin-top: -90px; position: relative; overflow: hidden; flex-shrink: 0; }
+.mc-big-round { width: 92px; height: 92px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.25); background: linear-gradient(135deg, #4A4A4A, #2E2E2E); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 8px 22px rgba(0,0,0,0.5); margin-top: -90px; position: relative; overflow: hidden; flex-shrink: 0; }
 .mc-big-round img { width: 100%; height: 100%; object-fit: cover; }
 .mc-big-round:active { opacity: 0.9; }
 .mc-big-round svg, .mc-round svg { filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.5)) drop-shadow(0 1px 1px rgba(255,255,255,0.3)); }
@@ -544,17 +544,17 @@ function go(route) {
 .qlink { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .qlink:active { opacity: 0.7; }
 .qlink-icon { width: 48px; height: 48px; border-radius: 14px; background: #2A2A2E; display: flex; align-items: center; justify-content: center; color: #999; transition: all 0.2s; }
-.qlink-icon.active { color: #FF7B2C; background: rgba(255,123,44,0.12); }
+.qlink-icon.active { color: #E8E8E8; background: rgba(255,255,255,0.10); }
 .qlink-label { font-size: 12px; color: #AAA; }
 
-.daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background: linear-gradient(135deg, #2A1A0A, #1E1A1A); border: 0.5px solid rgba(255,123,44,0.2); border-radius: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background: linear-gradient(135deg, #2E2E2E, #1E1A1A); border: 0.5px solid rgba(255,123,44,0.2); border-radius: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .daily-deal:active { opacity: 0.85; }
-.dd-icon-box { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,123,44,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dd-icon-box { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.10); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .dd-left { flex: 1; min-width: 0; }
-.dd-title { font-size: 15px; font-weight: 700; color: #FF7B2C; margin-bottom: 2px; }
+.dd-title { font-size: 15px; font-weight: 700; color: #E8E8E8; margin-bottom: 2px; }
 .dd-desc { font-size: 12px; color: #888; }
 .dd-right { flex-shrink: 0; }
-.dd-btn { display: inline-block; padding: 8px 18px; background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 14px; font-weight: 600; border-radius: 20px; white-space: nowrap; }
+.dd-btn { display: inline-block; padding: 8px 18px; background: linear-gradient(135deg, #4A4A4A, #2E2E2E); color: #fff; font-size: 14px; font-weight: 600; border-radius: 20px; white-space: nowrap; }
 
 .qr-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); animation: qrFadeIn 0.2s ease; }
 @keyframes qrFadeIn { from { opacity: 0 } to { opacity: 1 } }
@@ -582,7 +582,7 @@ function go(route) {
 .biz-modules { padding: 0 16px; margin-top: 16px; }
 .biz-hero { position: relative; border-radius: 16px; overflow: hidden; height: 170px; cursor: pointer; margin-bottom: 10px; }
 .biz-hero:active { opacity: 0.95; transform: scale(0.98); }
-.biz-hero-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #FF7B2C 0%, #E85D04 50%, #FF8C42 100%); }
+.biz-hero-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #4A4A4A 0%, #3A3A3A 50%, #2E2E2E 100%); }
 .biz-hero-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; }
 .biz-hero-content { position: relative; z-index: 2; padding: 24px; display: flex; flex-direction: column; height: 100%; max-width: 60%; }
 .biz-hero-title { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 6px; letter-spacing: 0.5px; }
