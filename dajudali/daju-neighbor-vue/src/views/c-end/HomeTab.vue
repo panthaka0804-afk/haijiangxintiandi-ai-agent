@@ -591,12 +591,12 @@ function go(route) {
 .biz-hero-desc { font-size: 12px; color: rgba(255,255,255,0.8); margin-bottom: auto; }
 .biz-hero-btn { display: inline-block; margin-top: 8px; padding: 5px 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.18); border-radius: 20px; font-size: 12px; font-weight: 600; color: #fff; align-self: flex-start; }
 .biz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.biz-card { position: relative; border-radius: 14px; overflow: hidden; height: 150px; cursor: pointer; transition: transform 0.15s; }
+.biz-card { position: relative; border-radius: 14px; overflow: hidden; height: 150px; cursor: pointer; transition: transform 0.15s; border: 1px solid rgba(255,255,255,0.16); background: rgba(40,40,40,0.6); }
 .biz-card:active { transform: scale(0.97); }
-.biz-card-bg { position: absolute; inset: 0; }
+.biz-card-bg { position: absolute; inset: 0; background: transparent !important; box-shadow: inset 0 3px 8px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.22); }
 .biz-card-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; }
 .biz-card-content { position: relative; z-index: 2; padding: 16px; display: flex; flex-direction: column; height: 100%; }
-.biz-card-icon-sm { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; margin-bottom: auto; }
-.biz-card-title { font-size: 15px; font-weight: 700; color: #fff; margin-top: 8px; }
+.biz-card-icon-sm { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; margin-bottom: auto; color: #fff; }
+.biz-card-title { font-size: 15px; font-weight: 700; color: #fff; margin-top: 8px; text-shadow: 0 1px 1px rgba(0,0,0,0.6), 0 -1px 1px rgba(255,255,255,0.15); }
 .biz-card-desc { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 2px; }
 </style>
