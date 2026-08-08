@@ -496,15 +496,16 @@ function go(route) {
 .mc-link { color: #FF7B2C; }
 
 /* 登录态：橙色渐变 + 清透感（浅亮、通透、有呼吸感） */
+/* iOS 毛玻璃：半透明橙 + 背景模糊 + 顶部内高光 + 极细玻璃描边（无生硬边框） */
 .mc-light {
-  background: linear-gradient(155deg, #FFFEFC 0%, #FFF4E8 42%, #FFE4C6 100%) !important;
-  box-shadow: 0 -6px 24px rgba(232, 93, 4, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-}
-.mc-light::before {
-  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 46%;
-  background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
-  border-radius: 20px 20px 0 0; pointer-events: none;
+  background: linear-gradient(150deg, rgba(255, 247, 238, 0.66) 0%, rgba(255, 228, 198, 0.55) 100%) !important;
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: none;
+  box-shadow:
+    0 10px 34px rgba(232, 93, 4, 0.14),
+    inset 0 1px 1px rgba(255, 255, 255, 0.65),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.32);
 }
 .member-logged { padding: 0; position: relative; }
 
