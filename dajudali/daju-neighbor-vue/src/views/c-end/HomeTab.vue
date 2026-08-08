@@ -201,9 +201,10 @@ import http from '@/api'
 const emit = defineEmits(['switchTab'])
 const router = useRouter()
 
-// 把图标路径转成 CSS mask 数据 URI，用于把图标形状镂空成凹陷腔体
+// 把图标路径转成 CSS mask 数据 URI，用于把图标线条镂空成凹陷腔体
+// 注意：这些图标是线条描边(feather)，必须用 stroke 而非 fill，否则线条消失
 const iconMask = (paths) => {
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'>${paths}</svg>`
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'>${paths}</svg>`
   const uri = encodeURIComponent(svg).replace(/\(/g, '%28').replace(/\)/g, '%29')
   return `url("data:image/svg+xml,${uri}")`
 }
