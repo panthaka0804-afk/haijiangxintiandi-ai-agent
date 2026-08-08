@@ -186,7 +186,7 @@
       <span class="section-cn">推荐商铺</span>
     </div>
     <div class="shop-list">
-      <div v-for="s in shops" :key="s.id" class="shop-card" @click="go('/shop/' + s.id)">
+      <div v-for="s in shops" :key="s.id" class="shop-card" @click="go('/shops/' + s.id)">
         <svg class="shop-illus" v-html="s.illus" viewBox="0 0 120 100" fill="none" preserveAspectRatio="xMinYMid slice"></svg>
         <div class="shop-logo" :style="{ background: s.color, color: logoTextColor(s.color) }">{{ s.name }}</div>
         <div class="shop-info">
