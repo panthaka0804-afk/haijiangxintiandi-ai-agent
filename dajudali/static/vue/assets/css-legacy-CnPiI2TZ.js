@@ -1,0 +1,1 @@
+(function(){System.register([`./css-legacy-BQt8UGZG.js`],function(e,t){return{setters:[function(e){}],execute:function(){}}})})();

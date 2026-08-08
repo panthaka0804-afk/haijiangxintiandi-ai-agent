@@ -12,7 +12,7 @@
       </div>
     </div>
 
-    <div class="member-card">
+    <div class="member-card" :class="{ 'mc-light': loggedIn }">
       <template v-if="!loggedIn">
         <div class="mc-top">
           <div class="mc-logo-circle">
@@ -43,33 +43,67 @@
       </template>
 
       <div v-else class="member-logged">
-        <div class="mc-arc-header">
-          <button class="mc-qr-btn" @click="openQrCode">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M21 14v3a1 1 0 01-1 1h-3M14 21h3a1 1 0 001-1v-3"/></svg>
-          </button>
-          <div class="mc-arc-info">
-            <div class="mc-avatar-sm" @click="triggerUpload">
+        <!-- 收起 / 展开 -->
+        <div class="ml-toggle" @click="memberExpanded = !memberExpanded">
+          <div class="ml-top">
+            <div class="ml-avatar" @click.stop="triggerUpload">
               <img v-if="avatarUrl" :src="avatarUrl" alt="" />
-              <span v-else class="mc-avatar-initial">{{ (displayName || '?')[0] }}</span>
+              <span v-else>{{ (displayName || '?')[0] }}</span>
               <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="onAvatarFile" />
             </div>
-            <div class="mc-arc-detail">
-              <div class="mc-title">{{ displayName }} <svg class="mc-edit-pen" @click.stop="editName" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
-              <div class="mc-subtitle">{{ memberInfo && memberInfo.membership_level || '普卡' }} 会员 · 积分 {{ memberInfo && memberInfo.points || 0 }}</div>
+            <div class="ml-id">
+              <div class="ml-name">{{ displayName }} <svg class="ml-edit" @click.stop="editName" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+              <div class="ml-upgrade" v-if="upgradeHint">{{ upgradeHint }}</div>
+            </div>
+            <div class="ml-level">{{ memberInfo && memberInfo.membership_level || '普卡' }}</div>
+            <svg class="ml-chevron" :class="{ open: memberExpanded }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+
+          <div class="ml-arc" v-if="upgradeHint">
+            <svg class="ml-arc-svg" viewBox="0 0 300 40" preserveAspectRatio="none">
+              <path d="M6 36 Q150 -10 294 36" fill="none" stroke="#FFE3C7" stroke-width="6" stroke-linecap="round"/>
+              <path d="M6 36 Q150 -10 294 36" fill="none" stroke="#FF7B2C" stroke-width="6" stroke-linecap="round" :stroke-dasharray="arcLen" :stroke-dashoffset="arcDash"/>
+              <circle :cx="arcDotX" :cy="arcDotY" r="6" fill="#FF7B2C"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- 展开区 -->
+        <div v-show="memberExpanded" class="ml-expand">
+          <div class="ml-stats">
+            <div class="ml-stat">
+              <div class="ml-stat-num">{{ memberInfo && memberInfo.balance != null ? memberInfo.balance : 0 }}</div>
+              <div class="ml-stat-label">账户余额</div>
+            </div>
+            <div class="ml-stat">
+              <div class="ml-stat-num">{{ memberInfo && memberInfo.coupon_count != null ? memberInfo.coupon_count : 0 }}</div>
+              <div class="ml-stat-label">优惠券</div>
+            </div>
+            <div class="ml-stat">
+              <div class="ml-stat-num">{{ memberInfo && memberInfo.timescard_count != null ? memberInfo.timescard_count : 0 }}</div>
+              <div class="ml-stat-label">次卡</div>
             </div>
           </div>
-          <div class="mc-arc-level">{{ memberInfo && memberInfo.membership_level || '普卡' }}</div>
+
+          <div class="ml-bottom">
+            <div class="ml-links">
+              <div class="ml-link" @click="openQrCode">会员码</div>
+              <div class="ml-link" @click="emit('switchTab', 'offers')">优惠券</div>
+              <div class="ml-link" @click="emit('switchTab', 'profile')">会员中心</div>
+            </div>
+            <div class="ml-rounds">
+              <button class="ml-round" @click="openQrCode" title="会员码">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M21 14v3a1 1 0 01-1 1h-3M14 21h3a1 1 0 001-1v-3"/></svg>
+              </button>
+              <button class="ml-round" @click="emit('switchTab', 'offers')" title="优惠券">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="M22 7H2v5h20z"/></svg>
+              </button>
+              <button class="ml-round ml-round-danger" @click="doLogout" title="退出">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="mc-arc-progress-bar" v-if="upgradeHint">
-          <div class="mc-progress-bar"><div class="mc-progress-fill" :style="{ width: upgradePercent + '%' }"></div></div>
-          <span class="mc-progress-text">{{ upgradeHint }}</span>
-        </div>
-        <div class="mc-actions">
-          <button class="mc-btn mc-btn-outline" @click="openQrCode">会员码</button>
-          <button class="mc-btn mc-btn-outline" @click="emit('switchTab', 'offers')">我的优惠券</button>
-          <button class="mc-btn" @click="emit('switchTab', 'profile')">会员中心</button>
-        </div>
-        <div class="mc-logout" @click="doLogout">退出登录</div>
       </div>
     </div>
 
@@ -188,6 +222,7 @@ const displayName = ref('')
 const avatarUrl = ref('')
 const memberInfo = ref(null)
 const avatarInput = ref(null)
+const memberExpanded = ref(false)
 
 const memberRank = computed(() => {
   if (!memberInfo.value) return 'L1'
@@ -230,6 +265,35 @@ const upgradePercent = computed(() => {
   const progress = cur - prevNeed
   return Math.min(100, Math.max(0, Math.round((progress / range) * 100)))
 })
+
+// 弧形进度条几何（沿二次贝塞尔 Q150,-10 在 viewBox 300x40 上）
+const arcLen = computed(() => {
+  // 近似弧长：弦长 + 拱高修正
+  const p0 = [6, 36], p1 = [150, -10], p2 = [294, 36]
+  const approx = (a, b, c) => {
+    const ab = Math.hypot(b[0] - a[0], b[1] - a[1])
+    const bc = Math.hypot(c[0] - b[0], c[1] - b[1])
+    const ac = Math.hypot(c[0] - a[0], c[1] - a[1])
+    return ab + bc // 折线近似
+  }
+  return approx(p0, p1, p2)
+})
+const arcDash = computed(() => {
+  const len = arcLen.value
+  const pct = upgradePercent.value / 100
+  return len * (1 - pct)
+})
+const arcDot = computed(() => {
+  const pct = Math.min(0.999, Math.max(0.001, upgradePercent.value / 100))
+  // 二次贝塞尔点：B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
+  const P0 = [6, 36], P1 = [150, -10], P2 = [294, 36]
+  const mt = 1 - pct
+  const x = mt * mt * P0[0] + 2 * mt * pct * P1[0] + pct * pct * P2[0]
+  const y = mt * mt * P0[1] + 2 * mt * pct * P1[1] + pct * pct * P2[1]
+  return { x, y }
+})
+const arcDotX = computed(() => arcDot.value.x)
+const arcDotY = computed(() => arcDot.value.y)
 
 onMounted(async () => {
   const urlParams = new URLSearchParams(window.location.search)
@@ -427,26 +491,44 @@ function go(route) {
 .mc-agree-text { font-size: 13px; color: #777; line-height: 1.6; }
 .mc-link { color: #FF7B2C; }
 
+/* 登录态：浅色卡片 + 橙色主调（保留项目品牌色，非图片蓝绿） */
+.mc-light { background: linear-gradient(160deg, #FFFFFF 0%, #FFF6EE 100%) !important; box-shadow: 0 -4px 20px rgba(255, 123, 44, 0.18); }
 .member-logged { padding: 0; }
-.mc-arc-header { position: relative; margin: -24px -20px 0; padding: 20px 20px 50px; overflow: visible; min-height: 120px; border-radius: 20px 20px 0 0; }
-.mc-arc-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; opacity: 0.3; }
-.mc-qr-btn { position: relative; margin-left: auto; z-index: 5; min-width: 32px; height: 32px; border-radius: 8px; background: rgba(255,123,44,0.2); border: 1px solid rgba(255,123,44,0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.mc-qr-btn:active { opacity: 0.7; }
-.mc-arc-info { display: flex; align-items: center; gap: 12px; position: relative; z-index: 3; }
-.mc-avatar-sm { width: 48px; height: 48px; border-radius: 50%; background: #2A2A2E; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; cursor: pointer; border: 2px solid rgba(255,123,44,0.3); }
-.mc-avatar-sm img { width: 100%; height: 100%; object-fit: cover; }
-.mc-avatar-initial { font-size: 20px; font-weight: 700; color: #FF7B2C; }
-.mc-logout { text-align: center; padding: 12px; margin-top: 12px; font-size: 13px; color: #666; cursor: pointer; border-top: 1px solid rgba(255,255,255,0.06); }
-.mc-logout:active { color: #FF7B2C; }
-.mc-edit-pen { flex-shrink: 0; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; }
-.mc-edit-pen:active { opacity: 1; }
-.mc-arc-detail { flex: 1; }
-.mc-arc-level { position: absolute; bottom: 12px; right: 20px; background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 14px; border-radius: 10px; z-index: 4; letter-spacing: 1px; }
-.mc-arc-progress-bar { margin-top: -24px; margin-bottom: 14px; position: relative; z-index: 1; }
-.mc-progress-bar { height: 6px; background: #2A2A2E; border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
-.mc-progress-fill { height: 100%; background: linear-gradient(90deg, #FF7B2C, #FF9500); border-radius: 3px; transition: width 0.4s ease; }
-.mc-progress-text { font-size: 12px; color: #888; }
-.mc-actions { display: flex; gap: 10px; margin-top: 4px; }
+
+/* 收起/展开头部 */
+.ml-toggle { cursor: pointer; }
+.ml-top { display: flex; align-items: center; gap: 12px; }
+.ml-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; cursor: pointer; box-shadow: 0 2px 8px rgba(255,123,44,0.4); }
+.ml-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ml-id { flex: 1; min-width: 0; }
+.ml-name { font-size: 17px; font-weight: 700; color: #1A1A1A; display: flex; align-items: center; gap: 5px; }
+.ml-edit { flex-shrink: 0; cursor: pointer; opacity: 0.55; }
+.ml-edit:active { opacity: 1; }
+.ml-upgrade { font-size: 12px; color: #999; margin-top: 3px; }
+.ml-level { background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 12px; border-radius: 12px; flex-shrink: 0; letter-spacing: 1px; }
+.ml-chevron { flex-shrink: 0; transition: transform 0.25s ease; }
+.ml-chevron.open { transform: rotate(180deg); }
+
+/* 弧形进度条 */
+.ml-arc { margin: 14px 0 6px; }
+.ml-arc-svg { width: 100%; height: 40px; display: block; }
+
+/* 展开区 */
+.ml-expand { animation: mlFade 0.25s ease; }
+@keyframes mlFade { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.ml-stats { display: flex; justify-content: space-around; margin: 16px 4px 14px; padding: 14px 8px; background: rgba(255,123,44,0.06); border-radius: 14px; }
+.ml-stat { text-align: center; flex: 1; }
+.ml-stat-num { font-size: 20px; font-weight: 800; color: #E85D04; line-height: 1.2; }
+.ml-stat-label { font-size: 12px; color: #888; margin-top: 4px; }
+
+.ml-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px solid rgba(255,123,44,0.12); }
+.ml-links { display: flex; gap: 14px; }
+.ml-link { font-size: 13px; color: #666; cursor: pointer; }
+.ml-link:active { color: #FF7B2C; }
+.ml-rounds { display: flex; gap: 10px; }
+.ml-round { width: 40px; height: 40px; border-radius: 50%; border: none; background: linear-gradient(135deg, #FF7B2C, #E85D04); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(255,123,44,0.35); }
+.ml-round:active { opacity: 0.85; }
+.ml-round-danger { background: linear-gradient(135deg, #999, #777); box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
 
 .quick-links { display: flex; justify-content: space-around; margin: 20px 16px 20px; }
 .qlink { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
