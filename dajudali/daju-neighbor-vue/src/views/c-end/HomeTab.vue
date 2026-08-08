@@ -553,7 +553,7 @@ function go(route) {
 .qlink { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .qlink:active { opacity: 0.7; }
 .qlink-icon { position: relative; overflow: hidden; width: 58px; height: 58px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.10); background: linear-gradient(145deg, #2d2d31, #1f1f23); box-shadow: 6px 6px 14px rgba(0,0,0,0.55), -5px -5px 12px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-.qlink-cut { position: absolute; inset: 0; background: linear-gradient(145deg, #141416, #1e1e22); box-shadow: inset 0 3px 7px rgba(0,0,0,0.78), inset 0 -2px 4px rgba(255,255,255,0.10); -webkit-mask: var(--m) center / 30px 30px no-repeat; mask: var(--m) center / 30px 30px no-repeat; }
+.qlink-cut { position: absolute; inset: 0; background: linear-gradient(150deg, #202024, #131315); -webkit-mask: var(--m) center / 30px 30px no-repeat; mask: var(--m) center / 30px 30px no-repeat; filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.9)) drop-shadow(0 1px 1px rgba(255,255,255,0.32)); }
 .qlink-icon.active { background: linear-gradient(145deg, #3a3a3f, #26262a); border-color: rgba(255,255,255,0.22); }
 .qlink-label { font-size: 12px; color: #AAA; }
 
