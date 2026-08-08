@@ -64,8 +64,8 @@
           <!-- 弧形进度条 -->
           <div class="mc-arc" v-if="memberInfo">
             <svg class="mc-arc-svg" viewBox="0 0 300 44" preserveAspectRatio="none">
-              <path d="M10 38 Q150 -6 290 38" fill="none" stroke="#F0E3D6" stroke-width="7" stroke-linecap="round"/>
-              <path d="M10 38 Q150 -6 290 38" fill="none" stroke="#FF7B2C" stroke-width="7" stroke-linecap="round" :stroke-dasharray="arcLen" :stroke-dashoffset="arcDash"/>
+              <path d="M10 38 Q150 -6 290 38" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="7" stroke-linecap="round"/>
+              <path d="M10 38 Q150 -6 290 38" fill="none" stroke="#FF8A3D" stroke-width="7" stroke-linecap="round" :stroke-dasharray="arcLen" :stroke-dashoffset="arcDash"/>
               <circle :cx="arcDotX" :cy="arcDotY" r="7" fill="#fff" stroke="#FF7B2C" stroke-width="3"/>
             </svg>
           </div>
@@ -491,17 +491,17 @@ function go(route) {
 .mc-light {
   background-color: transparent !important;
   background-image:
-    linear-gradient(150deg, rgba(255, 252, 248, 0.72) 0%, rgba(255, 241, 224, 0.68) 100%),
+    linear-gradient(150deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 241, 224, 0.08) 100%),
     linear-gradient(160deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.55) 16%, rgba(255, 255, 255, 0.12) 42%, rgba(255, 255, 255, 0.06) 56%, rgba(255, 255, 255, 0.36) 100%);
   background-origin: padding-box, border-box;
   background-clip: padding-box, border-box;
   border: 1.5px solid transparent;
   border-radius: 24px;
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(6px) saturate(150%);
+  -webkit-backdrop-filter: blur(6px) saturate(150%);
   box-shadow:
-    0 10px 34px rgba(232, 93, 4, 0.14),
-    inset 0 1px 1px rgba(255, 255, 255, 0.6);
+    0 10px 34px rgba(0, 0, 0, 0.20),
+    inset 0 1px 1px rgba(255, 255, 255, 0.55);
 }
 .member-logged { padding: 0; position: relative; }
 
@@ -510,9 +510,9 @@ function go(route) {
 /* 上半区：左名 + 右上大圆按钮 & 胶囊 */
 .mc-upper { display: flex; align-items: flex-start; justify-content: space-between; }
 .mc-left { flex: 1; min-width: 0; padding-top: 10px; }
-.mc-name { font-size: 20px; font-weight: 800; color: #2A1A0E; letter-spacing: 0.3px; }
-.mc-upgrade { font-size: 12px; color: #B09C88; margin-top: 12px; }
-.mc-upgrade b { color: #E85D04; font-weight: 700; font-size: 15px; }
+.mc-name { font-size: 20px; font-weight: 800; color: #FFFFFF; letter-spacing: 0.3px; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.28); }
+.mc-upgrade { font-size: 12px; color: rgba(255, 255, 255, 0.78); margin-top: 12px; text-shadow: 0 1px 3px rgba(0,0,0,0.22); }
+.mc-upgrade b { color: #FFB27A; font-weight: 700; font-size: 15px; }
 
 .mc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 .mc-big-round { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #FFF6EC; background: linear-gradient(135deg, #FF8A3D, #FF6F0F); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 18px rgba(232, 93, 4, 0.42); margin-top: -52px; position: relative; overflow: hidden; flex-shrink: 0; }
@@ -528,8 +528,8 @@ function go(route) {
 .mc-lower { display: flex; align-items: center; justify-content: space-between; margin-top: 22px; }
 .mc-cols { display: flex; gap: 44px; }
 .mc-col { cursor: pointer; }
-.mc-col-num { font-size: 22px; font-weight: 800; color: #2A1A0E; line-height: 1.2; }
-.mc-col-label { font-size: 12px; color: #B09C88; margin-top: 6px; letter-spacing: 0.5px; }
+.mc-col-num { font-size: 22px; font-weight: 800; color: #FFFFFF; line-height: 1.2; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.28); }
+.mc-col-label { font-size: 12px; color: rgba(255, 255, 255, 0.72); margin-top: 6px; letter-spacing: 0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.22); }
 .mc-rounds { display: flex; gap: 12px; }
 .mc-round { width: 42px; height: 42px; border-radius: 50%; border: none; background: linear-gradient(135deg, #FF8A3D, #FF6F0F); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 3px 10px rgba(232, 93, 4, 0.36); }
 .mc-round:active { opacity: 0.85; }
