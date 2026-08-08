@@ -127,50 +127,56 @@
     </div>
 
     <div class="daily-deal" @click="$router.push('/offers')">
-      <div class="dd-icon-box">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-        </svg>
-      </div>
-      <div class="dd-left">
-        <div class="dd-title">每日特惠</div>
-        <div class="dd-desc">精选商户限时折扣，天天有好价</div>
-      </div>
-      <div class="dd-right">
-        <span class="dd-btn">立即查看</span>
+      <div class="dd-well">
+        <div class="dd-icon-box">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+        </div>
+        <div class="dd-left">
+          <div class="dd-title">每日特惠</div>
+          <div class="dd-desc">精选商户限时折扣，天天有好价</div>
+        </div>
+        <div class="dd-right">
+          <span class="dd-btn">立即查看</span>
+        </div>
       </div>
     </div>
 
     <div class="biz-modules">
       <div class="biz-hero" @click="go('/activities')">
-        <div class="biz-hero-bg"></div>
-        <svg class="biz-hero-illus" viewBox="0 0 200 120" fill="none" preserveAspectRatio="xMaxYMid slice">
-          <circle cx="160" cy="30" r="50" fill="rgba(255,255,255,0.06)"/>
-          <circle cx="180" cy="80" r="30" fill="rgba(255,255,255,0.04)"/>
-          <rect x="130" y="45" width="50" height="55" rx="4" fill="rgba(255,255,255,0.12)"/>
-          <rect x="110" y="55" width="35" height="35" rx="3" fill="rgba(255,255,255,0.08)"/>
-          <rect x="70" y="70" width="30" height="25" rx="2" fill="rgba(255,255,255,0.06)"/>
-          <circle cx="150" cy="20" r="8" fill="rgba(255,255,255,0.15)"/>
-          <circle cx="175" cy="15" r="5" fill="rgba(255,255,255,0.1)"/>
-          <circle cx="100" cy="30" r="4" fill="rgba(255,255,255,0.08)"/>
-          <circle cx="115" cy="18" r="6" fill="rgba(255,255,255,0.1)"/>
-        </svg>
-        <div class="biz-hero-content">
-          <div class="biz-hero-title">社区聚乐部</div>
-          <div class="biz-hero-desc">活动报名 · 邻里社群 · 精彩生活</div>
-          <span class="biz-hero-btn">立即查看</span>
+        <div class="biz-hero-well">
+          <div class="biz-hero-bg"></div>
+          <svg class="biz-hero-illus" viewBox="0 0 200 120" fill="none" preserveAspectRatio="xMaxYMid slice">
+            <circle cx="160" cy="30" r="50" fill="rgba(255,255,255,0.06)"/>
+            <circle cx="180" cy="80" r="30" fill="rgba(255,255,255,0.04)"/>
+            <rect x="130" y="45" width="50" height="55" rx="4" fill="rgba(255,255,255,0.12)"/>
+            <rect x="110" y="55" width="35" height="35" rx="3" fill="rgba(255,255,255,0.08)"/>
+            <rect x="70" y="70" width="30" height="25" rx="2" fill="rgba(255,255,255,0.06)"/>
+            <circle cx="150" cy="20" r="8" fill="rgba(255,255,255,0.15)"/>
+            <circle cx="175" cy="15" r="5" fill="rgba(255,255,255,0.1)"/>
+            <circle cx="100" cy="30" r="4" fill="rgba(255,255,255,0.08)"/>
+            <circle cx="115" cy="18" r="6" fill="rgba(255,255,255,0.1)"/>
+          </svg>
+          <div class="biz-hero-content">
+            <div class="biz-hero-title">社区聚乐部</div>
+            <div class="biz-hero-desc">活动报名 · 邻里社群 · 精彩生活</div>
+            <span class="biz-hero-btn">立即查看</span>
+          </div>
         </div>
       </div>
       <div class="biz-grid">
         <div class="biz-card" v-for="m in bizModules" :key="m.label" @click="go(m.route)">
-          <div class="biz-card-bg" :style="{background: m.grad}"></div>
-          <svg class="biz-card-illus" v-html="m.illus" viewBox="0 0 120 100" fill="none" preserveAspectRatio="xMaxYMid slice"></svg>
-          <div class="biz-card-content">
-            <div class="biz-card-icon-sm">
-              <svg v-html="m.icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+          <div class="biz-card-well">
+            <div class="biz-card-bg" :style="{background: m.grad}"></div>
+            <svg class="biz-card-illus" v-html="m.illus" viewBox="0 0 120 100" fill="none" preserveAspectRatio="xMaxYMid slice"></svg>
+            <div class="biz-card-content">
+              <div class="biz-card-icon-sm">
+                <svg v-html="m.icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+              </div>
+              <div class="biz-card-title">{{ m.label }}</div>
+              <div class="biz-card-desc">{{ m.desc }}</div>
             </div>
-            <div class="biz-card-title">{{ m.label }}</div>
-            <div class="biz-card-desc">{{ m.desc }}</div>
           </div>
         </div>
       </div>
@@ -179,12 +185,14 @@
     <div class="section-label">推荐商铺</div>
     <div class="shop-list">
       <div v-for="s in shops" :key="s.id" class="shop-card" @click="go('/shop/' + s.id)">
-        <div class="shop-avatar" :style="{background: s.color}">{{ s.name[0] }}</div>
-        <div class="shop-info">
-          <div class="shop-name">{{ s.name }}</div>
-          <div class="shop-meta">{{ s.floor }} · {{ s.category }}</div>
+        <div class="shop-well">
+          <div class="shop-avatar" :style="{background: s.color}">{{ s.name[0] }}</div>
+          <div class="shop-info">
+            <div class="shop-name">{{ s.name }}</div>
+            <div class="shop-meta">{{ s.floor }} · {{ s.category }}</div>
+          </div>
+          <svg class="shop-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
-        <svg class="shop-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>
     <div class="spacer"></div>
@@ -548,8 +556,9 @@ function go(route) {
 .qlink-icon.active { color: #fff; background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
 .qlink-label { font-size: 12px; color: #AAA; }
 
-.daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; box-shadow: inset 0 3px 8px rgba(0,0,0,0.55), inset 0 -2px 5px rgba(255,255,255,0.10); cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.daily-deal:active { background: rgba(255,255,255,0.07); }
+.daily-deal { margin: 0 16px 20px; padding: 8px; background: linear-gradient(145deg, #2d2d31, #1f1f23); border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; box-shadow: 7px 7px 16px rgba(0,0,0,0.55), -6px -6px 14px rgba(255,255,255,0.04); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.daily-deal:active { box-shadow: 3px 3px 8px rgba(0,0,0,0.55), -3px -3px 8px rgba(255,255,255,0.03); }
+.dd-well { display: flex; align-items: center; gap: 12px; height: 100%; padding: 14px 16px; background: rgba(0,0,0,0.28); border-radius: 12px; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.7), inset -3px -3px 7px rgba(255,255,255,0.05); }
 .dd-icon-box { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .dd-icon-box svg { filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.6)) drop-shadow(0 1px 1px rgba(255,255,255,0.3)); }
 .dd-left { flex: 1; min-width: 0; }
@@ -574,8 +583,9 @@ function go(route) {
 .shop-list { margin: 0 0; padding: 4px 16px 10px; display: flex; flex-direction: row; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; -webkit-overflow-scrolling: touch; }
 .shop-list::-webkit-scrollbar { display: none; }
 .shop-list { scrollbar-width: none; }
-.shop-card { flex: 0 0 100%; height: 170px; scroll-snap-align: start; display: flex; flex-direction: row; align-items: center; gap: 14px; padding: 0 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); border-radius: 16px; box-shadow: inset 0 3px 8px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.22); cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.shop-card:active { background: rgba(255,255,255,0.1); }
+.shop-card { flex: 0 0 100%; height: 170px; scroll-snap-align: start; box-sizing: border-box; padding: 8px; background: linear-gradient(145deg, #2d2d31, #1f1f23); border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; box-shadow: 7px 7px 16px rgba(0,0,0,0.55), -6px -6px 14px rgba(255,255,255,0.04); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.shop-card:active { box-shadow: 3px 3px 8px rgba(0,0,0,0.55), -3px -3px 8px rgba(255,255,255,0.03); }
+.shop-well { display: flex; flex-direction: row; align-items: center; gap: 14px; width: 100%; height: 100%; padding: 0 16px; background: rgba(0,0,0,0.28); border-radius: 12px; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.7), inset -3px -3px 7px rgba(255,255,255,0.05); }
 .shop-avatar { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 22px; font-weight: 700; flex-shrink: 0; background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.22); }
 .shop-info { flex: 1; min-width: 0; }
 .shop-name { font-size: var(--fs-body); font-weight: 600; color: #F0F0F0; text-shadow: 0 1px 1px rgba(0,0,0,0.6), 0 -1px 1px rgba(255,255,255,0.15); }
@@ -585,20 +595,22 @@ function go(route) {
 
 /* ── 业务版块 ── */
 .biz-modules { padding: 0 16px; margin-top: 16px; }
-.biz-hero { position: relative; border-radius: 16px; overflow: hidden; height: 170px; cursor: pointer; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.12); }
-.biz-hero:active { opacity: 0.95; transform: scale(0.98); }
-.biz-hero-bg { position: absolute; inset: 0; background: rgba(255,255,255,0.04); box-shadow: inset 0 3px 8px rgba(0,0,0,0.55), inset 0 -2px 5px rgba(255,255,255,0.10); }
-.biz-hero-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; }
-.biz-hero-content { position: relative; z-index: 2; padding: 24px; display: flex; flex-direction: column; height: 100%; max-width: 60%; }
+.biz-hero { position: relative; border-radius: 18px; overflow: hidden; height: 170px; cursor: pointer; margin-bottom: 10px; padding: 10px; box-sizing: border-box; background: linear-gradient(145deg, #2d2d31, #1f1f23); border: 1px solid rgba(255,255,255,0.10); box-shadow: 7px 7px 16px rgba(0,0,0,0.55), -6px -6px 14px rgba(255,255,255,0.04); }
+.biz-hero:active { transform: scale(0.985); }
+.biz-hero-well { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 12px; background: rgba(0,0,0,0.30); box-shadow: inset 3px 3px 8px rgba(0,0,0,0.7), inset -3px -3px 8px rgba(255,255,255,0.05); }
+.biz-hero-bg { position: absolute; inset: 0; background: rgba(255,255,255,0.05); }
+.biz-hero-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; opacity: 0.9; }
+.biz-hero-content { position: relative; z-index: 2; padding: 22px; display: flex; flex-direction: column; height: 100%; max-width: 62%; }
 .biz-hero-title { font-size: var(--fs-headline); font-weight: 800; color: #fff; margin-bottom: 6px; letter-spacing: 0.5px; text-shadow: 0 -1px 1px rgba(0,0,0,0.6), 0 1px 1px rgba(255,255,255,0.12); }
 .biz-hero-desc { font-size: var(--fs-secondary); color: rgba(255,255,255,0.8); margin-bottom: auto; }
 .biz-hero-btn { display: inline-block; margin-top: 8px; padding: 5px 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.18); border-radius: 20px; font-size: var(--fs-button); font-weight: 600; color: #fff; align-self: flex-start; }
 .biz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.biz-card { position: relative; border-radius: 14px; overflow: hidden; height: 150px; cursor: pointer; transition: transform 0.15s; border: 1px solid rgba(255,255,255,0.16); background: rgba(40,40,40,0.6); }
+.biz-card { position: relative; border-radius: 16px; overflow: hidden; height: 150px; cursor: pointer; transition: transform 0.15s; padding: 8px; box-sizing: border-box; background: linear-gradient(145deg, #2d2d31, #1f1f23); border: 1px solid rgba(255,255,255,0.10); box-shadow: 6px 6px 14px rgba(0,0,0,0.55), -5px -5px 12px rgba(255,255,255,0.04); }
 .biz-card:active { transform: scale(0.97); }
-.biz-card-bg { position: absolute; inset: 0; background: transparent !important; box-shadow: inset 0 3px 8px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.22); }
-.biz-card-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; }
-.biz-card-content { position: relative; z-index: 2; padding: 16px; display: flex; flex-direction: column; height: 100%; }
+.biz-card-well { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 11px; background: rgba(0,0,0,0.30); box-shadow: inset 3px 3px 7px rgba(0,0,0,0.68), inset -3px -3px 7px rgba(255,255,255,0.05); }
+.biz-card-bg { position: absolute; inset: 0; background: transparent !important; }
+.biz-card-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; opacity: 0.9; }
+.biz-card-content { position: relative; z-index: 2; padding: 14px; display: flex; flex-direction: column; height: 100%; }
 .biz-card-icon-sm { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; margin-bottom: auto; color: #fff; }
 .biz-card-title { font-size: var(--fs-body); font-weight: 700; color: #fff; margin-top: 8px; text-shadow: 0 1px 1px rgba(0,0,0,0.6), 0 -1px 1px rgba(255,255,255,0.15); }
 .biz-card-desc { font-size: var(--fs-secondary); color: rgba(255,255,255,0.7); margin-top: 2px; }
