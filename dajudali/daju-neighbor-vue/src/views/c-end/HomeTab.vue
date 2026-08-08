@@ -520,10 +520,11 @@ function go(route) {
 .mc-upgrade b { color: rgba(255, 178, 122, 0.85); font-weight: 700; font-size: 15px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.3); }
 
 .mc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-.mc-big-round { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #FFF6EC; background: linear-gradient(135deg, #FF8A3D, #FF6F0F); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 18px rgba(232, 93, 4, 0.42); margin-top: -52px; position: relative; overflow: hidden; flex-shrink: 0; }
-.mc-big-round img { width: 100%; height: 100%; object-fit: cover; }
-.mc-big-round:active { opacity: 0.9; }
-.mc-pill { background: linear-gradient(135deg, #FF8A3D, #FF6F0F); color: #fff; font-size: 11px; font-weight: 700; padding: 5px 18px; border-radius: 16px; letter-spacing: 1px; box-shadow: 0 2px 8px rgba(232,93,4,0.3); }
+.mc-big-round { width: 70px; height: 70px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: inset 0 3px 7px rgba(0,0,0,0.5), inset 0 -2px 5px rgba(255,255,255,0.22); margin-top: -52px; position: relative; overflow: hidden; flex-shrink: 0; }
+.mc-big-round img { width: 84%; height: 84%; border-radius: 50%; object-fit: cover; margin: 8%; }
+.mc-big-round:active { background: rgba(255,255,255,0.1); }
+.mc-big-round svg, .mc-round svg { filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.5)) drop-shadow(0 1px 1px rgba(255,255,255,0.3)); }
+.mc-pill { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); color: rgba(255,255,255,0.72); font-size: 11px; font-weight: 700; padding: 5px 18px; border-radius: 16px; letter-spacing: 1px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.45), inset 0 -1px 3px rgba(255,255,255,0.22); text-shadow: 0 -1px 1px rgba(0,0,0,0.45), 0 1px 1px rgba(255,255,255,0.3); }
 
 /* 弧形进度条 */
 .mc-arc { margin: 20px 2px 6px; }
@@ -536,8 +537,8 @@ function go(route) {
 .mc-col-num { font-size: 22px; font-weight: 800; color: rgba(255, 255, 255, 0.52); line-height: 1.2; text-shadow: 0 -1px 1px rgba(0, 0, 0, 0.5), 0 1px 1px rgba(255, 255, 255, 0.35); }
 .mc-col-label { font-size: 12px; color: rgba(255, 255, 255, 0.5); margin-top: 6px; letter-spacing: 0.5px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.26); }
 .mc-rounds { display: flex; gap: 12px; }
-.mc-round { width: 42px; height: 42px; border-radius: 50%; border: none; background: linear-gradient(135deg, #FF8A3D, #FF6F0F); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 3px 10px rgba(232, 93, 4, 0.36); }
-.mc-round:active { opacity: 0.85; }
+.mc-round { width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.22); }
+.mc-round:active { background: rgba(255,255,255,0.1); }
 
 .quick-links { display: flex; justify-content: space-around; margin: 20px 16px 20px; }
 .qlink { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
