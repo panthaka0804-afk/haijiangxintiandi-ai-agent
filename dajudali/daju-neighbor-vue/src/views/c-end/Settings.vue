@@ -25,19 +25,19 @@
 
     <!-- 账户 -->
     <div class="st-section">
-      <div class="st-tag st-tag-orange">账户</div>
+      <div class="st-tag st-tag-gold">账户</div>
 
-      <div class="st-card st-card-blue" @click="go('/profile')">
+      <div class="st-card st-card-gold" @click="go('/profile')">
         <div class="st-row-left">
-          <span class="st-ic st-ic-blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+          <span class="st-ic st-ic-gold"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
           <span>账户与安全</span>
         </div>
         <div class="st-row-right"><span class="st-val">已实名</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </div>
 
-      <div class="st-card st-card-orange">
+      <div class="st-card st-card-pink">
         <div class="st-row-left">
-          <span class="st-ic st-ic-orange"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+          <span class="st-ic st-ic-pink"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
           <span>消息通知</span>
         </div>
         <div class="st-row-right">
@@ -47,9 +47,9 @@
         </div>
       </div>
 
-      <div class="st-card st-card-green">
+      <div class="st-card st-card-orangebrown">
         <div class="st-row-left">
-          <span class="st-ic st-ic-green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg></span>
+          <span class="st-ic st-ic-orangebrown"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg></span>
           <span>大字模式</span>
         </div>
         <div class="st-row-right">
@@ -59,9 +59,9 @@
         </div>
       </div>
 
-      <div class="st-card st-card-purple">
+      <div class="st-card st-card-grayviolet">
         <div class="st-row-left">
-          <span class="st-ic st-ic-purple"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+          <span class="st-ic st-ic-grayviolet"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
           <span>深色模式</span>
         </div>
         <div class="st-row-right">
@@ -73,10 +73,10 @@
 
     <!-- 通用 -->
     <div class="st-section">
-      <div class="st-tag st-tag-teal">通用</div>
-      <div class="st-card st-card-gray" @click="clearCache">
+      <div class="st-tag st-tag-greengray">通用</div>
+      <div class="st-card st-card-greengray" @click="clearCache">
         <div class="st-row-left">
-          <span class="st-ic st-ic-gray"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
+          <span class="st-ic st-ic-greengray"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
           <span>清除缓存</span>
         </div>
         <div class="st-row-right"><span class="st-val st-val-muted">{{ cacheSize }}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>
@@ -85,24 +85,24 @@
 
     <!-- 隐私与法律 -->
     <div class="st-section">
-      <div class="st-tag st-tag-purple">隐私与法律</div>
-      <div class="st-card st-card-blue" @click="go('/user-agreement')">
+      <div class="st-tag st-tag-grayviolet">隐私与法律</div>
+      <div class="st-card st-card-gold" @click="go('/user-agreement')">
         <div class="st-row-left">
-          <span class="st-ic st-ic-blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+          <span class="st-ic st-ic-gold"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
           <span>用户协议</span>
         </div>
         <div class="st-row-right"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </div>
-      <div class="st-card st-card-orange" @click="go('/privacy-policy')">
+      <div class="st-card st-card-pink" @click="go('/privacy-policy')">
         <div class="st-row-left">
-          <span class="st-ic st-ic-orange"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+          <span class="st-ic st-ic-pink"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
           <span>隐私政策</span>
         </div>
         <div class="st-row-right"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </div>
-      <div class="st-card st-card-green" @click="go('/about')">
+      <div class="st-card st-card-orangebrown" @click="go('/about')">
         <div class="st-row-left">
-          <span class="st-ic st-ic-green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+          <span class="st-ic st-ic-orangebrown"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
           <span>关于我们</span>
         </div>
         <div class="st-row-right"><span class="st-val st-val-muted">v1.0.0</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>
@@ -111,10 +111,10 @@
 
     <!-- 帮助 -->
     <div class="st-section">
-      <div class="st-tag st-tag-green">帮助</div>
-      <div class="st-card st-card-purple" @click="go('/')">
+      <div class="st-tag st-tag-orangebrown">帮助</div>
+      <div class="st-card st-card-grayviolet" @click="go('/')">
         <div class="st-row-left">
-          <span class="st-ic st-ic-purple"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="st-ic st-ic-grayviolet"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
           <span>帮助与反馈</span>
         </div>
         <div class="st-row-right"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>
@@ -123,16 +123,16 @@
 
     <!-- 账号操作（危险区） -->
     <div class="st-section">
-      <div class="st-tag st-tag-red">账号操作</div>
-      <div class="st-card st-card-gray st-logout" @click="logout">
+      <div class="st-tag st-tag-brownred">账号操作</div>
+      <div class="st-card st-card-greengray st-logout" @click="logout">
         <div class="st-row-left">
-          <span class="st-ic st-ic-gray"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+          <span class="st-ic st-ic-greengray"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
           <span>退出登录</span>
         </div>
       </div>
-      <div class="st-card st-card-red st-unregister" @click="showUnreg = true">
+      <div class="st-card st-card-brownred st-unregister" @click="showUnreg = true">
         <div class="st-row-left">
-          <span class="st-ic st-ic-red"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+          <span class="st-ic st-ic-brownred"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
           <span>注销账号</span>
         </div>
       </div>
@@ -244,10 +244,10 @@ async function confirmUnregister() {
 /* 账户卡片 */
 .st-account {
   display: flex; align-items: center; gap: 12px;
-  background: linear-gradient(135deg, #2A241C, #1A1A1A);
-  border: 1px solid rgba(255,123,44,0.25);
+  background: linear-gradient(135deg, #C4923A, #9A7425);
+  border: 1px solid #9A7425;
   border-radius: 16px; padding: 16px; margin-bottom: 18px; cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.10);
+  box-shadow: 0 4px 12px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.20);
 }
 .st-acc-avatar {
   width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
@@ -270,11 +270,12 @@ async function confirmUnregister() {
   display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 1px;
   padding: 4px 12px; border-radius: 20px; margin: 0 0 10px 2px;
 }
-.st-tag-orange { color: #FFD9B0; background: rgba(255,123,44,.16); border: 1px solid rgba(255,123,44,.40); }
-.st-tag-teal   { color: #BFEAF0; background: rgba(78,138,144,.18);  border: 1px solid rgba(78,138,144,.45); }
-.st-tag-purple { color: #D9C9F5; background: rgba(155,123,212,.18); border: 1px solid rgba(155,123,212,.45); }
-.st-tag-green  { color: #C2EAC5; background: rgba(62,142,65,.18);   border: 1px solid rgba(62,142,65,.45); }
-.st-tag-red    { color: #F2C2BF; background: rgba(224,85,79,.18);   border: 1px solid rgba(224,85,79,.45); }
+.st-tag-gold       { color: #F2D9A8; background: rgba(196,146,58,.20);  border: 1px solid rgba(196,146,58,.50); }
+.st-tag-pink       { color: #F0D8D0; background: rgba(212,165,154,.20); border: 1px solid rgba(212,165,154,.50); }
+.st-tag-orangebrown{ color: #ECCFB6; background: rgba(201,149,108,.20); border: 1px solid rgba(201,149,108,.50); }
+.st-tag-grayviolet { color: #DADADF; background: rgba(139,139,144,.20); border: 1px solid rgba(139,139,144,.50); }
+.st-tag-greengray  { color: #CACDBF; background: rgba(107,110,100,.20); border: 1px solid rgba(107,110,100,.50); }
+.st-tag-brownred   { color: #ECCDC7; background: rgba(155,74,62,.20);  border: 1px solid rgba(155,74,62,.50); }
 
 /* 多彩卡片 */
 .st-card {
@@ -285,32 +286,31 @@ async function confirmUnregister() {
   transition: transform .12s ease, box-shadow .12s ease;
 }
 .st-card:active { transform: scale(.985); }
-.st-row-left { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; color: #FFFFFF; }
+.st-row-left { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
 .st-row-right { display: flex; align-items: center; gap: 8px; }
-.st-val { font-size: 13px; }
-.st-val-muted { color: rgba(255,255,255,0.62); }
-.st-val-on { color: #FFE3C2; font-weight: 600; }
+.st-val { font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
+.st-val-muted { color: rgba(255,255,255,0.72); }
+.st-val-on { color: #FFFFFF; font-weight: 700; }
 
-/* 卡片配色（多彩，黑底鲜明、白字可读） */
-.st-card-blue   { background: #274463; border-color: #4F7BA8; }
-.st-card-orange { background: #6E3410; border-color: #C9541A; }
-.st-card-green  { background: #234A27; border-color: #4E9A54; }
-.st-card-purple { background: #3F2F63; border-color: #7A5CA8; }
-.st-card-gray   { background: #33362F; border-color: #60635A; }
-.st-card-red    { background: #5E201D; border-color: #B1302B; }
-.st-card-teal   { background: #234247; border-color: #4E8A90; }
+/* 卡片配色 —— 与首页「多彩卡片」统一色板：金黄/浅粉棕/深红棕/浅橙棕/灰紫/深灰绿 */
+.st-card-gold       { background: #C4923A; border-color: #9A7425; }
+.st-card-pink       { background: #D4A59A; border-color: #A67D72; }
+.st-card-orangebrown{ background: #C9956C; border-color: #A87C48; }
+.st-card-grayviolet { background: #8B8B90; border-color: #6A6A6E; }
+.st-card-greengray  { background: #6B6E64; border-color: #4E5049; }
+.st-card-brownred   { background: #9B4A3E; border-color: #6E332A; }
 
 /* 图标底色块 */
 .st-ic {
   width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
 }
-.st-ic-blue { background: linear-gradient(135deg, #4F9CC9, #357399); }
-.st-ic-orange { background: linear-gradient(135deg, #FF7B2C, #E85D04); }
-.st-ic-green { background: linear-gradient(135deg, #6BBF73, #3E8E4A); }
-.st-ic-purple { background: linear-gradient(135deg, #9B7BD4, #6A4FA0); }
-.st-ic-gray { background: linear-gradient(135deg, #6B6E64, #4E5049); }
-.st-ic-red { background: linear-gradient(135deg, #E0554F, #B1302B); }
+.st-ic-gold        { background: linear-gradient(135deg, #D9A85A, #C4923A); }
+.st-ic-pink        { background: linear-gradient(135deg, #E4C0B6, #D4A59A); }
+.st-ic-orangebrown { background: linear-gradient(135deg, #DAAE8E, #C9956C); }
+.st-ic-grayviolet  { background: linear-gradient(135deg, #A4A4A8, #8B8B90); }
+.st-ic-greengray   { background: linear-gradient(135deg, #82857A, #6B6E64); }
+.st-ic-brownred    { background: linear-gradient(135deg, #B5635A, #9B4A3E); }
 
 /* 开关 */
 .st-switch {
