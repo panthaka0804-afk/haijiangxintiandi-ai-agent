@@ -582,14 +582,14 @@ function go(route) {
 
 /* ── 业务版块 ── */
 .biz-modules { padding: 0 16px; margin-top: 16px; }
-.biz-hero { position: relative; border-radius: 16px; overflow: hidden; height: 170px; cursor: pointer; margin-bottom: 10px; }
+.biz-hero { position: relative; border-radius: 16px; overflow: hidden; height: 170px; cursor: pointer; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.12); }
 .biz-hero:active { opacity: 0.95; transform: scale(0.98); }
-.biz-hero-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #4A4A4A 0%, #3A3A3A 50%, #2E2E2E 100%); }
+.biz-hero-bg { position: absolute; inset: 0; background: rgba(255,255,255,0.04); box-shadow: inset 0 3px 8px rgba(0,0,0,0.55), inset 0 -2px 5px rgba(255,255,255,0.10); }
 .biz-hero-illus { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: none; }
 .biz-hero-content { position: relative; z-index: 2; padding: 24px; display: flex; flex-direction: column; height: 100%; max-width: 60%; }
-.biz-hero-title { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 6px; letter-spacing: 0.5px; }
+.biz-hero-title { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 6px; letter-spacing: 0.5px; text-shadow: 0 -1px 1px rgba(0,0,0,0.6), 0 1px 1px rgba(255,255,255,0.12); }
 .biz-hero-desc { font-size: 12px; color: rgba(255,255,255,0.8); margin-bottom: auto; }
-.biz-hero-btn { display: inline-block; margin-top: 8px; padding: 5px 18px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35); border-radius: 20px; font-size: 12px; font-weight: 600; color: #fff; align-self: flex-start; }
+.biz-hero-btn { display: inline-block; margin-top: 8px; padding: 5px 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(255,255,255,0.18); border-radius: 20px; font-size: 12px; font-weight: 600; color: #fff; align-self: flex-start; }
 .biz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .biz-card { position: relative; border-radius: 14px; overflow: hidden; height: 150px; cursor: pointer; transition: transform 0.15s; }
 .biz-card:active { transform: scale(0.97); }
