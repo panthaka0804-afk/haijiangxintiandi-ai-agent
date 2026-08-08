@@ -489,7 +489,7 @@ function go(route) {
 /* 登录态：橙色渐变 + 清透感（浅亮、通透、有呼吸感） */
 /* 清透玻璃：浅橙白为主 + 低模糊 + 顶部内高光（无生硬边框、无装饰） */
 .mc-light {
-  background: linear-gradient(150deg, rgba(255, 252, 248, 0.88) 0%, rgba(255, 241, 224, 0.82) 100%) !important;
+  background: linear-gradient(150deg, rgba(255, 252, 248, 0.70) 0%, rgba(255, 241, 224, 0.66) 100%) !important;
   backdrop-filter: blur(12px) saturate(140%);
   -webkit-backdrop-filter: blur(12px) saturate(140%);
   border: none;
