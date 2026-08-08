@@ -43,6 +43,21 @@
       </template>
 
       <div v-else class="member-logged">
+        <!-- 橙色纹理装饰层（衬在卡片最底层） -->
+        <div class="mc-texture-wrap" aria-hidden="true">
+          <svg class="mc-texture" viewBox="0 0 320 210" preserveAspectRatio="xMaxYMin slice" focusable="false">
+            <circle cx="296" cy="14" r="70" fill="rgba(255,138,61,0.12)"/>
+            <circle cx="272" cy="42" r="44" fill="rgba(255,111,15,0.09)"/>
+            <circle cx="18" cy="190" r="54" fill="rgba(255,138,61,0.08)"/>
+            <circle cx="148" cy="200" r="26" fill="rgba(255,111,15,0.05)"/>
+            <path d="M-10 148 Q160 104 330 148" stroke="rgba(255,138,61,0.15)" stroke-width="2" fill="none"/>
+            <path d="M-10 162 Q160 120 330 162" stroke="rgba(255,111,15,0.09)" stroke-width="1.5" fill="none"/>
+            <circle cx="90" cy="28" r="3" fill="rgba(255,138,61,0.22)"/>
+            <circle cx="112" cy="20" r="2" fill="rgba(255,138,61,0.16)"/>
+            <circle cx="62" cy="48" r="2.5" fill="rgba(255,111,15,0.18)"/>
+            <circle cx="150" cy="14" r="2" fill="rgba(255,138,61,0.14)"/>
+          </svg>
+        </div>
         <div class="mcard">
           <!-- 上半区：左名 + 右上大圆按钮 & 胶囊 -->
           <div class="mc-upper">
@@ -73,10 +88,6 @@
           <!-- 底部：三列数据 + 右侧三个圆形按钮 -->
           <div class="mc-lower">
             <div class="mc-cols">
-              <div class="mc-col" @click="emit('switchTab', 'profile')">
-                <div class="mc-col-num">{{ memberInfo && memberInfo.balance != null ? memberInfo.balance : 0 }}</div>
-                <div class="mc-col-label">账户余额</div>
-              </div>
               <div class="mc-col" @click="emit('switchTab', 'offers')">
                 <div class="mc-col-num">{{ memberInfo && memberInfo.coupon_count != null ? memberInfo.coupon_count : 0 }}</div>
                 <div class="mc-col-label">优惠券</div>
@@ -501,9 +512,13 @@ function go(route) {
   background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
   border-radius: 20px 20px 0 0; pointer-events: none;
 }
-.member-logged { padding: 0; }
+.member-logged { padding: 0; position: relative; }
 
-.mcard { position: relative; padding: 22px 20px 20px; overflow: visible; }
+/* 橙色纹理装饰层：铺满卡片、裁剪圆角、衬在最底层 */
+.mc-texture-wrap { position: absolute; inset: 0; border-radius: 20px; overflow: hidden; z-index: 0; pointer-events: none; }
+.mc-texture { width: 100%; height: 100%; display: block; }
+
+.mcard { position: relative; z-index: 1; padding: 22px 20px 20px; overflow: visible; }
 
 /* 上半区：左名 + 右上大圆按钮 & 胶囊 */
 .mc-upper { display: flex; align-items: flex-start; justify-content: space-between; }
