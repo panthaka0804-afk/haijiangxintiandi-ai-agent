@@ -7,6 +7,8 @@ import router from './router'
 import 'element-plus/dist/index.css'
 // Vant (按需导入在 vite.config.js 配了 auto-import)
 import 'vant/lib/index.css'
+// 后台移动端适配
+import './admin-mobile.css'
 
 const app = createApp(App)
 

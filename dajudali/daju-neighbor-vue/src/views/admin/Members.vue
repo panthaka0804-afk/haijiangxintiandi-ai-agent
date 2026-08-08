@@ -6,8 +6,9 @@
     </div>
 
     <el-card shadow="never">
+      <div class="table-x">
       <el-table :data="list" stripe v-loading="loading" style="width: 100%;">
-        <el-table-column prop="id" label="ID" width="60" />
+        <el-table-column prop="id" label="ID" width="60" class-name="m-hide" />
         <el-table-column prop="display_name" label="姓名" width="120" />
         <el-table-column prop="username" label="手机号" width="130">
           <template #default="{ row }">
@@ -20,8 +21,8 @@
           </template>
         </el-table-column>
         <el-table-column prop="points" label="积分" width="100" />
-        <el-table-column prop="created_at" label="注册时间" width="160" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column prop="created_at" label="注册时间" width="160" class-name="m-hide" />
+        <el-table-column label="操作" width="200">
           <template #default="{ row }">
             <el-button size="small" @click="editRow(row)">编辑</el-button>
             <el-popconfirm title="确定删除？" @confirm="deleteRow(row.id)">
@@ -32,6 +33,7 @@
           </template>
         </el-table-column>
       </el-table>
+      </div>
 
       <el-pagination
         v-model:current-page="page"

@@ -1,0 +1,105 @@
+/* ================================================================
+   后台移动端适配（仅 /admin 相关页面）
+   手机(<768px)：表格横向滚动、弹窗全屏化、筛选区堆叠、分页居中
+   ================================================================ */
+@media (max-width: 767px) {
+  /* 表格横向滚动容器（手机） */
+  .table-x {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-x .el-table {
+    min-width: max-content;
+  }
+  /* 活动页自定义表格：手机可横向滑动 */
+  .aa-table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* 次要列：手机隐藏（标记 class-name="m-hide"） */
+  th.m-hide, td.m-hide {
+    display: none !important;
+  }
+
+  /* 关键：flex 子项不因内容(宽表格)撑破，收缩到视口内 */
+  .admin-layout {
+    min-width: 0;
+  }
+  .main-area {
+    flex: 1;
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden;
+  }
+  .main-body {
+    min-width: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .el-card {
+    padding: 0;
+  }
+
+  /* 弹窗：手机全屏化 */
+  .el-dialog {
+    width: 94% !important;
+    max-width: 94vw !important;
+    margin: 6vh auto 0 !important;
+    max-height: 88vh;
+    overflow-y: auto;
+    border-radius: 12px;
+  }
+  .el-dialog__body {
+    max-height: 65vh;
+    overflow-y: auto;
+  }
+
+  /* 页面标题与操作按钮堆叠 */
+  .page-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .page-header h3 {
+    font-size: 16px !important;
+  }
+  .page-header .el-input,
+  .page-header .el-select {
+    width: 100% !important;
+  }
+
+  /* 筛选区：搜索框/下拉占满整行 */
+  .el-row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  .el-col {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 8px;
+  }
+
+  /* 分页：手机自适应，避免溢出 */
+  .el-pagination {
+    flex-wrap: wrap;
+    justify-content: center !important;
+    gap: 4px;
+  }
+  .el-pagination .el-pagination__total {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* 表单 label：手机上更紧凑 */
+  .el-form-item__label {
+    width: auto !important;
+    min-width: 70px;
+  }
+
+  /* 按钮组自适应 */
+  .el-button + .el-button {
+    margin-left: 0;
+  }
+}
