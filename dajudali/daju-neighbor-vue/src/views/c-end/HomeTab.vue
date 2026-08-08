@@ -487,16 +487,21 @@ function go(route) {
 .mc-link { color: #FF7B2C; }
 
 /* 登录态：橙色渐变 + 清透感（浅亮、通透、有呼吸感） */
-/* 清透玻璃：浅橙白为主 + 低模糊 + 顶部内高光（无生硬边框、无装饰） */
+/* iOS 玻璃边框：双层背景，border-box 渐变边(顶部亮→侧透→底微光)，大圆角 */
 .mc-light {
-  background: linear-gradient(150deg, rgba(255, 252, 248, 0.70) 0%, rgba(255, 241, 224, 0.66) 100%) !important;
+  background-color: transparent !important;
+  background-image:
+    linear-gradient(150deg, rgba(255, 252, 248, 0.72) 0%, rgba(255, 241, 224, 0.68) 100%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.55) 16%, rgba(255, 255, 255, 0.12) 42%, rgba(255, 255, 255, 0.06) 56%, rgba(255, 255, 255, 0.36) 100%);
+  background-origin: padding-box, border-box;
+  background-clip: padding-box, border-box;
+  border: 1.5px solid transparent;
+  border-radius: 24px;
   backdrop-filter: blur(12px) saturate(140%);
   -webkit-backdrop-filter: blur(12px) saturate(140%);
-  border: none;
   box-shadow:
-    0 10px 30px rgba(232, 93, 4, 0.13),
-    inset 0 1px 1px rgba(255, 255, 255, 0.7),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.38);
+    0 10px 34px rgba(232, 93, 4, 0.14),
+    inset 0 1px 1px rgba(255, 255, 255, 0.6);
 }
 .member-logged { padding: 0; position: relative; }
 
