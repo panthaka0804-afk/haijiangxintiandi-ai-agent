@@ -11,6 +11,7 @@ const routes = [
   // C端 — 独立页面
   { path: '/offers', name: 'offers', component: () => import('@/views/c-end/OffersTab.vue'), meta: { title: '优惠券 - 海江新天地' } },
   { path: '/nav', name: 'nav', component: () => import('@/views/c-end/NavTab.vue'), meta: { title: '室内导航 - 海江新天地' } },
+  { path: '/map3d', name: 'map3d', component: () => import('@/views/c-end/Map3D.vue'), meta: { title: '3D地图 - 海江新天地' } },
   { path: '/shops', name: 'shops', component: () => import('@/views/c-end/ShopsList.vue'), meta: { title: '商户列表 - 海江新天地' } },
   { path: '/shops/:id', name: 'shop-detail', component: () => import('@/views/c-end/ShopDetail.vue'), meta: { title: '商户详情 - 海江新天地' } },
   { path: '/parking', name: 'parking', component: () => import('@/views/c-end/ParkingPage.vue'), meta: { title: '停车缴费 - 海江新天地' } },

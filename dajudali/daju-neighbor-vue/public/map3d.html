@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>海江新天地 · 3D 室内地图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0c0c0c; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: #f0f0f0; }
+  #scene { position: fixed; inset: 0; }
+  .overlay { position: fixed; z-index: 10; pointer-events: none; }
+  .overlay > * { pointer-events: auto; }
+
+  /* 顶部标题 + 搜索 */
+  #topbar { top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; flex-wrap: wrap; }
+  .title { font-size: 15px; font-weight: 800; color: #fff; background: rgba(0,0,0,.5); padding: 6px 12px; border-radius: 10px; letter-spacing: .5px; }
+  .title b { color: #FF7B2C; }
+  .search { display: flex; align-items: center; gap: 6px; background: #1E1E1E; border: 1px solid #333; border-radius: 10px; padding: 6px 10px; flex: 1; min-width: 160px; max-width: 320px; }
+  .search input { flex: 1; border: none; background: none; outline: none; color: #f0f0f0; font-size: 13px; font-family: inherit; }
+  .search svg { flex-shrink: 0; }
+  .search-drop { position: absolute; top: 52px; left: 12px; width: 300px; max-width: 80vw; background: #1E1E1E; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); max-height: 240px; overflow-y: auto; }
+  .sd-item { padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: .5px solid #2A2A2A; display: flex; justify-content: space-between; gap: 8px; }
+  .sd-item:active { background: #2A2A2A; }
+  .sd-meta { font-size: 11px; color: #999; white-space: nowrap; }
+
+  /* 视图模式切换 */
+  #modebar { top: 56px; left: 12px; display: flex; gap: 6px; }
+  .seg { display: flex; background: #1E1E1E; border: 1px solid #333; border-radius: 20px; overflow: hidden; }
+  .seg button { border: none; background: none; color: #aaa; font-size: 12px; font-weight: 600; padding: 6px 14px; cursor: pointer; font-family: inherit; }
+  .seg button.active { background: #FF7B2C; color: #fff; }
+
+  /* 区块 / 楼层切换 */
+  #zonebar { top: 56px; right: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  .tab-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 60vw; }
+  .pill { border: 1px solid #333; background: #161616; color: #999; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 18px; cursor: pointer; font-family: inherit; }
+  .pill.active { background: #FF7B2C; border-color: #FF7B2C; color: #fff; }
+
+  /* 图例 */
+  #legend { bottom: 14px; left: 12px; }
+  .legend-toggle { display: flex; align-items: center; gap: 5px; background: rgba(30,30,30,.85); border: 1px solid rgba(255,255,255,.12); color: #ddd; font-size: 12px; padding: 6px 10px; border-radius: 18px; cursor: pointer; backdrop-filter: blur(6px); }
+  .legend-panel { margin-bottom: 6px; background: rgba(20,20,20,.92); border-radius: 10px; padding: 8px 10px; min-width: 96px; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+  .legend-row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #eee; padding: 3px 0; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+  /* 缩放/重置 */
+  #viewctl { bottom: 14px; right: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  .vc-btn { width: 38px; height: 38px; border: 1px solid rgba(255,255,255,.12); border-radius: 50%; background: rgba(30,30,30,.85); backdrop-filter: blur(6px); color: #ddd; font-size: 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .vc-btn:active { background: #FF7B2C; color: #fff; }
+  .vc-reset { font-size: 16px; }
+  .vc-lvl { font-size: 10px; color: #aaa; background: rgba(0,0,0,.5); padding: 2px 8px; border-radius: 8px; }
+
+  /* 选中信息卡 */
+  #infocard { bottom: 64px; left: 50%; transform: translateX(-50%); display: none; align-items: center; gap: 10px; background: rgba(24,24,24,.96); border: 1px solid #333; border-radius: 12px; padding: 9px 12px; box-shadow: 0 6px 20px rgba(0,0,0,.5); max-width: 92%; }
+  #infocard.show { display: flex; }
+  .ic-cat { font-size: 11px; color: #fff; padding: 3px 8px; border-radius: 6px; font-weight: 700; flex-shrink: 0; }
+  .ic-info { min-width: 0; }
+  .ic-name { font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ic-sub { font-size: 11px; color: #999; margin-top: 1px; }
+  .ic-btn { border: none; border-radius: 8px; font-size: 12px; padding: 6px 10px; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+  .ic-cancel { background: #333; color: #ccc; }
+  .ic-go { background: #FF7B2C; color: #fff; font-weight: 600; }
+
+  /* 操作提示 */
+  #hint { top: 100px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #777; background: rgba(0,0,0,.4); padding: 4px 12px; border-radius: 12px; white-space: nowrap; }
+  #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #0c0c0c; color: #888; font-size: 14px; z-index: 50; }
+</style>
+</head>
+<body>
+  <div id="scene"></div>
+  <div id="loading">正在构建 3D 地图…</div>
+
+  <div class="overlay" id="topbar">
+    <div class="title">海江新天地 · <b>3D</b> 室内地图</div>
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" placeholder="搜索商户…" />
+    </div>
+    <div class="search-drop" id="searchDrop" style="display:none"></div>
+  </div>
+
+  <div class="overlay" id="modebar">
+    <div class="seg">
+      <button id="modeSingle" class="active">单楼层</button>
+      <button id="modeStack">整栋分层</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="zonebar">
+    <div class="tab-row" id="zoneTabs"></div>
+    <div class="tab-row" id="floorTabs"></div>
+  </div>
+
+  <div class="overlay" id="hint">拖拽旋转 · 滚轮/双指缩放 · 右键或双指平移 · 点击商铺查看</div>
+
+  <div class="overlay" id="legend" >
+    <button class="legend-toggle" id="legendToggle">▦ 图例</button>
+    <div class="legend-panel" id="legendPanel" style="display:none"></div>
+  </div>
+
+  <div class="overlay" id="viewctl">
+    <button class="vc-btn" id="zoomIn">+</button>
+    <button class="vc-btn" id="zoomOut">−</button>
+    <button class="vc-btn vc-reset" id="resetView">⟲</button>
+    <span class="vc-lvl" id="zoomLvl">100%</span>
+  </div>
+
+  <div class="overlay" id="infocard">
+    <div class="ic-cat" id="icCat">餐饮</div>
+    <div class="ic-info">
+      <div class="ic-name" id="icName">商铺</div>
+      <div class="ic-sub" id="icSub">1区 · 1F</div>
+    </div>
+    <button class="ic-btn ic-cancel" id="icCancel">取消</button>
+  </div>
+
+  <script src="/vue/three/three.min.js"></script>
+  <script src="/vue/three/OrbitControls.js"></script>
+  <script>
+  (function () {
+    var PLAN_W = 20;            // 平面图在世界中的宽度
+    var FLOOR_H = 8;            // 楼层之间的垂直间距
+    var SHOP_H = 5;             // 商铺体块高度
+    var DATA_URL = '/vue/map3d-data.json';
+
+    var scene, camera, renderer, controls, raycaster, mouse;
+    var world, floorGroups = {};   // key -> { group, blocks:[{mesh,shop}] }
+    var blockMeshes = [];          // 所有可点击体块
+    var routeLine = null, meMarker = null, labelObjs = [];
+    var data = null;
+    var state = { mode: 'single', zone: null, floor: null, labels: false, selected: null };
+
+    init();
+
+    function init() {
+      var container = document.getElementById('scene');
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0c0c0c);
+      scene.fog = new THREE.Fog(0x0c0c0c, 60, 140);
+
+      camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 16, 26);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      if (THREE.sRGBEncoding) renderer.outputEncoding = THREE.sRGBEncoding;
+      container.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+      controls.maxPolarAngle = Math.PI * 0.49;
+      controls.minDistance = 6;
+      controls.maxDistance = 120;
+
+      // 灯光
+      scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+      var dir = new THREE.DirectionalLight(0xffffff, 0.85);
+      dir.position.set(20, 40, 25);
+      scene.add(dir);
+      var dir2 = new THREE.DirectionalLight(0x88aaff, 0.25);
+      dir2.position.set(-20, 20, -25);
+      scene.add(dir2);
+
+      raycaster = new THREE.Raycaster();
+      mouse = new THREE.Vector2();
+      world = new THREE.Group();
+      scene.add(world);
+
+      window.addEventListener('resize', onResize);
+      renderer.domElement.addEventListener('click', onClick);
+      renderer.domElement.addEventListener('pointermove', onHover);
+
+      fetch(DATA_URL).then(function (r) { return r.json(); }).then(function (json) {
+        data = json;
+        buildAll();
+        setupUI();
+        // 默认：第一个有商铺的楼层
+        var first = data.floors.find(function (f) { return f.shops.length; }) || data.floors[0];
+        state.zone = first.zone;
+        state.floor = first.key;
+        applyVisibility();
+        frameView();
+        document.getElementById('loading').style.display = 'none';
+        animate();
+      }).catch(function (e) {
+        document.getElementById('loading').textContent = '地图数据加载失败：' + e;
+      });
+    }
+
+    function planD(aspect) { return PLAN_W / (aspect || 1.78); }
+
+    function makeLabel(text) {
+      var c = document.createElement('canvas');
+      c.width = 256; c.height = 64;
+      var ctx = c.getContext('2d');
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      roundRect(ctx, 4, 14, 248, 36, 8); ctx.fill();
+      ctx.font = 'bold 26px "PingFang SC", sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 33);
+      var tex = new THREE.CanvasTexture(c);
+      if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+      var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+      var sp = new THREE.Sprite(mat);
+      sp.scale.set(4.2, 1.05, 1);
+      sp.renderOrder = 999;
+      return sp;
+    }
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+    }
+
+    function buildFloor(floor, localIndex) {
+      var g = new THREE.Group();
+      g.position.y = localIndex * FLOOR_H;
+      var D = planD(floor.aspect);
+      var fi = localIndex;
+
+      // 楼板（暗色薄板）
+      var slab = new THREE.Mesh(
+        new THREE.BoxGeometry(PLAN_W + 0.6, 0.4, D + 0.6),
+        new THREE.MeshStandardMaterial({ color: 0x161616, roughness: 1 })
+      );
+      slab.position.y = -0.2;
+      g.add(slab);
+
+      // 平面图贴图
+      var tex = new THREE.TextureLoader().load(floor.image, function () {
+        if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+      });
+      var plane = new THREE.Mesh(
+        new THREE.PlaneGeometry(PLAN_W, D),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.9 })
+      );
+      plane.rotation.x = -Math.PI / 2;
+      plane.position.y = 0.02;
+      g.add(plane);
+
+      // 商铺体块
+      var blocks = [];
+      floor.shops.forEach(function (shop) {
+        var shape = new THREE.Shape();
+        shop.poly.forEach(function (p, i) {
+          var wx = (p[0] - 0.5) * PLAN_W;
+          var wy = -(p[1] - 0.5) * D;
+          if (i === 0) shape.moveTo(wx, wy); else shape.lineTo(wx, wy);
+        });
+        shape.closePath();
+        var geo = new THREE.ExtrudeGeometry(shape, { depth: SHOP_H, bevelEnabled: false });
+        var col = new THREE.Color(shop.color || '#888');
+        var mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.65, metalness: 0.05, emissive: col.clone().multiplyScalar(0.12) });
+        var mesh = new THREE.Mesh(geo, mat);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.position.y = 0.1;
+        mesh.userData = { shop: shop, floor: floor, baseEmissive: mat.emissive.clone() };
+        g.add(mesh);
+        blocks.push({ mesh: mesh, shop: shop });
+        blockMeshes.push(mesh);
+
+        // 边线
+        var edges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(geo),
+          new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 })
+        );
+        edges.rotation.x = -Math.PI / 2;
+        edges.position.y = 0.1;
+        mesh.add(edges);
+
+        // 标签（默认隐藏）
+        var lbl = makeLabel(shop.name);
+        lbl.position.set((shop.x - 0.5) * PLAN_W, SHOP_H + 1.2, -(shop.y - 0.5) * D);
+        lbl.visible = false;
+        g.add(lbl);
+        labelObjs.push(lbl);
+        mesh.userData.label = lbl;
+      });
+
+      // 入口标记
+      if (floor.entrance) {
+        var ex = (floor.entrance[0] - 0.5) * PLAN_W;
+        var ez = -(floor.entrance[1] - 0.5) * D;
+        var me = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.5, 0.5, 1.4, 24),
+          new THREE.MeshStandardMaterial({ color: 0x2E8BFF, emissive: 0x123a66 })
+        );
+        me.position.set(ex, 0.9, ez);
+        g.add(me);
+        var ring = new THREE.Mesh(
+          new THREE.RingGeometry(0.9, 1.15, 32),
+          new THREE.MeshBasicMaterial({ color: 0x2E8BFF, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(ex, 0.15, ez);
+        g.add(ring);
+      }
+
+      g.userData = { blocks: blocks, floorIndex: fi, D: D };
+      floorGroups[floor.key] = { group: g, blocks: blocks };
+      world.add(g);
+    }
+
+    function buildAll() {
+      var zoneIdx = {};
+      data.floors.forEach(function (f) {
+        var li = zoneIdx[f.zone] || 0; zoneIdx[f.zone] = li + 1;
+        buildFloor(f, li);
+      });
+    }
+
+    // ---- 可见性 ----
+    function applyVisibility() {
+      Object.keys(floorGroups).forEach(function (k) { floorGroups[k].group.visible = false; });
+      if (state.mode === 'single') {
+        if (floorGroups[state.floor]) floorGroups[state.floor].group.visible = true;
+      } else {
+        data.floors.forEach(function (f) {
+          if (f.zone === state.zone && floorGroups[f.key]) floorGroups[f.key].group.visible = true;
+        });
+      }
+      // 楼层标签取决于 zone/floor 选择
+      document.getElementById('floorTabs').innerHTML = '';
+      var floorsOfZone = data.floors.filter(function (f) { return f.zone === state.zone; });
+      floorsOfZone.forEach(function (f) {
+        var b = document.createElement('button');
+        b.className = 'pill' + (state.mode === 'single' && state.floor === f.key ? ' active' : '');
+        b.textContent = f.label;
+        b.onclick = function () { state.floor = f.key; clearRoute(); clearSelect(); applyVisibility(); frameView(); };
+        document.getElementById('floorTabs').appendChild(b);
+      });
+    }
+
+    function frameView() {
+      var targets = [];
+      if (state.mode === 'single') {
+        var fg = floorGroups[state.floor];
+        if (!fg) return;
+        var D = fg.group.userData.D;
+        camera.position.set(0, 14, D * 1.4 + 10);
+        controls.target.set(0, SHOP_H / 2, 0);
+      } else {
+        var floorsOfZone = data.floors.filter(function (f) { return f.zone === state.zone; });
+        var n = floorsOfZone.length;
+        var top = (n - 1) * FLOOR_H + SHOP_H;
+        camera.position.set(0, top * 0.6 + 14, PLAN_W * 1.6);
+        controls.target.set(0, top / 2, 0);
+      }
+      controls.update();
+    }
+
+    // ---- 选择 / 路线 ----
+    function clearSelect() {
+      if (state.selected) {
+        var m = state.selected.mesh;
+        m.material.emissive.copy(m.userData.baseEmissive);
+        m.material.color.copy(new THREE.Color(state.selected.shop.color));
+        if (m.userData.label) m.userData.label.visible = state.labels;
+      }
+      state.selected = null;
+      document.getElementById('infocard').classList.remove('show');
+    }
+    function selectBlock(rec) {
+      clearSelect();
+      state.selected = rec;
+      rec.mesh.material.emissive = new THREE.Color(0xFF7B2C);
+      rec.mesh.material.color = new THREE.Color(0xFF7B2C);
+      if (rec.mesh.userData.label) rec.mesh.userData.label.visible = true;
+      drawRoute(rec.shop, rec.floor);
+      var card = document.getElementById('infocard');
+      document.getElementById('icCat').textContent = rec.shop.category;
+      document.getElementById('icCat').style.background = rec.shop.color;
+      document.getElementById('icName').textContent = rec.shop.name;
+      document.getElementById('icSub').textContent = rec.floor.zone + ' · ' + rec.floor.label;
+      card.classList.add('show');
+      // 飞行定位
+      var wx = (rec.shop.x - 0.5) * PLAN_W;
+      var wz = -(rec.shop.y - 0.5) * floorGroups[rec.floor.key].group.userData.D;
+      flyTo(wx, wz, rec.floor);
+    }
+    function flyTo(wx, wz, floor) {
+      var fy = floorGroups[floor.key].group.position.y + SHOP_H / 2;
+      controls.target.set(wx, fy, wz);
+      var dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+      camera.position.copy(controls.target).add(dir.multiplyScalar(state.mode === 'stacked' ? 34 : 22));
+      controls.update();
+    }
+
+    function drawRoute(shop, floor) {
+      clearRoute();
+      if (!floor.entrance) return;
+      var D = floorGroups[floor.key].group.userData.D;
+      var x0 = (floor.entrance[0] - 0.5) * PLAN_W, z0 = -(floor.entrance[1] - 0.5) * D;
+      var x1 = (shop.x - 0.5) * PLAN_W, z1 = -(shop.y - 0.5) * D;
+      var y = SHOP_H / 2 + 0.4;
+      var pts = [
+        new THREE.Vector3(x0, y, z0),
+        new THREE.Vector3(x1, y, z0),
+        new THREE.Vector3(x1, y, z1)
+      ];
+      var curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.0);
+      var geo = new THREE.TubeGeometry(curve, 40, 0.22, 8, false);
+      var mat = new THREE.MeshBasicMaterial({ color: 0xFF7B2C });
+      routeLine = new THREE.Mesh(geo, mat);
+      var fg = floorGroups[floor.key].group;
+      fg.add(routeLine);
+    }
+    function clearRoute() {
+      if (routeLine && routeLine.parent) routeLine.parent.remove(routeLine);
+      routeLine = null;
+    }
+
+    // ---- 交互 ----
+    function getIntersect(ev) {
+      var rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      var visible = blockMeshes.filter(function (m) {
+        var g = m.parent; while (g && g !== world) { if (!g.visible) return false; g = g.parent; } return true;
+      });
+      return raycaster.intersectObjects(visible, false);
+    }
+    function onClick(ev) {
+      var hits = getIntersect(ev);
+      if (hits.length) {
+        var mesh = hits[0].object;
+        // 找到所属 floor
+        var floorKey = null;
+        Object.keys(floorGroups).forEach(function (k) { if (floorGroups[k].group === mesh.parent) floorKey = k; });
+        var floor = data.floors.find(function (f) { return f.key === floorKey; });
+        var rec = { mesh: mesh, shop: mesh.userData.shop, floor: floor };
+        selectBlock(rec);
+      }
+    }
+    function onHover(ev) {
+      var hits = getIntersect(ev);
+      renderer.domElement.style.cursor = hits.length ? 'pointer' : 'grab';
+    }
+
+    // ---- UI ----
+    function setupUI() {
+      // 区块 tabs
+      var zones = [];
+      data.floors.forEach(function (f) { if (zones.indexOf(f.zone) < 0) zones.push(f.zone); });
+      var zt = document.getElementById('zoneTabs');
+      zones.forEach(function (z) {
+        var b = document.createElement('button');
+        b.className = 'pill' + (z === state.zone ? ' active' : '');
+        b.textContent = z;
+        b.onclick = function () {
+          state.zone = z;
+          var fz = data.floors.filter(function (f) { return f.zone === z; });
+          state.floor = fz[0].key;
+          clearRoute(); clearSelect();
+          document.querySelectorAll('#zoneTabs .pill').forEach(function (x) { x.classList.remove('active'); });
+          b.classList.add('active');
+          applyVisibility(); frameView();
+        };
+        zt.appendChild(b);
+      });
+
+      // 模式
+      document.getElementById('modeSingle').onclick = function () {
+        state.mode = 'single'; this.classList.add('active');
+        document.getElementById('modeStack').classList.remove('active');
+        clearRoute(); clearSelect(); applyVisibility(); frameView();
+      };
+      document.getElementById('modeStack').onclick = function () {
+        state.mode = 'stacked'; this.classList.add('active');
+        document.getElementById('modeSingle').classList.remove('active');
+        clearRoute(); clearSelect(); applyVisibility(); frameView();
+      };
+
+      // 图例
+      var cats = {};
+      data.floors.forEach(function (f) { f.shops.forEach(function (s) { cats[s.category] = s.color; }); });
+      var lp = document.getElementById('legendPanel');
+      Object.keys(cats).forEach(function (c) {
+        var row = document.createElement('div'); row.className = 'legend-row';
+        row.innerHTML = '<span class="legend-dot" style="background:' + cats[c] + '"></span>' + c;
+        lp.appendChild(row);
+      });
+      document.getElementById('legendToggle').onclick = function () {
+        var p = document.getElementById('legendPanel');
+        p.style.display = p.style.display === 'none' ? 'block' : 'none';
+      };
+
+      // 缩放/重置
+      document.getElementById('zoomIn').onclick = function () { dolly(0.85); };
+      document.getElementById('zoomOut').onclick = function () { dolly(1.18); };
+      document.getElementById('resetView').onclick = function () { clearRoute(); clearSelect(); applyVisibility(); frameView(); };
+      function dolly(f) {
+        var dir = new THREE.Vector3().subVectors(camera.position, controls.target);
+        camera.position.copy(controls.target).add(dir.multiplyScalar(f));
+        controls.update();
+      }
+
+      // 信息卡
+      document.getElementById('icCancel').onclick = function () { clearSelect(); clearRoute(); };
+
+      // 搜索
+      var inp = document.getElementById('searchInput');
+      var drop = document.getElementById('searchDrop');
+      inp.addEventListener('input', function () {
+        var q = inp.value.trim().toLowerCase();
+        if (!q) { drop.style.display = 'none'; return; }
+        var res = [];
+        data.floors.forEach(function (f) {
+          f.shops.forEach(function (s) {
+            if (s.name.toLowerCase().indexOf(q) >= 0) res.push({ shop: s, floor: f });
+          });
+        });
+        drop.innerHTML = '';
+        res.slice(0, 20).forEach(function (r) {
+          var it = document.createElement('div'); it.className = 'sd-item';
+          it.innerHTML = '<span>' + r.shop.name + '</span><span class="sd-meta">' + r.floor.zone + ' · ' + r.floor.label + '</span>';
+          it.onclick = function () {
+            drop.style.display = 'none'; inp.value = '';
+            state.mode = 'single'; state.zone = r.floor.zone; state.floor = r.floor.key;
+            document.getElementById('modeSingle').classList.add('active');
+            document.getElementById('modeStack').classList.remove('active');
+            document.querySelectorAll('#zoneTabs .pill').forEach(function (x) { x.classList.toggle('active', x.textContent === r.floor.zone); });
+            applyVisibility(); frameView();
+            var rec = floorGroups[r.floor.key].blocks.find(function (b) { return b.shop.name === r.shop.name; });
+            if (rec) selectBlock(rec);
+          };
+          drop.appendChild(it);
+        });
+        drop.style.display = res.length ? 'block' : 'none';
+      });
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('.search')) drop.style.display = 'none';
+      });
+    }
+
+    function onResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+  })();
+  </script>
+</body>
+</html>

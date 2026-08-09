@@ -22,6 +22,7 @@
     </div>
 
     <!-- 地图区域 -->
+    <button class="map3d-btn" @click="go3D">3D 地图 ›</button>
     <div class="map-area" ref="mapAreaRef"
       @wheel.prevent="onWheel"
       @mousedown="onDragStart"
@@ -348,6 +349,7 @@ function goDetail(p) {
   const s = shops.find(s => s.name === p.name && s.zone === activeZone.value && String(s.floor) === activeFloorKey.value)
   if (s) router.push(`/shops/${s.id}`)
 }
+function go3D() { router.push('/map3d') }
 function locateShop(s) {
   if (s.zone !== activeZone.value || String(s.floor) !== activeFloorKey.value) {
     activeZone.value = s.zone
@@ -428,6 +430,14 @@ function onSearchItem(shop) {
   flex: 1; margin: 6px 12px 0; position: relative; overflow: hidden;
   border-radius: 12px; background: #111; cursor: grab; user-select: none; touch-action: none;
 }
+.map3d-btn {
+  position: absolute; top: 12px; right: 22px; z-index: 12;
+  border: 1px solid rgba(255,255,255,.15); background: rgba(30,30,30,.85);
+  backdrop-filter: blur(6px); color: #eee; font-size: 13px; font-weight: 700;
+  padding: 7px 14px; border-radius: 20px; cursor: pointer; font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.map3d-btn:active { background: #FF7B2C; color: #fff; }
 .map-area:active { cursor: grabbing; }
 .map-canvas { position: absolute; top: 0; left: 0; width: 100%; transform-origin: 0 0; }
 .floor-wrap { position: relative; }
