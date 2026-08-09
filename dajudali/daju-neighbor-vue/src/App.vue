@@ -32,16 +32,11 @@ html, body {
   height: 100vh;
 }
 
-/* 大字模式：整体 zoom 2 倍 */
-html[data-large] body {
+/* 大字模式（关怀模式）：整页等比放大，手机端兼容、不变形
+   - 作用在 html 而非 body：position:fixed 的导航栏/底部 Tab 也会一起等比缩放，避免错位
+   - 用 zoom 整体放大，字体与按钮同步变大且保持比例（不会拉伸变形）
+   - 移除原先对聊天/工具栏手动缩到 8~10px 的规则（那会在手机端把文字缩成无法阅读的乱状） */
+html[data-large] {
   zoom: 2;
 }
-/* 修正 zoom 放大后的溢出 */
-html[data-large] .tb-row { flex-wrap: wrap; }
-html[data-large] .tb-btn { padding: 6px 2px; font-size: 8px; }
-html[data-large] .search-row { flex-wrap: wrap; }
-html[data-large] .search-btn { padding: 8px 4px; }
-html[data-large] .search-btn-text { font-size: 10px; }
-html[data-large] .chat-input-area { font-size: 9px; }
-html[data-large] .chat-messages { font-size: 10px; }
 </style>
