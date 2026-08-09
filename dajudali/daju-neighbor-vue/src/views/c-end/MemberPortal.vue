@@ -81,11 +81,11 @@
       <!-- 我的券 -->
       <van-cell-group inset title="我的券" style="margin-top: 16px" v-if="coupons && coupons.length">
         <van-cell
-          v-for="c in coupons"
-          :key="c.code"
-          :title="c.name"
-          :label="'有效期至 ' + c.expire_date"
-          :value="c.code"
+          v-for="(c, i) in coupons"
+          :key="(c.code || 'c') + '-' + i"
+          :title="c.item || '优惠券'"
+          :label="'有效期至 ' + (c.time || '—')"
+          :value="c.code || '—'"
         />
       </van-cell-group>
     </template>
