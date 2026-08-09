@@ -11,7 +11,7 @@
     </div>
 
     <!-- 账户信息卡片 -->
-    <div class="st-account" @click="$router.push('/profile')">
+    <div class="st-account" @click="$router.push('/member')">
       <div class="st-acc-avatar">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </div>
@@ -27,7 +27,7 @@
     <div class="st-section">
       <div class="st-tag st-tag-gold">账户</div>
 
-      <div class="st-card st-card-gold" @click="go('/profile')">
+      <div class="st-card st-card-gold" @click="go('/member')">
         <div class="st-row-left">
           <span class="st-ic st-ic-gold"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
           <span>账户与安全</span>

@@ -82,7 +82,7 @@
               </div>
             </div>
             <div class="mc-rounds">
-              <button class="mc-round" @click="emit('switchTab', 'profile')" title="会员中心">
+              <button class="mc-round" @click="router.push('/member')" title="会员中心">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
               </button>
               <button class="mc-round" @click="emit('switchTab', 'offers')" title="优惠券">
@@ -205,9 +205,24 @@ import { useRouter } from 'vue-router'
 import { placeholderImages as p } from '@/assets/placeholders'
 import allShops from '@/data/shops'
 import http from '@/api'
+import { useMemberStore } from '@/stores/member'
 
 const emit = defineEmits(['switchTab'])
 const router = useRouter()
+const memberStore = useMemberStore()
+
+// 统一会员数据：所有页面（首页会员卡 / 会员中心 / 更多页）共用 memberStore，登录后自动同步
+function buildMember(u) {
+  return {
+    phone: (u && u.phone) || '',
+    display_name: (u && u.display_name) || '海江会员',
+    membership_level: (u && u.membership_level) || '普卡',
+    points: (u && u.points) || 0,
+    discount: (u && u.discount) || '',
+    headimgurl: (u && u.headimgurl) || '',
+    coupon_count: (u && u.coupon_count) || 0,
+  }
+}
 
 // 新拟态：把图标线条渲染成内嵌 SVG（stroke=currentColor），配合 engraved 阴影做"刻入卡面"效果
 const iconSvg = (paths) =>
@@ -317,6 +332,7 @@ onMounted(async () => {
         displayName.value = wxRes.user.display_name || '会员'
         memberInfo.value = wxRes.user
         avatarUrl.value = wxRes.user.headimgurl || ''
+        memberStore.setMember(buildMember(wxRes.user))
         const cleanUrl = window.location.origin + window.location.pathname
         window.history.replaceState({}, document.title, cleanUrl)
         return
@@ -332,8 +348,14 @@ onMounted(async () => {
       if (res.user.phone) {
         try {
           const minfo = await http.post('/api/member/lookup', { phone: res.user.phone })
-          if (minfo.ok && minfo.member) { memberInfo.value = minfo.member }
+          if (minfo.ok && minfo.member) {
+            memberInfo.value = minfo.member
+            memberStore.setMember(buildMember({ ...res.user, ...minfo.member }))
+          }
         } catch {}
+      } else if (res.user.display_name || res.user.headimgurl) {
+        // 仅有微信信息（无手机号）也写入，保证头像/昵称同步
+        memberStore.setMember(buildMember(res.user))
       }
     }
   } catch {}
@@ -352,6 +374,7 @@ async function handleLogin() {
         loggedIn.value = true
         memberInfo.value = lookup.member
         displayName.value = res.user.display_name || '会员'
+        memberStore.setMember(buildMember({ phone: p, display_name: res.user.display_name, headimgurl: res.user.headimgurl, ...lookup.member }))
       } else {
         alert(res.error || '登录失败')
       }
@@ -363,6 +386,7 @@ async function handleLogin() {
           loggedIn.value = true
           memberInfo.value = reg.user
           displayName.value = '会员' + p.slice(-4)
+          memberStore.setMember(buildMember(reg.user))
         }
       } else {
         alert(reg.error || '注册失败')
@@ -401,6 +425,7 @@ function triggerUpload() { avatarInput.value && avatarInput.value.click() }
 
 async function doLogout() {
   await http.post('/logout')
+  memberStore.logout()
   loggedIn.value = false
   memberInfo.value = null
   displayName.value = ''

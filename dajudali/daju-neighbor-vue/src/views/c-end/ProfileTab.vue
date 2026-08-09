@@ -20,14 +20,16 @@
     <!-- ── 用户信息卡片（浅橙棕） ── -->
     <div class="user-card">
       <div class="uc-avatar">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <img v-if="member && member.headimgurl" :src="member.headimgurl" class="uc-avatar-img" alt="" />
+        <svg v-else width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </div>
       <div class="uc-info">
         <div class="uc-name-row">
-          <span class="uc-name">海江会员</span>
+          <span class="uc-name">{{ member && member.display_name ? member.display_name : '海江会员' }}</span>
+          <span class="uc-points" v-if="member">积分 {{ member.points }}</span>
           <svg class="uc-edit" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </div>
-        <div class="uc-phone">195****1648</div>
+        <div class="uc-phone">{{ maskPhone(member && member.phone) }}</div>
       </div>
       <div class="uc-actions">
         <div class="uc-action-btn">
@@ -62,15 +64,15 @@
     <!-- ── 数据统计行（深灰绿） ── -->
     <div class="stats-card">
       <div class="stat-item">
-        <div class="stat-num">0</div>
-        <div class="stat-label">余额</div>
+        <div class="stat-num">{{ member ? member.points : 0 }}</div>
+        <div class="stat-label">积分</div>
       </div>
       <div class="stat-item">
-        <div class="stat-num">0</div>
-        <div class="stat-label">次卡</div>
+        <div class="stat-num">{{ member ? (member.membership_level || '普卡') : '普卡' }}</div>
+        <div class="stat-label">等级</div>
       </div>
       <div class="stat-item">
-        <div class="stat-num">5</div>
+        <div class="stat-num">{{ member && member.coupon_count ? member.coupon_count : 5 }}</div>
         <div class="stat-label">优惠券</div>
       </div>
     </div>
@@ -145,12 +147,31 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
+import { useMemberStore } from '@/stores/member'
 import mtnPu from '@/assets/mountain-pu.png'
 import mtnYin from '@/assets/mountain-yin.png'
 const emit = defineEmits(['switchTab'])
 const router = useRouter()
+const memberStore = useMemberStore()
+// 与首页会员卡、会员中心共用同一份登录态（微信昵称 / 头像 / 积分 / 等级同步）
+const member = computed(() => memberStore.member)
+const levelToIndex = { '普卡': 0, '银卡': 1, '金卡': 2, '铂金卡': 3, '钻石卡': 4, '黑钻卡': 5 }
+function maskPhone(p) {
+  if (!p) return '195****1648'
+  return p.slice(0, 3) + '****' + p.slice(7)
+}
+function syncMemberTier() {
+  memberStore.restore()
+  const lv = member.value && member.value.membership_level
+  if (lv && levelToIndex[lv] != null) {
+    tierCurrent.value = levelToIndex[lv]
+    requestAnimationFrame(() => goTier(tierCurrent.value))
+  }
+}
+onMounted(syncMemberTier)
+onActivated(syncMemberTier)
 
 // 海江之友等级卡（可切换）：普卡/银卡/金卡/铂金卡/钻石卡/黑钻卡
 const tiers = [
@@ -187,7 +208,7 @@ const functions = [
   { label: '商户收藏', route: '/shops', icon: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>' },
   { label: '室内导航', route: '/nav', icon: '<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>' },
   { label: '兑换记录', route: '/redeem', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' },
-  { label: '会员中心', route: '/profile', icon: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' },
+  { label: '会员中心', route: '/member', icon: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' },
   { label: '关于我们', route: '/about', icon: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>' },
 ]
 
@@ -242,11 +263,13 @@ function go(route) { if (route) router.push(route) }
   background: rgba(255,255,255,0.18);
   border: 1.5px solid rgba(255,255,255,0.30);
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+  overflow: hidden; flex-shrink: 0;
 }
+.uc-avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .uc-info { flex: 1; min-width: 0; }
 .uc-name-row { display: flex; align-items: center; gap: 6px; }
 .uc-name { font-size: var(--fs-body); font-weight: 700; }
+.uc-points { font-size: 11px; font-weight: 700; color: #FFB877; background: rgba(255,184,119,0.14); border: 1px solid rgba(255,184,119,0.35); padding: 1px 8px; border-radius: 10px; white-space: nowrap; }
 .uc-edit { flex-shrink: 0; cursor: pointer; opacity: 0.85; }
 .uc-phone { font-size: var(--fs-secondary); margin-top: 3px; opacity: 0.9; }
 .uc-actions { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }

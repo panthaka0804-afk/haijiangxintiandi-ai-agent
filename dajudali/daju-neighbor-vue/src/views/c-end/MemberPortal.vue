@@ -2,12 +2,12 @@
   <div class="member-page">
     <van-nav-bar title="会员中心" left-text="返回" left-arrow @click-left="$router.back()" fixed placeholder>
       <template #right>
-        <van-button size="small" round plain @click="userStore.largeFont = !userStore.largeFont" :style="{ color: userStore.largeFont ? '#9E9E9E' : '#777', borderColor: userStore.largeFont ? '#9E9E9E' : '#444', fontWeight: '700' }">{{ userStore.largeFont ? '老年关怀' : '老年关怀' }}</van-button>
+        <van-button size="small" round plain @click="userStore.largeFont = !userStore.largeFont" :style="{ color: userStore.largeFont ? '#FFB877' : '#777', borderColor: userStore.largeFont ? '#FFB877' : '#444', fontWeight: '700' }">关怀模式</van-button>
       </template>
     </van-nav-bar>
 
-    <!-- 未查询：输入手机号 -->
-    <template v-if="!memberData">
+    <!-- 未登录（无会员信息）：输入手机号查询 / 登录 -->
+    <template v-if="!memberStore.member">
       <van-form @submit="queryMember" style="margin-top: 20px;">
         <van-cell-group inset>
           <van-field
@@ -28,32 +28,39 @@
             查询会员信息
           </van-button>
         </div>
+        <div class="member-hint">登录后，首页会员卡、会员中心与各页面的积分与会员信息将自动同步。</div>
       </van-form>
     </template>
 
-    <!-- 会员信息展示 -->
+    <!-- 会员信息展示（与首页会员卡、更多页共享同一份登录态） -->
     <template v-else>
       <div class="member-card">
         <div class="card-header">
-          <span class="level-badge" :class="memberData.level">{{ memberData.level }}</span>
-          <span class="card-name">{{ memberData.name }}</span>
+          <div class="m-avatar">
+            <img v-if="member.avatar" :src="member.avatar" class="m-avatar-img" alt="" />
+            <svg v-else width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div class="m-head-text">
+            <span class="level-badge" :class="member.level">{{ member.level }}</span>
+            <span class="card-name">{{ member.name }}</span>
+          </div>
         </div>
         <div class="card-body">
           <div class="info-row">
             <span class="label">手机号</span>
-            <span>{{ memberData.phone }}</span>
+            <span>{{ member.phone || '未绑定' }}</span>
           </div>
           <div class="info-row">
             <span class="label">当前积分</span>
-            <span class="value highlight">{{ memberData.points }}</span>
+            <span class="value highlight">{{ member.points }}</span>
           </div>
           <div class="info-row">
             <span class="label">会员折扣</span>
-            <span class="value highlight">{{ memberData.discount || '98折' }}</span>
+            <span class="value highlight">{{ member.discount }}</span>
           </div>
           <div class="info-row">
             <span class="label">距升级还需</span>
-            <span>{{ memberData.needUpgrade || '-' }}分</span>
+            <span>{{ member.needUpgrade }}分</span>
           </div>
         </div>
       </div>
@@ -86,17 +93,39 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useUserStore } from '@/stores/user'
+import { useMemberStore } from '@/stores/member'
 import { showToast, showConfirmDialog } from 'vant'
+import { getMemberCoupons } from '@/api'
 
 const userStore = useUserStore()
-import { getMemberPortal, getMemberCoupons, redeemPoints } from '@/api'
+const memberStore = useMemberStore()
 
 const phone = ref('')
 const loading = ref(false)
-const memberData = ref(null)
 const coupons = ref([])
+
+// 与首页会员卡、更多页共用同一份 memberStore（登录后自动同步）
+const member = computed(() => {
+  const m = memberStore.member
+  if (!m) return null
+  return {
+    name: m.display_name || '海江会员',
+    phone: m.phone || '',
+    points: m.points || 0,
+    level: m.membership_level || '普卡',
+    discount: m.discount || '98折',
+    avatar: m.headimgurl || '',
+    needUpgrade: '-',
+  }
+})
+
+// 进入页面时先从 sessionStorage 恢复（保持各页面同步）
+memberStore.restore()
+if (memberStore.member && memberStore.member.phone) {
+  loadCoupons(memberStore.member.phone)
+}
 
 const redeemList = [
   { id: 'g4', name: '停车券', points: 500, value: '¥10' },
@@ -113,12 +142,11 @@ const redeemList = [
 async function queryMember() {
   loading.value = true
   try {
-    const res = await getMemberPortal(phone.value)
+    // loginByPhone 内部走 /api/member/lookup 并写入 memberStore（各页面共享）
+    const res = await memberStore.loginByPhone(phone.value)
     if (res.ok) {
-      memberData.value = res.member
-      const couponRes = await getMemberCoupons(phone.value)
-      if (couponRes.ok) {
-        coupons.value = couponRes.coupons || []
+      if (memberStore.member && memberStore.member.phone) {
+        await loadCoupons(memberStore.member.phone)
       }
     } else {
       showToast(res.error || '查询失败')
@@ -130,11 +158,18 @@ async function queryMember() {
   }
 }
 
+async function loadCoupons(p) {
+  try {
+    const res = await getMemberCoupons(p)
+    if (res.ok) coupons.value = res.coupons || []
+  } catch {}
+}
+
 async function showRedeemConfirm(item) {
   try {
     await showConfirmDialog({
       title: '确认兑换',
-      message: `确定用 ${item.points} 积分兑换"${item.name}"？\n兑换后剩余 ${memberData.value.points - item.points} 分`,
+      message: `确定用 ${item.points} 积分兑换"${item.name}"？\n兑换后剩余 ${member.value.points - item.points} 分`,
       confirmButtonText: '确认兑换',
       cancelButtonText: '取消'
     })
@@ -148,22 +183,50 @@ async function showRedeemConfirm(item) {
 <style scoped>
 .member-page {
   min-height: 100vh;
-  background: #1A1A1A;
+  background: #000;
+}
+.member-hint {
+  margin: 4px 24px;
+  font-size: 12px;
+  color: #888;
+  line-height: 1.6;
 }
 
 .member-card {
   margin: 16px;
   background: linear-gradient(135deg, #1A1A1A, #2A2A2A);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 2px 12px #999999;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
 }
 
 .card-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 16px;
+}
+
+.m-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.16);
+}
+.m-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+
+.m-head-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .level-badge {
@@ -173,17 +236,22 @@ async function showRedeemConfirm(item) {
   font-weight: 600;
   color: #fff;
   background: #999;
+  flex-shrink: 0;
 }
-
-.level-badge.普卡 { background: #999; }
-.level-badge.银卡 { background: #1A1A1A; }
-.level-badge.金卡 { background: #1A1A1A; }
-.level-badge.钻石卡 { background: #1A1A1A; }
+.level-badge.普卡 { background: #8B8B90; }
+.level-badge.银卡 { background: #9CA1A8; }
+.level-badge.金卡 { background: #C4923A; }
+.level-badge.铂金卡 { background: #9DA7B5; }
+.level-badge.钻石卡 { background: #4F9CC9; }
+.level-badge.黑钻卡 { background: #2E2E33; border: 1px solid #555; }
 
 .card-name {
   font-size: 18px;
   font-weight: 600;
   color: #F0F0F0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-body {
@@ -209,7 +277,7 @@ async function showRedeemConfirm(item) {
 }
 
 .info-row .value.highlight {
-  color: #999999;
+  color: #FFB877;
   font-size: 18px;
 }
 

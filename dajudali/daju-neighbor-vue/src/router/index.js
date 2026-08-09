@@ -19,6 +19,7 @@ const routes = [
   { path: '/activities/:id', name: 'activity-detail', component: () => import('@/views/c-end/ActivityDetail.vue'), meta: { title: '活动详情 - 海江新天地' } },
   { path: '/redeem', name: 'redeem', component: () => import('@/views/c-end/RedeemPage.vue'), meta: { title: '积分商城 - 海江新天地' } },
   { path: '/redeem/:id', name: 'redeem-detail', component: () => import('@/views/c-end/RedeemDetail.vue'), meta: { title: '兑换详情 - 海江新天地' } },
+  { path: '/member', name: 'member', component: () => import('@/views/c-end/MemberPortal.vue'), meta: { title: '会员中心 - 海江新天地' } },
   { path: '/merchant', name: 'merchant', component: () => import('@/views/c-end/MerchantPage.vue'), meta: { title: '招商合作 - 海江新天地' } },
   // 旧独立登录页已并入首页，重定向避免黑屏
   { path: '/login', redirect: '/' },
