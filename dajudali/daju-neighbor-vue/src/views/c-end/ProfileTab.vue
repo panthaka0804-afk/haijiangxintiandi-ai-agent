@@ -359,10 +359,10 @@ function go(route) { if (route) router.push(route) }
   flex: 0 0 100%; box-sizing: border-box; scroll-snap-align: start;
   position: relative; overflow: visible;
 }
-/* 雪山：直接放在 .tier-slide 内、与卡片同属一个被滚动的元素，100%同步、零独立动画；山顶贴 slide 顶(top:0)，不超出 slide，故不被 overflow-x:auto 滚动容器隐式裁切 y（?t=169 定稿规则）；卡片 margin-top 留出山峰区并压住山脚 */
+/* 雪山：直接放在 .tier-slide 内、与卡片同属一个被滚动的元素，100%同步、零独立动画；山顶 top:-40px 从 slide 顶上探40px，因 .tier-viewport 的 padding-top 有 45px，该探出段落在视口可见 padding 区内(viewport_y≈5px)，不会被 overflow-x:auto 隐式裁切 y；卡片 margin-top:25px 留出山峰区并压住山脚约1/3（?t=170 用户认可坐标，山高、峰突出） */
 .tier-mtn-img {
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: -40px; left: 0; right: 0;
   z-index: 0; pointer-events: none;
   width: 100%; height: auto;
   display: block;
@@ -374,7 +374,7 @@ function go(route) { if (route) router.push(route) }
 .tier-card {
   position: relative; z-index: 1;
   box-sizing: border-box; width: 100%;
-  margin-top: 38px;
+  margin-top: 25px;
   min-height: 180px;
   border-radius: 18px;
   border-width: 3px; border-style: solid;
