@@ -21,8 +21,14 @@
       <button v-for="f in floorList" :key="f.key" class="tab-pill" :class="{ active: activeFloorKey === f.key }" @click="setFloor(f.key)">{{ f.label }}</button>
     </div>
 
-    <!-- 地图区域 -->
-    <button class="map3d-btn" @click="go3D">3D 地图 ›</button>
+    <!-- 路线提示条 -->
+    <div v-if="selected" class="route-banner">
+      <span class="rb-dot rb-start"></span>
+      <span class="rb-text">我的位置 → <b>{{ selected.name }}</b></span>
+      <button class="rb-clear" @click="clearRoute">✕ 取消导航</button>
+    </div>
+
+    <!-- 地图区域：真实商铺轮廓平铺的 2D 平面图 -->
     <div class="map-area" ref="mapAreaRef"
       @wheel.prevent="onWheel"
       @mousedown="onDragStart"
@@ -32,42 +38,50 @@
       @mouseup="onDragEnd"
       @mouseleave="onDragEnd"
     >
-      <div class="map-canvas" :style="canvasStyle">
-        <div class="floor-wrap" :style="{ width: imgW + 'px' }">
-          <img v-if="currentImageUrl" ref="imgRef" :src="currentImageUrl" :alt="`${activeZone} ${activeFloorLabel}`" class="floor-img" draggable="false" @load="fitView" />
-          <!-- 无底图提示 -->
-          <div v-else class="no-map-hint">
-            <p>暂无 {{ activeZone }} {{ activeFloorLabel }} 平面图</p>
-            <p class="hint-sub">该楼层可能正在规划中</p>
-          </div>
+      <!-- 加载中 -->
+      <div v-if="!mapData" class="map-loading">平面图加载中…</div>
 
-          <!-- POI 叠加层（与平面图同坐标空间） -->
-          <div v-if="currentPois" class="poi-layer">
+      <div v-else class="map-canvas" :style="canvasStyle">
+        <div class="floor-wrap" :style="{ width: floorWrapWidth + 'px' }">
+          <svg class="floor-svg" :viewBox="`0 0 1000 ${H}`" preserveAspectRatio="none" width="100%" height="auto">
+            <!-- 走廊 / 公共区域底色 -->
+            <rect x="0" y="0" :width="1000" :height="H" fill="#ECEAE4" />
+            <!-- 建筑外框 -->
+            <rect x="3" y="3" :width="994" :height="H-6" fill="none" stroke="#C9C5BC" stroke-width="3" rx="6" />
+
+            <!-- 商铺多边形 -->
+            <g v-for="(s, i) in currentShops" :key="s.name + i">
+              <polygon
+                :points="polyStr(s)"
+                :fill="fillOf(s)"
+                :stroke="selected && selected.name === s.name ? '#FF7B2C' : s.color"
+                :stroke-width="selected && selected.name === s.name ? 3.4 : 1.3"
+                :class="['shop-poly', { sel: selected && selected.name === s.name }]"
+                @click.stop="selectShop(s)"
+              />
+              <text
+                :x="s.x * 1000" :y="s.y * H"
+                class="shop-label"
+                :class="{ sel: selected && selected.name === s.name }"
+                @click.stop="selectShop(s)"
+              >{{ s.name }}</text>
+            </g>
+
             <!-- 导航路线 -->
-            <svg v-if="routeD" class="route-svg" :viewBox="`0 0 1000 ${aspectH}`" preserveAspectRatio="none">
-              <path :d="routeD" class="route-casing" />
-              <path :d="routeD" class="route-line" />
-            </svg>
+            <path v-if="routeD" :d="routeD" class="route-casing" />
+            <path v-if="routeD" :d="routeD" class="route-line" />
 
-            <!-- 我的位置（入口） -->
-            <div class="me-dot" :style="pinPos(currentPois.entrance)" :title="'我的位置'"></div>
-            <div class="me-label" :style="meLabelStyle(currentPois.entrance)">我的位置</div>
-
-            <!-- 门店标记 -->
-            <div v-for="(p, i) in currentPois.pois" :key="p.name + i"
-              class="poi-pin" :class="{ selected: selected && selected.name === p.name }"
-              :style="pinPos([p.x, p.y], true)"
-              @mousedown.stop @touchstart.stop
-              @click.stop="selectPoi(p)"
-            >
-              <div class="pin-body" :style="{ background: p.color }"></div>
-              <div class="pin-label">{{ p.name }}</div>
-            </div>
-          </div>
+            <!-- 我的位置（起点） -->
+            <g v-if="entrance">
+              <circle :cx="entrance[0]*1000" :cy="entrance[1]*H" r="11" fill="#2E8BFF" stroke="#fff" stroke-width="3.5" />
+              <circle :cx="entrance[0]*1000" :cy="entrance[1]*H" r="20" fill="none" stroke="#2E8BFF" stroke-width="2" opacity="0.45" />
+              <text :x="entrance[0]*1000" :y="entrance[1]*H - 22" class="me-text">我的位置</text>
+            </g>
+          </svg>
         </div>
       </div>
 
-      <!-- 右下角放大镜控件 -->
+      <!-- 右下角缩放控件 -->
       <div class="zoom-controls">
         <button class="zc-btn" @click="zoomIn" title="放大">+</button>
         <button class="zc-btn" @click="zoomOut" title="缩小">−</button>
@@ -127,7 +141,6 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import shopsData from '@/data/shops.js'
-import floorPois from '@/data/floorPois.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -145,10 +158,9 @@ const drawerOpen = ref(false)
 const legendOpen = ref(false)
 const selected = ref(null)
 
-// 画面尺寸
-const imgW = ref(0)
-const imgH = ref(0)
-const aspectH = ref(1000)
+const floorWrapWidth = ref(0)
+const mapData = ref(null)          // 真实商铺几何（来自 map3d-data.json）
+const mapFloors = ref({})          // key: "1区-1" -> floor 对象
 
 // 拖拽/手势
 const dragging = ref(false)
@@ -156,9 +168,7 @@ const dragStart = ref({ x: 0, y: 0, px: 0, py: 0 })
 const lastTouchDist = ref(0)
 const lastTouchCenter = ref({ x: 0, y: 0 })
 const moved = ref(false)
-
 const mapAreaRef = ref(null)
-const imgRef = ref(null)
 
 // ---- 区块 / 楼层 ----
 const zoneList = computed(() => [...new Set(shops.map(s => s.zone))])
@@ -170,17 +180,11 @@ function getFloorsForZone(zone) {
 const floorList = computed(() => getFloorsForZone(activeZone.value))
 const activeFloorLabel = computed(() => floorList.value.find(f => f.key === activeFloorKey.value)?.label || '')
 
-// 区块 → ASCII slug（平面图文件名）。注意：PDF 中"5区"对应招商数据的"7区"
-const ZONE_SLUG = { '1区': 'z1', '3区': 'z3', '4区': 'z4', '6区': 'z6', '7区': 'z5' }
-const currentImageUrl = computed(() => {
-  if (!activeZone.value || !activeFloorKey.value) return ''
-  const slug = ZONE_SLUG[activeZone.value]
-  if (!slug) return ''
-  return `${import.meta.env.BASE_URL}floor-plans/${slug}-${activeFloorKey.value}.png`
-})
-
-// 当前楼层 POI
-const currentPois = computed(() => floorPois[`${activeZone.value}-${activeFloorKey.value}`] || null)
+// 当前楼层真实几何
+const currentFloor = computed(() => mapFloors.value[`${activeZone.value}-${activeFloorKey.value}`] || null)
+const currentShops = computed(() => currentFloor.value?.shops || [])
+const H = computed(() => currentFloor.value ? Math.round(1000 / currentFloor.value.aspect) : 562)
+const entrance = computed(() => currentFloor.value?.entrance || null)
 
 const canvasStyle = computed(() => ({
   transform: `translate(${panX.value}px, ${panY.value}px) scale(${zoom.value})`,
@@ -199,25 +203,52 @@ const categoryList = computed(() => {
   return list
 })
 
-// 导航路线（曼哈顿：先横后纵）
+// 导航路线（我的位置 → 选中店，先横后纵，正交折线）
 const routeD = computed(() => {
-  if (!selected.value || !currentPois.value) return ''
-  const [ex, ey] = currentPois.value.entrance
+  if (!selected.value || !currentFloor.value) return ''
+  const [ex, ey] = currentFloor.value.entrance
   const px = selected.value.x, py = selected.value.y
-  const X0 = ex * 1000, Y0 = ey * 1000, X1 = px * 1000, Y1 = py * 1000
+  const X0 = ex * 1000, Y0 = ey * H.value, X1 = px * 1000, Y1 = py * H.value
+  // 先走到目标列、再走到目标行（走廊折线感）
   return `M ${X0} ${Y0} L ${X1} ${Y0} L ${X1} ${Y1}`
 })
 
+// 多边形点串
+function polyStr(s) {
+  const h = H.value
+  return s.poly.map(p => `${(p[0] * 1000).toFixed(1)},${(p[1] * h).toFixed(1)}`).join(' ')
+}
+// 浅色填充（保留业态色相）
+function fillOf(s) {
+  const hex = s.color
+  if (!hex || hex[0] !== '#' || hex.length < 7) return '#F3F1EC'
+  let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16)
+  const a = 0.16
+  return `rgba(${r},${g},${b},${a})`
+}
+
 // ---- 初始化 ----
-onMounted(() => {
+onMounted(async () => {
   if (zoneList.value.length && !activeZone.value) activeZone.value = zoneList.value[0]
   updateFloor()
+  // 拉取真实商铺几何
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}map3d-data.json`)
+    const data = await res.json()
+    const map = {}
+    data.floors.forEach(f => { map[f.key] = f })
+    mapFloors.value = map
+    mapData.value = data
+  } catch (e) {
+    console.error('map3d-data load failed', e)
+  }
   const shopId = route.query.shop
   if (shopId) {
     const s = shops.find(s => s.id === shopId)
-    if (s) { activeZone.value = s.zone; setTimeout(() => { activeFloorKey.value = String(s.floor); drawerOpen.value = true }, 120) }
+    if (s) { activeZone.value = s.zone; setTimeout(() => { activeFloorKey.value = String(s.floor); drawerOpen.value = true }, 160) }
   }
   window.addEventListener('resize', fitView)
+  nextTick(fitView)
 })
 function updateFloor() {
   const fl = floorList.value
@@ -229,9 +260,9 @@ function setZone(z) { activeZone.value = z; updateFloor(); selected.value = null
 function setFloor(key) { activeFloorKey.value = key; selected.value = null; resetView() }
 
 // ---- 缩放 ----
-const MIN_ZOOM = 0.4
-const MAX_ZOOM = 4
-const ZOOM_STEP = 0.3
+const MIN_ZOOM = 0.5
+const MAX_ZOOM = 5
+const ZOOM_STEP = 0.35
 const clampZoom = z => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z))
 function zoomIn() { zoom.value = clampZoom(zoom.value + ZOOM_STEP) }
 function zoomOut() { zoom.value = clampZoom(zoom.value - ZOOM_STEP) }
@@ -254,22 +285,18 @@ function onWheel(e) {
   zoomAt(e.clientX, e.clientY, delta)
 }
 
-// ---- 适配视图（图片加载后调用）----
+// ---- 适配视图（平面图按宽度铺满，垂直可拖动）----
 function fitView() {
   const area = mapAreaRef.value
-  const img = imgRef.value
-  if (!area || !img || !img.naturalWidth) return
+  if (!area) return
   const rect = area.getBoundingClientRect()
   const aw = rect.width, ah = rect.height
   const fw = aw
-  const fh = aw * img.naturalHeight / img.naturalWidth
-  imgW.value = fw; imgH.value = fh
-  aspectH.value = Math.round(1000 * img.naturalHeight / img.naturalWidth)
-  const fit = Math.min(aw / fw, ah / fh)
-  const z = Math.max(MIN_ZOOM, fit)
-  zoom.value = z
-  panX.value = (aw - fw * z) / 2
-  panY.value = (ah - fh * z) / 2
+  floorWrapWidth.value = fw
+  const planH = fw * H.value / 1000
+  zoom.value = 1
+  panX.value = 0
+  panY.value = (ah - planH) / 2 > 0 ? (ah - planH) / 2 : 0
 }
 
 // 飞到某点（0..1 归一化）
@@ -278,16 +305,16 @@ function flyTo(x, y, z) {
   if (!area) return
   const rect = area.getBoundingClientRect()
   const aw = rect.width, ah = rect.height
-  const fw = imgW.value || aw, fh = imgH.value || ah
-  const Z = clampZoom(z || Math.max(zoom.value, 2.2))
+  const fw = floorWrapWidth.value || aw
+  const Z = clampZoom(z || Math.max(zoom.value, 2.4))
   zoom.value = Z
   panX.value = aw / 2 - x * fw * Z
-  panY.value = ah / 2 - y * fh * Z
+  panY.value = ah / 2 - y * (H.value / 1000) * fw * Z
 }
 
 // ---- 拖拽平移 ----
 function onDragStart(e) {
-  if (e.target.closest('.zoom-controls, .legend, .poi-popup, .poi-pin')) return
+  if (e.target.closest('.zoom-controls, .legend, .poi-popup')) return
   dragging.value = true; moved.value = false
   const pt = e.touches ? e.touches[0] : e
   dragStart.value = { x: pt.clientX, y: pt.clientY, px: panX.value, py: panY.value }
@@ -321,35 +348,16 @@ function onTouchMove(e) {
 }
 function onDragEnd() { dragging.value = false; lastTouchDist.value = 0 }
 
-// ---- POI 定位 ----
-function pinPos(pt, isPin) {
-  if (!pt) return {}
-  const s = 1 / zoom.value
-  return {
-    left: (pt[0] * 100) + '%',
-    top: (pt[1] * 100) + '%',
-    transform: `translate(-50%, ${isPin ? '-100%' : '-50%'}) scale(${s})`,
-  }
-}
-function meLabelStyle(pt) {
-  if (!pt) return {}
-  const s = 1 / zoom.value
-  return {
-    left: (pt[0] * 100) + '%',
-    top: (pt[1] * 100) + '%',
-    transform: `translate(-50%, 10px) scale(${s})`,
-  }
-}
-function selectPoi(p) {
-  selected.value = p
-  flyTo(p.x, p.y, 2.4)
+// ---- 选店 / 路线 ----
+function selectShop(s) {
+  selected.value = { name: s.name, x: s.x, y: s.y, color: s.color, category: s.category }
+  flyTo(s.x, s.y, 2.6)
 }
 function clearRoute() { selected.value = null }
-function goDetail(p) {
-  const s = shops.find(s => s.name === p.name && s.zone === activeZone.value && String(s.floor) === activeFloorKey.value)
-  if (s) router.push(`/shops/${s.id}`)
+function goDetail(s) {
+  const shop = shops.find(x => x.name === s.name && x.zone === activeZone.value && String(x.floor) === activeFloorKey.value)
+  if (shop) router.push(`/shops/${shop.id}`)
 }
-function go3D() { router.push('/map3d') }
 function locateShop(s) {
   if (s.zone !== activeZone.value || String(s.floor) !== activeFloorKey.value) {
     activeZone.value = s.zone
@@ -357,9 +365,9 @@ function locateShop(s) {
     selected.value = null
   }
   nextTick(() => {
-    const arr = floorPois[`${s.zone}-${s.floor}`]?.pois || []
-    const p = arr.find(p => p.name === s.name)
-    if (p) selectPoi(p)
+    const arr = currentFloor.value?.shops || []
+    const sh = arr.find(x => x.name === s.name)
+    if (sh) selectShop(sh)
   })
 }
 
@@ -380,9 +388,9 @@ function onSearchItem(shop) {
   activeFloorKey.value = String(shop.floor)
   selected.value = null
   nextTick(() => {
-    const arr = floorPois[`${shop.zone}-${shop.floor}`]?.pois || []
-    const p = arr.find(p => p.name === shop.name)
-    if (p) selectPoi(p)
+    const arr = currentFloor.value?.shops || []
+    const sh = arr.find(x => x.name === shop.name)
+    if (sh) selectShop(sh)
     else drawerOpen.value = true
   })
 }
@@ -425,76 +433,70 @@ function onSearchItem(shop) {
 }
 .tab-pill.active { background: #FF7B2C; border-color: #FF7B2C; color: #fff; }
 
+/* 路线提示条 */
+.route-banner {
+  display: flex; align-items: center; gap: 8px; margin: 6px 12px 0;
+  background: linear-gradient(90deg, #FF7B2C, #E85D04); color: #fff;
+  border-radius: 10px; padding: 8px 12px; font-size: 13px;
+  box-shadow: 0 4px 14px rgba(255,123,44,.3);
+}
+.rb-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.rb-start { background: #2E8BFF; box-shadow: 0 0 0 3px rgba(46,139,255,.35); }
+.rb-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rb-text b { font-weight: 700; }
+.rb-clear { border: none; background: rgba(255,255,255,.2); color: #fff; font-size: 12px; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+.rb-clear:active { background: rgba(255,255,255,.35); }
+
 /* 地图区域 */
 .map-area {
   flex: 1; margin: 6px 12px 0; position: relative; overflow: hidden;
-  border-radius: 12px; background: #111; cursor: grab; user-select: none; touch-action: none;
+  border-radius: 12px; background: #ECEAE4; cursor: grab; user-select: none; touch-action: none;
 }
-.map3d-btn {
-  position: absolute; top: 12px; right: 22px; z-index: 12;
-  border: 1px solid rgba(255,255,255,.15); background: rgba(30,30,30,.85);
-  backdrop-filter: blur(6px); color: #eee; font-size: 13px; font-weight: 700;
-  padding: 7px 14px; border-radius: 20px; cursor: pointer; font-family: inherit;
-  -webkit-tap-highlight-color: transparent;
-}
-.map3d-btn:active { background: #FF7B2C; color: #fff; }
 .map-area:active { cursor: grabbing; }
+.map-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #888; font-size: 14px; }
 .map-canvas { position: absolute; top: 0; left: 0; width: 100%; transform-origin: 0 0; }
 .floor-wrap { position: relative; }
-.floor-img { width: 100%; height: auto; display: block; -webkit-user-drag: none; pointer-events: none; }
-.no-map-hint { text-align: center; color: #555; padding: 40px 20px; }
+.floor-svg { display: block; -webkit-user-drag: none; }
 
-/* POI 层 */
-.poi-layer { position: absolute; inset: 0; pointer-events: none; }
-.route-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.route-casing { fill: none; stroke: #fff; stroke-width: 13; stroke-linejoin: round; stroke-linecap: round; opacity: .85; }
-.route-line { fill: none; stroke: #FF7B2C; stroke-width: 6; stroke-linejoin: round; stroke-linecap: round; }
-.poi-pin { position: absolute; pointer-events: auto; cursor: pointer; transform-origin: 50% 100%; }
-.pin-body {
-  width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
-  border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.45);
+/* 商铺多边形 */
+.shop-poly { cursor: pointer; transition: fill .15s, stroke .15s; }
+.shop-poly:hover { fill: rgba(255,123,44,.22) !important; }
+.shop-poly.sel { fill: rgba(255,123,44,.30) !important; }
+.shop-label {
+  font-size: 30px; fill: #2b2b2b; font-weight: 600; text-anchor: middle; dominant-baseline: middle;
+  paint-order: stroke; stroke: #fff; stroke-width: 3.2px; stroke-linejoin: round;
+  pointer-events: none; font-family: inherit; user-select: none;
 }
-.pin-label {
-  position: absolute; top: -19px; left: 50%; transform: translateX(-50%);
-  font-size: 10px; color: #fff; background: rgba(0,0,0,.62); padding: 1px 6px;
-  border-radius: 6px; white-space: nowrap; pointer-events: none; font-weight: 600;
-}
-.poi-pin.selected { z-index: 6; }
-.poi-pin.selected .pin-body { background: #FF7B2C !important; box-shadow: 0 0 0 4px rgba(255,123,44,.35), 0 2px 8px rgba(0,0,0,.5); }
-.poi-pin.selected .pin-label { background: #FF7B2C; }
+.shop-label.sel { fill: #E85D04; font-weight: 700; }
 
-.me-dot {
-  position: absolute; width: 15px; height: 15px; border-radius: 50%;
-  background: #2E8BFF; border: 3px solid #fff; box-shadow: 0 0 0 4px rgba(46,139,255,.3);
-  pointer-events: none;
-}
-.me-label {
-  position: absolute; transform: translate(-50%, 8px); font-size: 10px; color: #2E8BFF;
-  background: rgba(255,255,255,.85); padding: 0 5px; border-radius: 5px; white-space: nowrap;
-  pointer-events: none; font-weight: 700;
-}
+/* 路线 */
+.route-casing { fill: none; stroke: #fff; stroke-width: 16; stroke-linejoin: round; stroke-linecap: round; opacity: .9; }
+.route-line { fill: none; stroke: #FF7B2C; stroke-width: 7; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1 0; }
+
+/* 我的位置文字 */
+.me-text { font-size: 26px; fill: #2E8BFF; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: #fff; stroke-width: 3.4px; stroke-linejoin: round; pointer-events: none; font-family: inherit; }
 
 /* 地图内标签 */
 .map-label { position: absolute; top: 10px; left: 12px; font-size: 13px; font-weight: 700; color: #fff; background: rgba(0,0,0,.5); padding: 3px 10px; border-radius: 6px; z-index: 8; pointer-events: none; }
 
-/* 放大镜控件 */
+/* 缩放控件 */
 .zoom-controls { position: absolute; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 4px; z-index: 9; align-items: flex-end; }
 .zc-btn {
-  width: 36px; height: 36px; border: none; border-radius: 50%; background: rgba(30,30,30,.85);
-  backdrop-filter: blur(6px); color: #DDD; font-size: 19px; font-weight: 600; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.12);
+  width: 36px; height: 36px; border: none; border-radius: 50%; background: rgba(255,255,255,.9);
+  color: #333; font-size: 19px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,.18);
   -webkit-tap-highlight-color: transparent;
 }
 .zc-btn:active { background: #FF7B2C; color: #fff; }
 .zc-reset { font-size: 15px; }
-.zc-level { font-size: 10px; color: #aaa; background: rgba(0,0,0,.5); padding: 2px 8px; border-radius: 8px; margin-top: 2px; }
+.zc-level { font-size: 10px; color: #555; background: rgba(255,255,255,.85); padding: 2px 8px; border-radius: 8px; margin-top: 2px; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 
 /* 图例 */
 .legend { position: absolute; left: 10px; bottom: 10px; z-index: 9; }
-.legend-toggle { display: flex; align-items: center; gap: 4px; border: none; background: rgba(30,30,30,.85); backdrop-filter: blur(6px); color: #DDD; font-size: 12px; padding: 6px 10px; border-radius: 18px; cursor: pointer; border: 1px solid rgba(255,255,255,.12); }
+.legend-toggle { display: flex; align-items: center; gap: 4px; border: none; background: rgba(255,255,255,.9); color: #333; font-size: 12px; padding: 6px 10px; border-radius: 18px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.18); font-weight: 600; }
 .legend-ico { font-size: 13px; }
-.legend-panel { margin-bottom: 6px; background: rgba(20,20,20,.92); border-radius: 10px; padding: 8px 10px; min-width: 96px; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
-.legend-row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #EEE; padding: 3px 0; }
+.legend-panel { margin-bottom: 6px; background: rgba(255,255,255,.95); border-radius: 10px; padding: 8px 10px; min-width: 96px; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+.legend-row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #333; padding: 3px 0; }
 .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
 
 /* 选中气泡 */
