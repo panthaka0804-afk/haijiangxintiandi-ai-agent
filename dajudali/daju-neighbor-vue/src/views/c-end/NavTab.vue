@@ -126,10 +126,14 @@ const activeFloorLabel = computed(() => {
   return f?.label || ''
 })
 
-// 当前平面图 URL（public 目录，Vite 原样复制到 dist 根）
+// 区块 → ASCII slug（避免中文文件名在 URL 编码链路里 404）
+const ZONE_SLUG = { '1区': 'z1', '3区': 'z3', '4区': 'z4', '5区': 'z5', '6区': 'z6' }
+// 当前平面图 URL（public 目录，Vite 原样复制到 dist 根；用 BASE_URL 自动适配 /vue/ 前缀）
 const currentImageUrl = computed(() => {
   if (!activeZone.value || !activeFloorKey.value) return ''
-  return `/floor-plans/${activeZone.value}-${activeFloorKey.value}.png`
+  const slug = ZONE_SLUG[activeZone.value]
+  if (!slug) return '' // 7区等暂无平面图 → 显示提示
+  return `${import.meta.env.BASE_URL}floor-plans/${slug}-${activeFloorKey.value}.png`
 })
 
 // 视口 transform 样式
