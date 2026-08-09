@@ -323,33 +323,29 @@ function go(route) { if (route) router.push(route) }
 }
 .benefit-red { background-color: #9B4A3E; border: 3px solid #6E332A; }
 
-/* ── 高端纹理：织纹 + 斜向光泽（叠加在实色之上，颜色透过透明处显示，营造金属压纹/烫印质感） ── */
+/* ── 高端质感：斜向金属高光 + 内描边压印（去掉交叉织纹/华夫格，避免廉价感） ── */
 .mem-card,
 .tier-card,
 .benefit-red {
   background-image:
     linear-gradient(135deg,
-      rgba(255,255,255,0.24) 0%,
-      rgba(255,255,255,0.06) 16%,
-      rgba(255,255,255,0) 40%,
-      rgba(0,0,0,0.14) 100%),
-    repeating-linear-gradient(45deg, rgba(255,255,255,0.085) 0 1px, transparent 1px 6px),
-    repeating-linear-gradient(-45deg, rgba(0,0,0,0.07) 0 1px, transparent 1px 6px);
-  background-blend-mode: normal;
+      rgba(255,255,255,0.32) 0%,
+      rgba(255,255,255,0.06) 24%,
+      rgba(255,255,255,0) 48%,
+      rgba(0,0,0,0.16) 100%);
 }
-/* 卡片内再叠一层极淡的细点阵，增加"磨砂烫金"层次 */
-.mem-card::after,
-.tier-card::after,
-.benefit-red::after {
+/* 顶部内高光 + 底部内阴影：营造厚实压印/烫印的立体感（替代网格纹路） */
+.mem-card::before,
+.tier-card::before,
+.benefit-red::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1.4px);
-  background-size: 9px 9px;
-  mix-blend-mode: screen;
-  opacity: 0.5;
+  box-shadow:
+    inset 0 2px 3px rgba(255,255,255,0.30),
+    inset 0 -3px 6px rgba(0,0,0,0.20);
 }
 
 /* ── 海江之友：可切换等级轮播 ── */
@@ -363,10 +359,10 @@ function go(route) { if (route) router.push(route) }
   flex: 0 0 100%; box-sizing: border-box; scroll-snap-align: start;
   position: relative; overflow: visible;
 }
-/* 雪山：直接放在 .tier-slide 内、与卡片同属一个被滚动的元素，100%同步、零独立动画；山顶从 slide 顶往上探 40px(仍在 viewport 的 45px 顶部留白内，不被滚动容器裁切)，卡片 margin-top 留出山峰、压住山脚约1/3（坐标与用户认可的?t=168一致） */
+/* 雪山：直接放在 .tier-slide 内、与卡片同属一个被滚动的元素，100%同步、零独立动画；山顶贴 slide 顶(top:0)，不超出 slide，故不被 overflow-x:auto 滚动容器隐式裁切 y（?t=169 定稿规则）；卡片 margin-top 留出山峰区并压住山脚 */
 .tier-mtn-img {
   position: absolute;
-  top: -40px; left: 0; right: 0;
+  top: 0; left: 0; right: 0;
   z-index: 0; pointer-events: none;
   width: 100%; height: auto;
   display: block;
@@ -378,7 +374,7 @@ function go(route) { if (route) router.push(route) }
 .tier-card {
   position: relative; z-index: 1;
   box-sizing: border-box; width: 100%;
-  margin-top: 25px;
+  margin-top: 38px;
   min-height: 180px;
   border-radius: 18px;
   border-width: 3px; border-style: solid;
