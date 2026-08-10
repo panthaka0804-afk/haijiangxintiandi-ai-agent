@@ -1,5 +1,5 @@
-﻿// API 基础配置
-const BASE_URL = ''
+﻿// API 基础配置（build 时用 VITE_API_BASE 注入公网后端地址；为空则同源）
+const BASE_URL = import.meta.env.VITE_API_BASE || ''
 
 async function request(url, options = {}) {
   const config = {
@@ -227,6 +227,26 @@ export function payParking(data) {
     method: 'POST',
     body: JSON.stringify(data)
   })
+}
+
+// ========== 无感积分停车 ==========
+export function bindPlate(data) {
+  return request('/api/parking/bind', { method: 'POST', body: JSON.stringify(data) })
+}
+export function myPlates() {
+  return request('/api/parking/my-plates')
+}
+export function unbindPlate(data) {
+  return request('/api/parking/unbind', { method: 'POST', body: JSON.stringify(data) })
+}
+export function redeemParkingCoupon() {
+  return request('/api/parking/redeem-coupon', { method: 'POST', body: '{}' })
+}
+export function parkingEntry(data) {
+  return request('/api/parking/entry', { method: 'POST', body: JSON.stringify(data) })
+}
+export function parkingExit(data) {
+  return request('/api/parking/exit', { method: 'POST', body: JSON.stringify(data) })
 }
 
 // 通用 HTTP 客户端（ActivityDetail 等使用）

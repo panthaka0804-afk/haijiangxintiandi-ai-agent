@@ -59,12 +59,42 @@
       <div class="pp-paid-text">缴费成功</div>
       <div class="pp-paid-detail">{{ payResult?.message }}</div>
     </div>
+
+    <!-- 无感积分停车演示 -->
+    <div class="pp-seamless">
+      <div class="pps-title">无感积分停车（会员自动抵扣）</div>
+      <div class="pps-sub">绑定车牌后，车辆进出自动识别；出场自动用会员权益 / 停车券 / 积分抵扣，无需当场缴费</div>
+      <div class="pps-plates" v-if="myPlateList.length">
+        <span>我的车辆：</span><b>{{ myPlateList.join('、') }}</b>
+        <span class="pps-link" @click="$router.push('/parking/bind')">管理</span>
+      </div>
+      <div class="pps-actions">
+        <button class="pps-btn entry" :disabled="!plate || entrying" @click="doEntry">{{ entrying ? '入场中...' : '模拟入场' }}</button>
+        <button class="pps-btn exit" :disabled="!plate || exiting" @click="doExit">{{ exiting ? '结算中...' : '模拟出场结算' }}</button>
+      </div>
+      <div class="pps-msg" v-if="entryMsg">{{ entryMsg }}</div>
+      <div class="pps-result" v-if="settleResult">
+        <div class="pps-r-row"><span>车牌</span><b>{{ settleResult.plate }}</b></div>
+        <div class="pps-r-row"><span>会员等级</span><b>{{ settleResult.member_level }}</b></div>
+        <div class="pps-r-row"><span>停车时长</span><b>{{ settleResult.duration }}</b></div>
+        <div class="pps-r-row"><span>原始费用</span><b>¥{{ settleResult.original_fee?.toFixed(2) }}</b></div>
+        <div class="pps-r-row"><span>会员免费时长</span><b>{{ settleResult.member_benefit_min }} 分钟</b></div>
+        <div class="pps-r-row"><span>停车券抵扣</span><b>{{ settleResult.coupon_hours_used }} 小时</b></div>
+        <div class="pps-r-row"><span>积分抵扣</span><b>{{ settleResult.points_used }} 分</b></div>
+        <div class="pps-r-row total"><span>已自动抵扣</span><b>-¥{{ settleResult.discount_total?.toFixed(2) }}</b></div>
+        <div class="pps-r-row total"><span>实付</span><b>¥{{ settleResult.payable?.toFixed(2) }}</b></div>
+        <div class="pps-barrier" :class="settleResult.barrier === 'OPEN' ? 'open' : 'pay'">
+          道闸：{{ settleResult.barrier === 'OPEN' ? '已自动放行' : '需支付后放行' }}
+        </div>
+        <div class="pps-msg2">{{ settleResult.message }}</div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { queryParking, payParking } from '@/api'
+import { queryParking, payParking, parkingEntry, parkingExit, myPlates } from '@/api'
 
 const plate = ref('')
 const presets = ref(['沪A·12345', '沪B·67890', '沪C·11111'])
@@ -116,6 +146,37 @@ async function doPay() {
   } finally {
     paying.value = false
   }
+}
+
+// ---- 无感积分停车演示 ----
+const myPlateList = ref([])
+const entrying = ref(false)
+const exiting = ref(false)
+const settleResult = ref(null)
+const entryMsg = ref('')
+
+async function loadMyPlates() {
+  try { const r = await myPlates(); if (r.ok) myPlateList.value = r.plates || [] } catch (e) {}
+}
+loadMyPlates()
+
+async function doEntry() {
+  if (!plate.value.trim()) return
+  entrying.value = true; entryMsg.value = ''; settleResult.value = null
+  try {
+    const r = await parkingEntry({ plate: plate.value.trim() })
+    entryMsg.value = r.ok ? (r.data?.message || '入场成功') : (r.error || '入场失败')
+  } catch (e) { entryMsg.value = '网络错误' } finally { entrying.value = false }
+}
+
+async function doExit() {
+  if (!plate.value.trim()) return
+  exiting.value = true; entryMsg.value = ''; settleResult.value = null
+  try {
+    const r = await parkingExit({ plate: plate.value.trim() })
+    if (r.ok) settleResult.value = r.data
+    else entryMsg.value = r.error || '结算失败'
+  } catch (e) { entryMsg.value = '网络错误' } finally { exiting.value = false }
 }
 </script>
 
@@ -194,4 +255,32 @@ async function doPay() {
 }
 .pp-paid-text { font-size: 18px; font-weight: 700; color: #878787; margin-bottom: 8px; }
 .pp-paid-detail { font-size: 13px; color: #999; }
+
+.pp-seamless {
+  margin-top: 24px; padding: 16px; background: #222222; border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.pps-title { font-size: 17px; font-weight: 700; color: #F0F0F0; margin-bottom: 6px; }
+.pps-sub { font-size: 12px; color: #888; line-height: 1.6; margin-bottom: 14px; }
+.pps-plates { font-size: 13px; color: #999; margin-bottom: 14px; }
+.pps-plates b { color: #F0F0F0; }
+.pps-link { color: #9AA39A; margin-left: 8px; text-decoration: underline; cursor: pointer; }
+.pps-actions { display: flex; gap: 10px; margin-bottom: 12px; }
+.pps-btn {
+  flex: 1; padding: 13px; border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.pps-btn.entry { background: #2A2A2A; color: #fff; }
+.pps-btn.exit { background: #1A1A1A; color: #fff; }
+.pps-btn:disabled { opacity: 0.5; }
+.pps-msg { font-size: 13px; color: #8FB98F; margin-bottom: 10px; }
+.pps-result { background: #1A1A1A; border-radius: 10px; padding: 12px 14px; margin-top: 4px; }
+.pps-r-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 14px; color: #999; }
+.pps-r-row b { color: #F0F0F0; font-weight: 600; }
+.pps-r-row.total { border-top: 1px solid #2E2E2E; margin-top: 4px; padding-top: 10px; }
+.pps-r-row.total b { color: #9AA39A; }
+.pps-barrier { margin-top: 10px; padding: 10px; border-radius: 10px; text-align: center; font-size: 14px; font-weight: 600; }
+.pps-barrier.open { background: #1E2A1E; color: #8FB98F; }
+.pps-barrier.pay { background: #2A2420; color: #C8A07A; }
+.pps-msg2 { font-size: 12px; color: #999; margin-top: 8px; text-align: center; }
 </style>

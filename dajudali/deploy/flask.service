@@ -11,9 +11,10 @@ WorkingDirectory=/opt/haijiang/dajudali
 ExecStart=/usr/bin/python3 /opt/haijiang/dajudali/server.py
 Restart=always
 RestartSec=5
-# 后端需要的密钥/环境变量可在此注入（不要写进代码仓库）
+# 密钥由 server.py 同目录 .env 自动加载（python-dotenv），无需在此填写，也不会进仓库
+# 如需在此覆盖（优先级高于 .env），取消下行注释：
+# Environment=DS_API_KEY=xxxx
 Environment=PYTHONUNBUFFERED=1
-# Environment=DEEPSEEK_API_KEY=xxxx
 
 [Install]
 WantedBy=multi-user.target

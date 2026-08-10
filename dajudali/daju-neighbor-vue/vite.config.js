@@ -8,7 +8,7 @@ import { VantResolver } from '@vant/auto-import-resolver'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
-  base: '/vue/',
+  base: './',
   plugins: [
     vue(),
     legacy({
@@ -35,6 +35,16 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    allowedHosts: true,
+    proxy: {
+      '/api': 'http://localhost:8765',
+      '/login': 'http://localhost:8765',
+      '/logout': 'http://localhost:8765'
+    }
+  },
+  preview: {
+    port: 4173,
+    allowedHosts: true,
     proxy: {
       '/api': 'http://localhost:8765',
       '/login': 'http://localhost:8765',

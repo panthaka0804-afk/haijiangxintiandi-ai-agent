@@ -1,45 +1,26 @@
-node_modules/
-dist/
+# ===== 密钥与本地配置（切勿提交） =====
 .env
-*.pyc
-__pycache__/
-.venv/
-venv/
+.env.*
+!.env.example
+
+# ===== 数据库（运行时生成） =====
 *.db
-*.db-shm
-*.db-wal
+*.sqlite
+*.sqlite3
+
+# ===== Python =====
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# ===== 前端依赖与构建产物 =====
+node_modules/
+daju-neighbor-vue/dist/
+# static/vue 由 dist 复制而来，属部署产物
+dajudali/static/vue/
+
+# ===== 日志与系统 =====
 *.log
 .DS_Store
-thumbs.db
-media/
-backups/
-avatars/
-wallpaper/
-openclaw-workspace-state.json
-package-lock.json
-*.xlsx
-*.docx
-temp*
-memory/
-AGENTS.md
-HEARTBEAT.md
-IDENTITY.md
-MEMORY.md
-SOUL.md
-TOOLS.md
-USER.md
-HEARTBEAT.md
-check_*.py
-check_*.js
-test_*.py
-test_*.js
-test_*.sh
-fix_*.py
-fix_*.js
-fix_*.cjs
-debug_*.js
-extract_*.js
-gen_*.js
-*.test.*
-*_test.*
-_*.py
+Thumbs.db

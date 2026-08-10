@@ -4,12 +4,13 @@
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#AAA" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
     </div>
     <div class="pb-title">我的车辆</div>
+    <div v-if="tip" class="pb-tip">{{ tip }}</div>
 
     <div class="pb-list">
       <div v-for="(p, i) in plates" :key="i" class="pb-card">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
         <span class="pb-plate">{{ p }}</span>
-        <button class="pb-del" @click="plates.splice(i, 1)">删除</button>
+        <button class="pb-del" @click="delPlate(p)">删除</button>
       </div>
     </div>
 
@@ -28,14 +29,47 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { myPlates, bindPlate, unbindPlate } from '@/api'
 
-const plates = ref(['沪A·12345', '沪B·67890'])
+const plates = ref([])
 const adding = ref(false)
 const newPlate = ref('')
+const loading = ref(false)
+const tip = ref('')
 
-function addPlate() {
-  if (newPlate.value) { plates.value.push(newPlate.value); newPlate.value = ''; adding.value = false }
+async function loadPlates() {
+  try {
+    const resp = await myPlates()
+    if (resp.ok) plates.value = resp.plates || []
+  } catch (e) {}
+}
+
+onMounted(loadPlates)
+
+function norm(p) { return (p || '').replace(/[·\s-]/g, '').toUpperCase() }
+
+async function addPlate() {
+  const p = norm(newPlate.value)
+  if (!p) return
+  loading.value = true; tip.value = ''
+  try {
+    const resp = await bindPlate({ plate: p })
+    if (resp.ok) {
+      plates.value = resp.plates || []
+      newPlate.value = ''; adding.value = false
+      tip.value = resp.message || '绑定成功'
+    } else {
+      tip.value = resp.error || '绑定失败'
+    }
+  } catch (e) { tip.value = '网络错误' } finally { loading.value = false }
+}
+
+async function delPlate(p) {
+  try {
+    const resp = await unbindPlate({ plate: p })
+    if (resp.ok) plates.value = resp.plates || []
+  } catch (e) {}
 }
 </script>
 
@@ -43,6 +77,7 @@ function addPlate() {
 .pb-page { padding: 0 12px; min-height: 100vh; background: #1A1A1A; }
 .pb-back { padding: 10px 0; cursor: pointer; display: inline-block; margin-bottom: 8px; }
 .pb-title { font-size: 24px; font-weight: 700; color: #F0F0F0; margin-bottom: 20px; }
+.pb-tip { font-size: 13px; color: #8FB98F; background: #1E2A1E; border: 1px solid #3A5A3A; padding: 8px 12px; border-radius: 10px; margin-bottom: 14px; }
 
 .pb-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
 .pb-card {
