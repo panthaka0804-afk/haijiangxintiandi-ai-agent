@@ -2936,10 +2936,18 @@ _INIT_LOCK_FILE = os.path.join(HERE, '.init_lock')
 _init_lock_fd = None
 
 def _acquire_init_flock():
-    """获取跨进程初始化文件锁（阻塞直到拿到）。"""
+    """获取跨进程初始化文件锁（阻塞直到拿到）。
+    用 os.open(O_CREAT|O_RDWR) 创建/打开，避免 open('w') 的截断写权限要求；
+    锁文件若由其他用户(如 admin)创建过，www-data 用截断模式会 PermissionError。
+    """
     global _init_lock_fd
     if _init_lock_fd is None:
-        _init_lock_fd = open(_INIT_LOCK_FILE, 'w')
+        fd = os.open(_INIT_LOCK_FILE, os.O_CREAT | os.O_RDWR, 0o666)
+        try:
+            os.chmod(_INIT_LOCK_FILE, 0o666)
+        except Exception:
+            pass
+        _init_lock_fd = os.fdopen(fd, 'r+')
     fcntl.flock(_init_lock_fd.fileno(), fcntl.LOCK_EX)
     return _init_lock_fd
 
@@ -3541,16 +3549,21 @@ def _auto_level(points):
             level = name
     return level
 
-def add_points(phone, points, action, remark=''):
+def add_points(phone, points, action, remark='', conn=None):
     """统一加分入口：加分 + 记流水 + 自动升级等级 + 检查徽章。
-    后续内容层/互动层行为（发帖/评论/被赞）直接调用此函数即可，无需重复造轮子。"""
+    后续内容层/互动层行为（发帖/评论/被赞）直接调用此函数即可，无需重复造轮子。
+    conn 由调用方传入时复用其事务（不自行提交/关闭），避免同一请求内多连接互锁 SQLite。
+    """
     if not phone or points == 0:
         return {'ok': False, 'error': '参数错误'}
-    conn = get_db()
+    own = conn is None
+    if own:
+        conn = get_db()
     _ensure_tables(conn)
     user = conn.execute('SELECT id, points, membership_level FROM users WHERE phone=?', (phone,)).fetchone()
     if not user:
-        conn.close()
+        if own:
+            conn.close()
         return {'ok': False, 'error': '用户不存在，请先注册会员'}
     old_points = user['points'] or 0
     new_points = old_points + points
@@ -3564,17 +3577,22 @@ def add_points(phone, points, action, remark=''):
     if _level_rank(new_level) > _level_rank(old_level):
         conn.execute('UPDATE users SET membership_level=? WHERE phone=?', (new_level, phone))
         level_up = new_level
-    conn.commit()
-    conn.close()
-    new_badges = check_badges(phone)
+    if own:
+        conn.commit()
+        conn.close()
+    new_badges = check_badges(phone, conn)
     return {'ok': True, 'points': new_points, 'added': points, 'level': new_level,
             'level_up': level_up, 'new_badges': new_badges}
 
-def check_badges(phone):
-    """检查并自动颁发达成条件的徽章，返回本次新获得的徽章 code 列表"""
+def check_badges(phone, conn=None):
+    """检查并自动颁发达成条件的徽章，返回本次新获得的徽章 code 列表。
+    conn 由调用方传入时复用其事务（不自行提交/关闭），否则自建连接。
+    """
     if not phone:
         return []
-    conn = get_db()
+    own = conn is None
+    if own:
+        conn = get_db()
     _ensure_tables(conn)
     user = conn.execute('SELECT points, membership_level FROM users WHERE phone=?', (phone,)).fetchone()
     if not user:
@@ -3608,8 +3626,9 @@ def check_badges(phone):
         if not exists:
             conn.execute('INSERT INTO user_badges (user_phone, badge_code) VALUES (?,?)', (phone, code))
             earned.append(code)
-    conn.commit()
-    conn.close()
+    if own:
+        conn.commit()
+        conn.close()
     return earned
 
 
@@ -5456,7 +5475,7 @@ def api_interest_club_join():
         if not exists:
             conn.execute("INSERT INTO user_club_members (club_id,user_phone,user_name) VALUES (?,?,?)", (club_id, phone, name))
             conn.execute("UPDATE interest_clubs SET member_count = member_count + 1 WHERE id=?", (club_id,))
-            add_points(phone, 5, 'join_club', '加入兴趣社#' + str(club_id))
+            add_points(phone, 5, 'join_club', '加入兴趣社#' + str(club_id), conn)
     else:
         if exists:
             conn.execute("DELETE FROM user_club_members WHERE club_id=? AND user_phone=?", (club_id, phone))
@@ -5575,9 +5594,9 @@ def api_club_event_join():
         conn.close()
         return jsonify(ok=False, error='您已在该活动群')
     conn.execute("INSERT INTO club_event_members (event_id,user_phone,user_name) VALUES (?,?,?)", (eid, phone, name))
-    conn.commit()
-    add_points(phone, 5, 'join_club_event', '加入活动群#' + str(eid))
+    add_points(phone, 5, 'join_club_event', '加入活动群#' + str(eid), conn)
     joined = conn.execute("SELECT COUNT(*) FROM club_event_members WHERE event_id=?", (eid,)).fetchone()[0]
+    conn.commit()
     conn.close()
     return jsonify(ok=True, data={
         'joined_count': joined, 'remain': max(0, (r['need_count'] or 0) - joined),
@@ -5610,8 +5629,8 @@ def api_club_event_message():
         return jsonify(ok=False, error='请先加入该活动群再留言')
     conn.execute("INSERT INTO club_event_messages (event_id,user_phone,user_name,content) VALUES (?,?,?,?)",
                  (eid, phone, name, content[:300]))
+    add_points(phone, 2, 'club_event_msg', '活动群留言#' + str(eid), conn)
     conn.commit()
-    add_points(phone, 2, 'club_event_msg', '活动群留言#' + str(eid))
     conn.close()
     return jsonify(ok=True, data={'message': '留言已发送'})
 
