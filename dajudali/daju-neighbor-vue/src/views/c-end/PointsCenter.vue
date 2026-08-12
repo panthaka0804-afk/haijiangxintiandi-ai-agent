@@ -206,51 +206,57 @@ onMounted(() => {
 .points-empty { padding: 40px 24px; text-align: center; color: #999; }
 .empty-title { font-size: 18px; color: #eee; margin-bottom: 8px; }
 .empty-hint { font-size: 14px; }
+.points-empty .van-button { background: #C4923A; border-color: #9A7425; }
 
-.growth-card { margin: 16px; padding: 18px 16px; background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 16px; }
+/* 成长值卡片 — 银灰多彩卡（渐变实色底 + 深边框 + 内高光） */
+.growth-card { margin: 16px; padding: 18px 16px; background: linear-gradient(135deg, #9CA1A8 0%, #7A7E84 100%); border: 3px solid #6A6E74; border-radius: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px rgba(0,0,0,0.35); }
 .growth-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.growth-level { padding: 4px 12px; border-radius: 14px; border: 1px solid; font-size: 13px; color: #fff; }
-.growth-points { font-size: 26px; font-weight: 700; color: #fff; }
-.growth-points em { font-style: normal; font-size: 13px; color: #999; font-weight: 400; margin-left: 4px; }
-.growth-bar { height: 8px; background: #2e2e2e; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.growth-level { padding: 4px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.55); font-size: 13px; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.30); }
+.growth-points { font-size: 26px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
+.growth-points em { font-style: normal; font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 400; margin-left: 4px; }
+.growth-bar { height: 8px; background: rgba(0,0,0,0.22); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
 .growth-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s; }
-.growth-hint { font-size: 12px; color: #999; }
+.growth-hint { font-size: 12px; color: rgba(255,255,255,0.92); text-shadow: 0 1px 1px rgba(0,0,0,0.25); }
 
-.sign-card { margin: 0 16px 16px; padding: 16px; background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; }
-.sign-title { font-size: 16px; color: #fff; font-weight: 600; }
-.sign-days { font-size: 12px; color: #999; margin-top: 4px; }
-.sign-days b { color: #C4923A; }
-.sign-btn { padding: 12px 22px; border-radius: 22px; border: none; background: #FFFFFF; color: #C4923A; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
-.sign-btn.signed { background: #2e2e2e; color: #888; cursor: default; box-shadow: none; }
+/* 签到抽奖卡 — 金黄多彩卡 */
+.sign-card { margin: 0 16px 16px; padding: 16px; background: linear-gradient(135deg, #C4923A 0%, #A8761F 100%); border: 3px solid #7E5413; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px rgba(196,146,58,0.35); }
+.sign-title { font-size: 16px; color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
+.sign-days { font-size: 12px; color: rgba(255,255,255,0.92); margin-top: 4px; }
+.sign-days b { color: #FFF3D6; }
+.sign-btn { padding: 12px 22px; border-radius: 22px; border: none; background: #fff; color: #A8761F; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+.sign-btn.signed { background: rgba(0,0,0,0.30); color: rgba(255,255,255,0.85); cursor: default; box-shadow: none; }
 .sign-coupon { font-size: 12px; color: #FFF3D6; margin-top: 6px; }
 
-.memberday-card { margin: 0 16px 16px; padding: 16px; border: 3px solid #5C241D; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,.20), 0 3px 10px rgba(0,0,0,.35); }
-.md-title { font-size: 16px; color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
-.md-sub { font-size: 12px; color: rgba(255,255,255,.92); margin-top: 4px; }
+/* 周三会员日卡 — 深红棕多彩卡 */
+.memberday-card { margin: 0 16px 16px; padding: 16px; background: linear-gradient(135deg, #9B4A3E 0%, #7A342B 100%); border: 3px solid #5C241D; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,0.20), 0 4px 14px rgba(155,74,62,0.35); }
+.md-title { font-size: 16px; color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
+.md-sub { font-size: 12px; color: rgba(255,255,255,0.92); margin-top: 4px; }
 .md-sub b { color: #FFF3D6; }
 .md-got { font-size: 11px; color: #FFF3D6; margin-top: 4px; }
 .md-btn { padding: 12px 20px; border-radius: 22px; border: none; background: #fff; color: #7A342B; font-size: 14px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
-.md-btn.got { background: rgba(255,255,255,.25); color: #fff; cursor: default; }
-.md-btn.off { background: rgba(255,255,255,.18); color: rgba(255,255,255,.8); }
+.md-btn.got { background: rgba(255,255,255,0.25); color: #fff; cursor: default; }
+.md-btn.off { background: rgba(255,255,255,0.18); color: rgba(255,255,255,0.8); }
 
+/* 徽章墙 — 玻璃容器 + 多彩徽章 */
 .badge-section { margin: 0 16px 16px; }
 .section-title { font-size: 16px; color: #fff; font-weight: 600; margin-bottom: 12px; }
 .section-sub { font-size: 12px; color: #999; font-weight: 400; }
 .badge-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.badge-item { background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 12px; padding: 12px 6px; text-align: center; }
-.badge-icon { width: 40px; height: 40px; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; background: #2e2e2e; color: #666; border: 1px solid #444; }
-.badge-item.earned .badge-icon { background: #C4923A; border-color: #9A7425; color: #fff; }
+.badge-item { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; padding: 12px 6px; text-align: center; }
+.badge-icon { width: 40px; height: 40px; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; background: rgba(255,255,255,0.10); color: #888; border: 1px solid rgba(255,255,255,0.18); }
+.badge-item.earned .badge-icon { background: linear-gradient(135deg, #C4923A, #A8761F); border-color: #7E5413; color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.30), 0 2px 6px rgba(196,146,58,0.40); }
 .badge-name { font-size: 13px; color: #eee; }
 .badge-item:not(.earned) .badge-name { color: #888; }
-.badge-desc { font-size: 10px; color: #666; margin-top: 3px; line-height: 1.3; }
+.badge-desc { font-size: 10px; color: #777; margin-top: 3px; line-height: 1.3; }
 
+/* 成长值明细 — 深灰绿多彩卡 */
 .log-section { margin: 0 16px; }
-.log-list { background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 12px; overflow: hidden; }
-.log-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #2e2e2e; }
+.log-list { background: linear-gradient(135deg, #6B6E64 0%, #565952 100%); border: 3px solid #44463F; border-radius: 14px; overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 4px 12px rgba(0,0,0,0.30); }
+.log-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid rgba(0,0,0,0.22); }
 .log-item:last-child { border-bottom: none; }
-.log-remark { font-size: 14px; color: #eee; }
-.log-time { font-size: 11px; color: #666; margin-top: 2px; }
-.log-points { font-size: 16px; font-weight: 700; color: #C4923A; }
-.log-points.minus { color: #3E8E41; }
-.log-empty { padding: 24px; text-align: center; color: #888; font-size: 13px; }
+.log-remark { font-size: 14px; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.25); }
+.log-time { font-size: 11px; color: rgba(255,255,255,0.70); margin-top: 2px; }
+.log-points { font-size: 16px; font-weight: 700; color: #FFF3D6; }
+.log-points.minus { color: #D6E8D5; }
+.log-empty { padding: 24px; text-align: center; color: rgba(255,255,255,0.80); font-size: 13px; }
 </style>
