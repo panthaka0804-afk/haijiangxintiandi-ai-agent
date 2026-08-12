@@ -174,14 +174,18 @@ onMounted(syncMemberTier)
 onActivated(syncMemberTier)
 
 // 海江之友等级卡（可切换）：普卡/银卡/金卡/铂金卡/钻石卡/黑钻卡
+// 等级主题色统一取自 memberStore.levelTheme（与首页会员卡、会员中心、兑换页一致）
 const tiers = [
-  { name: '普卡', tag: 'Lv.1', cls: 'tier-pu', bg: '#8B8B90', peaks: 1, mountain: mtnPu, concepts: ['注册即会员，0门槛', '基础积分累积', '生日专属祝福'] },
-  { name: '银卡', tag: 'Lv.2', cls: 'tier-yin', bg: '#9CA1A8', peaks: 2, mountain: mtnPu, concepts: ['消费满2万自动升级', '全场9.5折优惠', '每月1张特惠券'] },
-  { name: '金卡', tag: 'Lv.3', cls: 'tier-jin', bg: '#C4923A', peaks: 3, mountain: mtnPu, concepts: ['全场9折+专属折扣', '生日双倍积分', '免费停车2小时/天'] },
-  { name: '铂金卡', tag: 'Lv.4', cls: 'tier-bo', bg: '#9DA7B5', peaks: 4, mountain: mtnPu, concepts: ['全场8.5折', '专属客服一对一', '免费停车+快递代收'] },
-  { name: '钻石卡', tag: 'Lv.5', cls: 'tier-zuan', bg: '#4F9CC9', peaks: 5, mountain: mtnPu, concepts: ['全场8折', '月度尊享礼遇', '亲友卡权益共享'] },
-  { name: '黑钻卡', tag: 'Lv.6', cls: 'tier-hei', bg: '#2E2E33', peaks: 6, mountain: mtnPu, concepts: ['顶级黑钻特权', '私人管家服务', '全年免费+专属活动'] },
-]
+  { name: '普卡', tag: 'Lv.1', cls: 'tier-pu', peaks: 1, mountain: mtnPu, concepts: ['注册即会员，0门槛', '基础积分累积', '生日专属祝福'] },
+  { name: '银卡', tag: 'Lv.2', cls: 'tier-yin', peaks: 2, mountain: mtnPu, concepts: ['消费满2万自动升级', '全场9.5折优惠', '每月1张特惠券'] },
+  { name: '金卡', tag: 'Lv.3', cls: 'tier-jin', peaks: 3, mountain: mtnPu, concepts: ['全场9折+专属折扣', '生日双倍积分', '免费停车2小时/天'] },
+  { name: '铂金卡', tag: 'Lv.4', cls: 'tier-bo', peaks: 4, mountain: mtnPu, concepts: ['全场8.5折', '专属客服一对一', '免费停车+快递代收'] },
+  { name: '钻石卡', tag: 'Lv.5', cls: 'tier-zuan', peaks: 5, mountain: mtnPu, concepts: ['全场8折', '月度尊享礼遇', '亲友卡权益共享'] },
+  { name: '黑钻卡', tag: 'Lv.6', cls: 'tier-hei', peaks: 6, mountain: mtnPu, concepts: ['顶级黑钻特权', '私人管家服务', '全年免费+专属活动'] },
+].map(t => {
+  const th = memberStore.levelTheme(t.name)
+  return { ...t, bg: th.bg, bd: th.bd, accent: th.accent }
+})
 // 海江之友各等级使用各自的山峰图（t.mountain），普卡已配置，其余待替换
 const tierCurrent = ref(0)
 const tierViewport = ref(null)
@@ -410,12 +414,12 @@ function go(route) { if (route) router.push(route) }
   position: relative; z-index: 2;
   margin-top: 0;
 }
-.tier-pu   { background-color: #6A5B8C; border-color: #4F4368; }
-.tier-yin  { background-color: #9CA1A8; border-color: #75787E; }
+.tier-pu   { background-color: #8B8B90; border-color: #6A6A6E; }
+.tier-yin  { background-color: #9CA1A8; border-color: #7A7E84; }
 .tier-jin  { background-color: #C4923A; border-color: #9A7425; }
-.tier-bo   { background-color: #9DA7B5; border-color: #747D8A; }
-.tier-zuan { background-color: #4F9CC9; border-color: #357399; }
-.tier-hei  { background-color: #2E2E33; border-color: #151518; }
+.tier-bo   { background-color: #9DA7B5; border-color: #7C8593; }
+.tier-zuan { background-color: #4F9CC9; border-color: #3A7BA0; }
+.tier-hei  { background-color: #2E2E33; border-color: #555555; }
 .tier-concepts { margin-top: 6px; }
 .tier-line { font-size: 15px; font-weight: 600; line-height: 1.8; opacity: 0.96;
   text-shadow: 0 1px 2px rgba(0,0,0,0.35); }

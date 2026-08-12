@@ -5,58 +5,7 @@ from datetime import datetime
 from functools import wraps
 from flask import Flask, request, session, jsonify, send_from_directory
 from openai import OpenAI
-
-# ========== 环境变量（.env 支持，不覆盖系统已设变量） ==========
-import os as _os
-_ENV_FILE = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '.env')
-try:
-    from dotenv import load_dotenv
-    load_dotenv(_ENV_FILE)   # 从 server.py 同目录 .env 读取；系统环境变量优先
-except ImportError:
-    pass  # 没装 python-dotenv 时退化为纯系统环境变量
-
 import floor_data
-
-# ========== 密码哈希（PBKDF2-HMAC-SHA256，兼容旧 SHA256） ==========
-import hmac as _hmac
-import base64 as _b64
-
-_PBKDF2_ITER = 260000          # SHA-256 推荐迭代次数（OWASP 2023）
-_PBKDF2_SALT_BYTES = 16
-
-def hash_password(password):
-    """生成 PBKDF2-HMAC-SHA256 哈希，格式 pbkdf2:sha256:<iters>$<salt_b64>$<hash_b64>。"""
-    salt = os.urandom(_PBKDF2_SALT_BYTES)
-    dk = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, _PBKDF2_ITER)
-    return 'pbkdf2:sha256:%d$%s$%s' % (_PBKDF2_ITER, _b64.b64encode(salt).decode(), _b64.b64encode(dk).decode())
-
-def _is_legacy_sha256(stored):
-    return bool(stored) and len(stored) == 64 and all(c in '0123456789abcdef' for c in stored)
-
-def verify_password(password, stored):
-    """校验密码：兼容旧 SHA256(64位hex，无盐) 与新的 PBKDF2 哈希，常量时间比较。"""
-    if not stored:
-        return False
-    if stored.startswith('pbkdf2:'):
-        try:
-            head, salt_b64, hash_b64 = stored.split('$')
-            _, algo, iters = head.split(':')
-            if algo != 'sha256':
-                return False
-            salt = _b64.b64decode(salt_b64)
-            dk = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, int(iters))
-            return _hmac.compare_digest(_b64.b64encode(dk).decode(), hash_b64)
-        except Exception:
-            return False
-    if _is_legacy_sha256(stored):
-        return _hmac.compare_digest(hashlib.sha256(password.encode('utf-8')).hexdigest(), stored)
-    return False
-
-def maybe_upgrade_password(password, stored):
-    """旧 SHA256 哈希登录成功后返回升级后的 PBKDF2 哈希，否则返回 None（透明迁移）。"""
-    if _is_legacy_sha256(stored):
-        return hash_password(password)
-    return None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -76,187 +25,54 @@ DB_PATH = os.path.join(HERE, 'dajudali.db')
 DS_API_KEY = os.environ.get('DS_API_KEY', '')
 import subprocess as _sp
 
-def _ask_deepseek(messages, max_tokens=600):
-    """统一调用 DeepSeek（走 httpx 客户端 ds_client）。返回 (ok, text)。"""
-    if ds_client is None:
-        return False, 'AI 服务未配置：请设置环境变量 DS_API_KEY（DeepSeek API Key）后重启服务。'
+def _call_deepseek(messages, max_tokens=600):
+    """用 curl 调 DeepSeek（绕过 Python SSL 问题）"""
+    import tempfile
+    payload = json.dumps({
+        'model': 'deepseek-chat',
+        'messages': messages,
+        'max_tokens': max_tokens,
+        'temperature': 0.7
+    }, ensure_ascii=False)
+    # 用临时文件传参，避免命令行过长
+    tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8')
+    tmp.write(payload)
+    tmp.close()
     try:
-        resp = ds_client.chat.completions.create(
-            model='deepseek-chat',
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=0.7
-        )
-        return True, resp.choices[0].message.content
+        result = _sp.run([
+            'curl', '-s', '--max-time', '8', '--connect-timeout', '4',
+            'https://api.deepseek.com/chat/completions',
+            '-H', 'Content-Type: application/json',
+            '-H', 'Authorization: Bearer ' + DS_API_KEY,
+            '-d', '@' + tmp.name
+        ], capture_output=True, text=True, timeout=15)
+        resp = json.loads(result.stdout)
+        if 'choices' in resp:
+            return True, resp['choices'][0]['message']['content']
+        return False, resp.get('error', {}).get('message', str(resp))
     except Exception as e:
         return False, str(e)
+    finally:
+        try: os.unlink(tmp.name)
+        except: pass
 
-# 用 httpx 客户端调用 DeepSeek
+# 用 curl wrapper 替代 OpenAI 客户端
 import httpx
-# 默认开启 SSL 证书校验；仅当服务器缺失 CA 证书且短期内无法修复时，
-# 才用环境变量 DJDL_INSECURE_SSL=1 临时关闭校验（不推荐长期开启）。
-_INSECURE_SSL = os.environ.get('DJDL_INSECURE_SSL', '0') == '1'
-if _INSECURE_SSL:
-    print('[WARN] DJDL_INSECURE_SSL=1：已关闭 DeepSeek 调用的 SSL 证书校验，存在中间人风险')
 httpx_client = httpx.Client(
     http2=False,
     timeout=10.0,
     follow_redirects=True,
-    verify=not _INSECURE_SSL
+    verify=False
 )
-# 无 API key 时延迟创建，避免服务启动即崩溃（本地预览/未配置环境可正常起服务）
-ds_client = None
-if DS_API_KEY:
-    ds_client = OpenAI(api_key=DS_API_KEY, base_url='https://api.deepseek.com', http_client=httpx_client)
-else:
-    print('[WARN] DS_API_KEY 未设置：AI 聊天功能将不可用，但其他页面/接口仍可访问。')
+ds_client = OpenAI(api_key=DS_API_KEY, base_url='https://api.deepseek.com', http_client=httpx_client)
 
 # 通义千问 fallback (阿里云服务器上优先，走内网更快)
 QWEN_API_KEY = os.environ.get('QWEN_API_KEY', '') or DS_API_KEY
 
-# ========== 限流（防刷 AI / 语音接口） ==========
-import threading as _threading
-_RATE_LOCK = _threading.Lock()
-_RATE_BUCKETS = {}  # key -> [timestamp, ...]
-
-def get_client_ip():
-    """取真实客户端 IP；Nginx 反代时读 X-Forwarded-For，否则用 remote_addr。"""
-    fwd = request.headers.get('X-Forwarded-For', '')
-    if fwd:
-        return fwd.split(',')[0].strip()
-    return request.remote_addr or 'unknown'
-
-def rate_limit(limit, per=60, scope='global'):
-    """简单滑动窗口限流：同一客户端 limit 次 / per 秒，超出返回 429。"""
-    def decorator(f):
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            key = '%s:%s:%s' % (scope, request.endpoint, get_client_ip())
-            now = time.time()
-            with _RATE_LOCK:
-                hits = [t for t in _RATE_BUCKETS.get(key, []) if now - t < per]
-                if len(hits) >= limit:
-                    return jsonify(ok=False, error='请求过于频繁，请稍后再试'), 429
-                hits.append(now)
-                if hits:
-                    _RATE_BUCKETS[key] = hits
-                else:
-                    _RATE_BUCKETS.pop(key, None)
-            return f(*args, **kwargs)
-        return wrapper
-    return decorator
-
 # ========== DB ==========
-# ========== 核心表补建（源码 zip 缺建表脚本，本地预览临时补齐） ==========
-def _init_schema(conn):
-    """建核心业务表：users / tenants / knowledge_base / work_orders /
-    conversations / activities / activity_sessions / registrations。
-    源码包内仅 _ensure_tables 建了 shops 等演示表，这些核心表缺失会导致
-    访问即 500，这里补齐以便本地预览（生产部署应改用完整初始化脚本）。"""
-    conn.execute('''CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id INTEGER DEFAULT 1,
-        username TEXT,
-        password_hash TEXT,
-        display_name TEXT,
-        role TEXT DEFAULT 'user',
-        phone TEXT,
-        points INTEGER DEFAULT 0,
-        membership_level TEXT DEFAULT '',
-        headimgurl TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS tenants (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT, contact TEXT, plan TEXT,
-        monthly_quota INTEGER DEFAULT 0, status TEXT DEFAULT 'active',
-        phone TEXT, address TEXT
-    )''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS knowledge_base (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id INTEGER DEFAULT 1,
-        category TEXT, question TEXT, answer TEXT, keywords TEXT
-    )''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS work_orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id INTEGER DEFAULT 1,
-        type TEXT, title TEXT, description TEXT,
-        priority TEXT DEFAULT 'normal', status TEXT DEFAULT 'pending',
-        reporter TEXT, reporter_contact TEXT, merchant TEXT DEFAULT '',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS conversations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id INTEGER DEFAULT 1,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS activities (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT, "desc" TEXT, venue TEXT,
-        start_date TEXT, end_date TEXT, gradient TEXT,
-        price INTEGER DEFAULT 0, points_price INTEGER DEFAULT 0,
-        max_people INTEGER DEFAULT 0, enrolled INTEGER DEFAULT 0,
-        status TEXT DEFAULT 'open'
-    )''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS activity_sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        activity_id INTEGER, session_date TEXT, session_time TEXT,
-        venue TEXT, max_people INTEGER DEFAULT 0, enrolled INTEGER DEFAULT 0
-    )''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS registrations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id INTEGER DEFAULT 1,
-        registration_no TEXT, activity_id INTEGER, session_id INTEGER,
-        event TEXT, name TEXT, phone TEXT,
-        user_phone TEXT, user_name TEXT,
-        count INTEGER DEFAULT 1, people_count INTEGER DEFAULT 1,
-        note TEXT, amount REAL DEFAULT 0, pay_method TEXT,
-        points_used INTEGER DEFAULT 0, status TEXT DEFAULT 'paid',
-        ticket_code TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    if conn.execute('SELECT COUNT(*) FROM tenants').fetchone()[0] == 0:
-        conn.execute("INSERT INTO tenants (id, name, status) VALUES (1, '海江新天地', 'active')")
-    conn.commit()
-
-    # --- 无感积分停车：停车记录表 + 会员车牌绑定 + 停车券 + 扩展字段 ---
-    conn.execute('''CREATE TABLE IF NOT EXISTS parking_records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        plate TEXT NOT NULL, entry_time TEXT, exit_time TEXT,
-        duration_minutes INTEGER DEFAULT 0, fee REAL DEFAULT 0,
-        status TEXT DEFAULT 'parked',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS member_plates (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        plate TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(user_id, plate)
-    )''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS parking_coupons (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        hours INTEGER DEFAULT 2,
-        used INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    _cols = [r[1] for r in conn.execute("PRAGMA table_info(parking_records)").fetchall()]
-    for _col, _dt in [
-        ('member_id','INTEGER'),('free_minutes','INTEGER'),('coupon_hours','INTEGER'),
-        ('points_used','INTEGER'),('original_fee','REAL'),('discount_fee','REAL'),
-        ('payable_fee','REAL'),('settle_type','TEXT'),('plate_display','TEXT')
-    ]:
-        if _col not in _cols:
-            conn.execute(f"ALTER TABLE parking_records ADD COLUMN {_col} {_dt}")
-    conn.commit()
-
-
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    _init_schema(conn)
     return conn
 
 # ========== Auth ==========
@@ -382,6 +198,193 @@ def kb_search(tenant_id, query, limit=5):
     scored.sort(key=lambda x: x[0], reverse=True)
     return [s[1] for s in scored[:limit]]
 
+# ===== 真实商户检索（基于 shops 表，支持 区域/楼层 + 品类 精准过滤） =====
+# 品类关键词 -> shops.category 映射（覆盖用户口语化说法）
+_CATEGORY_ALIASES = {
+    '吃': ('餐饮','快餐简餐','烧烤夜宵酒馆日料','火锅串串','茶饮咖啡','湘菜江湖菜','江浙本帮徽菜','甜品烘焙'),
+    '吃的': ('餐饮','快餐简餐','烧烤夜宵酒馆日料','火锅串串','茶饮咖啡','湘菜江湖菜','江浙本帮徽菜','甜品烘焙'),
+    '美食': ('餐饮','快餐简餐','烧烤夜宵酒馆日料','火锅串串','茶饮咖啡','湘菜江湖菜','江浙本帮徽菜','甜品烘焙'),
+    '餐饮': ('餐饮','快餐简餐','烧烤夜宵酒馆日料','火锅串串','茶饮咖啡','湘菜江湖菜','江浙本帮徽菜','甜品烘焙'),
+    '喝': ('茶饮咖啡','餐饮','甜品烘焙'),
+    '咖啡': ('茶饮咖啡','餐饮'),
+    '奶茶': ('茶饮咖啡','餐饮'),
+    '火锅': ('火锅串串','餐饮'),
+    '串串': ('火锅串串','餐饮'),
+    '烧烤': ('烧烤夜宵酒馆日料','餐饮'),
+    '夜宵': ('烧烤夜宵酒馆日料','餐饮'),
+    '日料': ('烧烤夜宵酒馆日料','餐饮'),
+    '酒馆': ('烧烤夜宵酒馆日料','餐饮'),
+    '湘菜': ('湘菜江湖菜','餐饮'),
+    '本帮': ('江浙本帮徽菜','餐饮'),
+    '江浙菜': ('江浙本帮徽菜','餐饮'),
+    '徽菜': ('江浙本帮徽菜','餐饮'),
+    '甜品': ('甜品烘焙','餐饮'),
+    '烘焙': ('甜品烘焙','餐饮'),
+    '蛋糕': ('甜品烘焙','餐饮'),
+    '快餐': ('快餐简餐','餐饮'),
+    '简餐': ('快餐简餐','餐饮'),
+    '小吃': ('快餐简餐','餐饮'),
+    '亲子': ('亲子',),
+    '小孩': ('亲子',),
+    '儿童': ('亲子',),
+    '教培': ('教育培训',),
+    '培训': ('教育培训',),
+    '教育': ('教育培训',),
+    '跳舞': ('教育培训',),
+    '健身': ('休闲娱乐',),
+    '娱乐': ('休闲娱乐','娱乐'),
+    '电影': ('休闲娱乐','娱乐'),
+    '超市': ('生鲜超市','零售'),
+    '生鲜': ('生鲜超市',),
+    '便利店': ('零售便利数码银行',),
+    '银行': ('零售便利数码银行',),
+    '手机': ('零售便利数码银行',),
+    '数码': ('零售便利数码银行',),
+    '零售': ('零售',),
+    '购物': ('零售','零售便利数码银行'),
+    '宠物': ('宠物',),
+    '美容': ('康养美容',),
+    '养生': ('康养美容',),
+    '推拿': ('康养美容',),
+    '美甲': ('康养美容',),
+    '住宿': ('住宿',),
+    '酒店': ('住宿',),
+}
+# 区域/楼层关键词 -> 规范化（用于匹配 shops.zone / floor）
+# 区域字母<->数字 别名映射：A↔1、B↔2、C↔3、D↔4、E↔5、F↔6，7区独立
+# 库里 zone 命名混乱(1区/A区/A1/A3/安信财富中心A区 并存)，全部归一到标准数字区
+_LETTER_TO_NUM = {'a':'1','b':'2','c':'3','d':'4','e':'5','f':'6'}
+_NUM_TO_LETTER = {'1':'A','2':'B','3':'C','4':'D','5':'E','6':'F'}
+
+# DB 真实 zone 值 -> 标准数字区（字母区与数字区视为同一区域）
+_ZONE_CANON = {
+    '1区':'1','A区':'1','A1':'1','A3':'1','安信财富中心A区':'1',
+    'B1':'2',            # 2区/B区 实际在册只有 B1
+    '3区':'3','C区':'3',
+    '4区':'4',           # D区 -> 4区
+    'E1':'5','E区':'5',  # 5区/E区
+    '6区':'6','F1':'6','F区':'6',
+    '7区':'7',
+}
+
+def _zone_display(canon):
+    """标准数字区 -> 可展示的区域名（含字母别名），如 '1' -> 'A区/1区'"""
+    names = [canon + '区']
+    letter = _NUM_TO_LETTER.get(canon)
+    if letter:
+        names.append(letter + '区')
+    return '/'.join(names)
+
+def _parse_zone(q):
+    """从用户问题提取区域/楼层，返回 (zval, fval)。
+    zval 为标准数字区('1'-'7')或 None；fval 为楼层数字或 None。
+    区域与楼层可同时识别（如「F区1楼」）。"""
+    ql = q.lower()
+    zval = None
+    fval = None
+    # 1) 字母区优先（A区/F区...）
+    for letter, num in _LETTER_TO_NUM.items():
+        if letter + '区' in ql:
+            zval = num
+            break
+    # 2) 裸 B1 / F1（不带"区"字，仍指向标准区 2 / 6；放在数字区之前避免被楼层误判）
+    if zval is None:
+        if 'b1' in ql and 'b区' not in ql:
+            zval = '2'
+        elif 'f1' in ql and 'f区' not in ql:
+            zval = '6'
+    # 3) 数字区（1区..7区），用"区"字限定避免与楼层"1楼"混淆
+    if zval is None:
+        m = re.search(r'([1-7])区', q)
+        if m:
+            zval = m.group(1)
+    # 4) 楼层（1楼/一楼/二楼...）
+    m = re.search(r'[一二三四五六七八九十\d]楼', q)
+    if m:
+        cn = {'一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9','十':'10'}
+        ch = m.group(0)[0]
+        fval = cn.get(ch, ch) if ch in cn else ch
+    return zval, fval
+
+def shop_search(query):
+    """识别区域/品类意图，查 shops 表返回真实商户清单。无命中返回 []。"""
+    q = query.lower()
+    # 1) 识别品类
+    cats = set()
+    for kw, clist in _CATEGORY_ALIASES.items():
+        if kw in q:
+            cats.update(clist)
+    # 2) 识别区域/楼层（字母区与数字区别名互查，并归一到标准数字区）
+    zval, fval = _parse_zone(query)
+    if not cats and not zval and not fval:
+        return []  # 既不是找品类也不是找区域/楼层，不触发商户检索
+    conn = get_db()
+    try:
+        sql = "SELECT name, floor, zone, category, hours, description FROM shops WHERE 1=1"
+        params = []
+        if cats:
+            ph = ','.join('?' * len(cats))
+            sql += f" AND category IN ({ph})"
+            params.extend(cats)
+        if zval:
+            # 把该标准数字区下所有别名 zone（如 A区/1区/A1/A3/安信财富中心A区）都查出来
+            targets = [z for z, c in _ZONE_CANON.items() if c == zval]
+            if targets:
+                ph = ','.join('?' * len(targets))
+                sql += f" AND zone IN ({ph})"
+                params.extend(targets)
+            else:
+                # 标准区但库里无任何对应 zone（理论不会触发），用数字区兜底
+                sql += " AND zone LIKE ?"
+                params.append(f'%{zval}%')
+        if fval:
+            sql += " AND floor LIKE ?"
+            params.append(f'%{fval}%')
+        sql += " ORDER BY CAST(floor AS INTEGER), zone, name"
+        rows = conn.execute(sql, params).fetchall()
+    finally:
+        conn.close()
+    if not rows:
+        return []
+    return [dict(r) for r in rows]
+
+def shop_block_build(query):
+    """生成商户检索注入文本（用于 prompt）。无命中返回空字符串。"""
+    rows = shop_search(query)
+    if not rows:
+        return ''
+    zval, fval = _parse_zone(query)
+    zone_label = _zone_display(zval) if zval else ''
+    floor_label = (fval + '楼') if fval else ''
+    scope_label = '/'.join(x for x in (floor_label, zone_label) if x)
+    zone_hint = ''
+    if zone_label:
+        zone_hint = (f'\n（系统在「{zone_label}」收录以下真实商户——字母区与数字区为同一区域，'
+                     f'例如问"A区"或"1区"都会返回这里的内容）')
+    lines = [f'\n【真实商户检索结果{("· " + scope_label) if scope_label else ""}】'
+             f'以下为系统中真实在册商户，必须基于它回答，严禁编造其他店铺：{zone_hint}']
+    for r in rows:
+        desc = (r.get('description') or '').strip()
+        hours = (r.get('hours') or '').strip()
+        floor = (r.get('floor') or '').strip()
+        # 展示时把 zone 归一到标准"字母区/数字区"写法，避免库里 A1/A3 等混乱写法
+        canon = _ZONE_CANON.get((r.get('zone') or '').strip())
+        zone_disp = _zone_display(canon) if canon else ((r.get('zone') or '').strip())
+        loc = ''
+        if floor:
+            loc += f'{floor}楼'
+        if zone_disp:
+            loc += zone_disp
+        loc = loc or '位置未标注'
+        extra = ''
+        if desc:
+            extra += f'（{desc}）'
+        if hours:
+            extra += f' 营业时间：{hours}'
+        lines.append(f"- {loc}｜{r['name']}｜品类：{r['category']}{extra}")
+    lines.append('若用户问"某区/某楼有什么吃的/玩的"，请只列出上面属于该品类且位于该区域的商户；若上面没有符合的，如实告知该区域暂无此类商户。')
+    return '\n'.join(lines)
+
 # 极速本地回复（O(1) 关键词匹配，<1ms，覆盖常见问题）
 def _fast_reply(msg):
     m = msg.strip().lower()
@@ -473,7 +476,7 @@ def index():
         if not user:
             conn.execute(
                 "INSERT INTO users (tenant_id, username, password_hash, display_name, role) VALUES (1,'guest',?,?,?)",
-                (hash_password('guest'), '游客', 'user')
+                (hashlib.sha256('guest'.encode()).hexdigest(), '游客', 'user')
             )
             conn.commit()
             user = conn.execute("SELECT * FROM users WHERE username='guest' AND tenant_id=1").fetchone()
@@ -523,24 +526,18 @@ def api_login():
     password = data.get('password', '')
     admin_flag = data.get('admin', False)
     conn = get_db()
+    pw_hash = hashlib.sha256(password.encode()).hexdigest()
     if admin_flag:
         user = conn.execute(
-            "SELECT * FROM users WHERE username=? AND role IN ('tenant_admin','super_admin')",
-            (username,)
+            "SELECT * FROM users WHERE username=? AND password_hash=? AND role IN ('tenant_admin','super_admin')",
+            (username, pw_hash)
         ).fetchone()
     else:
         user = conn.execute(
-            "SELECT * FROM users WHERE username=?",
-            (username,)
+            "SELECT * FROM users WHERE username=? AND password_hash=?",
+            (username, pw_hash)
         ).fetchone()
-    if not user or not verify_password(password, user['password_hash']):
-        conn.close()
-        return jsonify(ok=False, error='用户名或密码错误')
-    # 透明迁移：旧 SHA256 哈希登录成功后改写为 PBKDF2
-    upgraded = maybe_upgrade_password(password, user['password_hash'])
-    if upgraded:
-        conn.execute("UPDATE users SET password_hash=? WHERE id=?", (upgraded, user['id']))
-        conn.commit()
+    conn.close()
     if not user:
         return jsonify(ok=False, error='用户名或密码错误')
     session['user_id'] = user['id']
@@ -596,7 +593,6 @@ def api_chat():
     return _do_chat(tid, uid, user_input)
 
 @app.route('/api/public/chat', methods=['POST'])
-@rate_limit(30, 60, scope='public_chat')
 def api_public_chat():
     """C端公开聊天 — 不需要登录，用 session cookie 做 key"""
     data = request.get_json()
@@ -735,7 +731,7 @@ def _do_chat(tid, uid, user_input):
                 reply = f'手机号 {rphone} 已注册过会员，无需重复注册~可以直接使用积分兑换等功能！'
             else:
                 import hashlib
-                pw_hash = hash_password('member'+rphone)
+                pw_hash = hashlib.sha256(('member'+rphone).encode()).hexdigest()
                 uname = 'm'+rphone
                 rdb.execute(
                     'INSERT INTO users (tenant_id, username, password_hash, display_name, role, phone, points, membership_level) VALUES (?,?,?,?,?,?,?,?)',
@@ -866,8 +862,10 @@ def _do_chat(tid, uid, user_input):
         kb_block = '\n【知识库匹配】'
         for r in kb_results:
             kb_block += f'\n[{r["category"]}] {r["question"]}: {r["answer"][:300]}'
+    # 真实商户检索（区域/品类精准过滤，避免漏答）
+    shop_block = shop_block_build(user_input)
     web_block = web_search_inject(user_input)
-    sp = SYSTEM_PROMPT + '\n当前时间: ' + datetime.now().strftime('%Y-%m-%d %H:%M') + kb_block + web_block
+    sp = SYSTEM_PROMPT + '\n当前时间: ' + datetime.now().strftime('%Y-%m-%d %H:%M') + shop_block + kb_block + web_block
     sp += member_hint
     # 知识库匹配度检查：70分以上直接回复，跳过 AI
     best_kb = None
@@ -897,7 +895,7 @@ def _do_chat(tid, uid, user_input):
         messages.append(h)
     messages.append({'role':'user','content': user_input})
     try:
-        ok, result = _ask_deepseek(messages, max_tokens=600)
+        ok, result = _call_deepseek(messages, max_tokens=600)
         if ok:
             reply = result
         else:
@@ -921,12 +919,18 @@ def _do_chat(tid, uid, user_input):
         if matched_emotion:
             reply = matched_emotion
         else:
-            kb = kb_search(tid, user_input, limit=3)
-            if kb:
-                reply = '\n'.join([f'[{r["category"]}] {r["answer"][:200]}' for r in kb[:3]])
-                if len(reply) < 20:
-                    reply = '抱歉，小江暂时没找到相关信息，你可以换个问法试试~'
-            elif any(w in user_input for w in ['你好','嗨','hi','hello']):
+            # 优先用真实商户检索（区域/品类精准），AI 不可用时也能答"某区有什么吃的"
+            sb = shop_block_build(user_input)
+            if sb:
+                reply = sb.replace('\n【真实商户检索结果】', '').strip()
+                reply = '为你查到海江新天地真实在册的商户：\n' + reply
+            else:
+                kb = kb_search(tid, user_input, limit=3)
+                if kb:
+                    reply = '\n'.join([f'[{r["category"]}] {r["answer"][:200]}' for r in kb[:3]])
+                    if len(reply) < 20:
+                        reply = '抱歉，小江暂时没找到相关信息，你可以换个问法试试~'
+            if any(w in user_input for w in ['你好','嗨','hi','hello']):
                 reply = '嗨！我是小江，海江新天地的客服助手~\n想找店铺、查优惠、问路、看活动，尽管问我！'
             else:
                 reply = '哎呀，小江的脑子有点转不过来...要不你重新说一遍？'
@@ -959,7 +963,6 @@ def api_chat_clear():
 EXTERNAL_TOKEN = 'djdl_8…942e'
 
 @app.route('/api/ext/chat', methods=['POST'])
-@rate_limit(60, 60, scope='ext_chat')
 def api_ext_chat():
     token = request.headers.get('Authorization', '').replace('Bearer ', '')
     if token != EXTERNAL_TOKEN:
@@ -1011,9 +1014,8 @@ def api_ext_chat():
     messages = [{'role':'system','content': SYSTEM_PROMPT + kb_block}]
     messages.append({'role':'user','content': user_input})
     try:
-        ok, reply = _ask_deepseek(messages, max_tokens=500)
-        if not ok:
-            reply = 'AI service unavailable'
+        resp = ds_client.chat.completions.create(model='deepseek-chat', messages=messages, max_tokens=500)
+        reply = resp.choices[0].message.content
     except:
         reply = 'AI service unavailable'
     reply = re.sub(r'\*\*|__|#{1,6}\s*', '', reply)
@@ -1613,7 +1615,7 @@ def api_member_register():
         conn.close()
         return jsonify(ok=False, error='该手机号已注册会员')
     import hashlib
-    pw_hash = hash_password('member'+phone)
+    pw_hash = hashlib.sha256(('member'+phone).encode()).hexdigest()
     uname = 'm'+phone
     conn.execute(
         'INSERT INTO users (tenant_id, username, password_hash, display_name, role, phone, points, membership_level) VALUES (?,?,?,?,?,?,?,?)',
@@ -1768,23 +1770,13 @@ def api_users():
         conn.close()
         return jsonify([dict(r) for r in rows])
     data = request.get_json()
-    raw_pw = data.get('password')
-    auto_pw = False
-    if not raw_pw:
-        # 不默认弱口令：未提供密码时生成随机强口令，并在响应中一次性返回
-        raw_pw = secrets.token_urlsafe(12)
-        auto_pw = True
     conn.execute(
         "INSERT INTO users (tenant_id, username, password_hash, display_name, role) VALUES (?,?,?,?,?)",
-        (tid, data['username'], hash_password(raw_pw),
+        (tid, data['username'], hashlib.sha256(data.get('password','123456').encode()).hexdigest(),
          data.get('display_name',''), data.get('role','user'))
     )
     conn.commit(); conn.close()
-    resp = {'ok': True}
-    if auto_pw:
-        resp['generated_password'] = raw_pw
-        resp['note'] = '未提供密码，已生成随机强口令，请妥善交付用户并尽快修改'
-    return jsonify(resp)
+    return jsonify(ok=True)
 
 @app.route('/api/tenants', methods=['GET'])
 @super_admin_required
@@ -1938,7 +1930,7 @@ def api_wx_auth():
 
         # 新用户注册
         import hashlib
-        pw_hash = hash_password('wx_' + openid)
+        pw_hash = hashlib.sha256(('wx_' + openid).encode()).hexdigest()
         display_name = nickname or ('微信用户' + openid[-6:])
         conn.execute(
             '''INSERT INTO users (tenant_id, username, password_hash, display_name, role, phone, points, membership_level, discount, wx_openid, headimgurl)
@@ -1989,7 +1981,6 @@ def api_member_qrcode():
 
 # ============ 通用语音识别（接收音频文件） ============
 @app.route('/api/asr', methods=['POST'])
-@rate_limit(20, 60, scope='asr')
 def api_asr():
     if 'audio' not in request.files:
         return jsonify(ok=False, error='未上传音频文件')
@@ -2025,7 +2016,6 @@ def api_asr():
 
 # ============ 微信语音处理 ============
 @app.route('/api/wx-voice', methods=['POST'])
-@rate_limit(20, 60, scope='wx_voice')
 def api_wx_voice():
     """接收微信语音 serverId，下载并转文字"""
     data = request.get_json()
@@ -2145,6 +2135,17 @@ def migrate_db():
         conn.close()
 
 migrate_db()
+
+if __name__ == '__main__':
+    sys.stdout.reconfigure(encoding='utf-8')
+    print('[OK] Dajudali V1.0: http://localhost:8765')
+    try:
+        from pyngrok import ngrok
+        tunnel = ngrok.connect(8765, 'http')
+        print('[Tunnel] ' + tunnel.public_url)
+    except Exception as e:
+        print('[Tunnel] ngrok unavailable: ' + str(e))
+    app.run(host='0.0.0.0', port=8765, debug=False)
 
 
 # ========== 活动报名API ==========
@@ -2615,6 +2616,17 @@ def _ensure_tables(conn):
         ]
         conn.executemany('INSERT INTO redeem_goods (id,name,points,category,gradient) VALUES (?,?,?,?,?)', goods_data)
 
+    # --- parking_records ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS parking_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plate TEXT NOT NULL, entry_time TEXT, exit_time TEXT,
+        duration_minutes INTEGER DEFAULT 0, fee REAL DEFAULT 0,
+        status TEXT DEFAULT 'parked',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    conn.commit()
+
+
 # ========== API - Shops ==========
 @app.route('/api/shops')
 def api_shops():
@@ -2728,252 +2740,11 @@ def api_parking_pay():
     })
 
 
-# ========== 无感积分停车（自动会员权益+停车券+积分抵扣） ==========
-def _norm_plate(p):
-    return (p or '').replace('·', '').replace(' ', '').replace('-', '').upper()
-
-def _calc_parking_fee(duration_min):
-    """计费规则：前30分钟免费，之后5元/小时，40元/天封顶。返回 (原始费用, 计费分钟)"""
-    if duration_min <= 30:
-        return 0.0, 0
-    charge_min = duration_min - 30
-    hours = (charge_min + 59) // 60
-    fee = min(5.0 * hours, 40.0)
-    return round(fee, 2), charge_min
-
-def _member_free_minutes(level):
-    """会员等级赠送的免费停车分钟数（模拟每月权益）"""
-    return {'钻石卡': 24 * 60, '金卡': 120, '银卡': 60}.get(level or '', 0)
-
-@app.route('/api/parking/bind', methods=['POST'])
-@login_required
-def api_parking_bind():
-    plate = _norm_plate((request.json or {}).get('plate', ''))
-    if not plate:
-        return jsonify(ok=False, error='请输入车牌号')
-    uid = session['user_id']
-    conn = get_db()
-    try:
-        conn.execute("INSERT OR IGNORE INTO member_plates (user_id, plate) VALUES (?,?)", (uid, plate))
-        conn.commit()
-        plates = [r['plate'] for r in conn.execute("SELECT plate FROM member_plates WHERE user_id=?", (uid,)).fetchall()]
-        return jsonify(ok=True, plates=plates, message='绑定成功')
-    finally:
-        conn.close()
-
-@app.route('/api/parking/my-plates', methods=['GET'])
-@login_required
-def api_parking_my_plates():
-    uid = session['user_id']
-    conn = get_db()
-    try:
-        plates = [r['plate'] for r in conn.execute("SELECT plate FROM member_plates WHERE user_id=?", (uid,)).fetchall()]
-        return jsonify(ok=True, plates=plates)
-    finally:
-        conn.close()
-
-@app.route('/api/parking/unbind', methods=['POST'])
-@login_required
-def api_parking_unbind():
-    plate = _norm_plate((request.json or {}).get('plate', ''))
-    uid = session['user_id']
-    conn = get_db()
-    try:
-        conn.execute("DELETE FROM member_plates WHERE user_id=? AND plate=?", (uid, plate))
-        conn.commit()
-        plates = [r['plate'] for r in conn.execute("SELECT plate FROM member_plates WHERE user_id=?", (uid,)).fetchall()]
-        return jsonify(ok=True, plates=plates, message='已解绑')
-    finally:
-        conn.close()
-
-@app.route('/api/parking/redeem-coupon', methods=['POST'])
-@login_required
-def api_parking_redeem_coupon():
-    """500积分兑换一张停车券（抵扣2小时）"""
-    uid = session['user_id']
-    cost = 500
-    conn = get_db()
-    try:
-        u = conn.execute("SELECT points FROM users WHERE id=?", (uid,)).fetchone()
-        if (u['points'] or 0) < cost:
-            return jsonify(ok=False, error=f'积分不足，兑换停车券需要 {cost} 分')
-        conn.execute("UPDATE users SET points = points - ? WHERE id=?", (cost, uid))
-        conn.execute("INSERT INTO parking_coupons (user_id, hours) VALUES (?,2)", (uid,))
-        conn.commit()
-        np_ = conn.execute("SELECT points FROM users WHERE id=?", (uid,)).fetchone()[0]
-        return jsonify(ok=True, points=np_, message='已兑换停车券（可抵扣2小时停车费）')
-    finally:
-        conn.close()
-
-@app.route('/api/parking/entry', methods=['POST'])
-def api_parking_entry():
-    """道闸/车牌识别设备回调，或演示录入入场。自动关联绑定会员。"""
-    data = request.json or {}
-    plate = _norm_plate(data.get('plate', ''))
-    if not plate:
-        return jsonify(ok=False, error='缺少车牌号')
-    conn = get_db()
-    try:
-        mp = conn.execute("SELECT user_id FROM member_plates WHERE plate=?", (plate,)).fetchone()
-        member_id = mp['user_id'] if mp else None
-        conn.execute(
-            "INSERT INTO parking_records (plate, member_id, entry_time, status) VALUES (?,?,?,'parked')",
-            (plate, member_id, datetime.now().isoformat())
-        )
-        conn.commit()
-        rid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
-        return jsonify(ok=True, record_id=rid, plate=plate, member_id=member_id,
-                       entry_time=datetime.now().strftime('%Y-%m-%d %H:%M'),
-                       message='入场成功' + ('（已识别会员车辆）' if member_id else '（访客车辆）'))
-    finally:
-        conn.close()
-
-@app.route('/api/parking/exit', methods=['POST'])
-def api_parking_exit():
-    """出场无感结算：自动会员权益+停车券+积分抵扣，返回放行指令。"""
-    data = request.json or {}
-    plate = _norm_plate(data.get('plate', ''))
-    if not plate:
-        return jsonify(ok=False, error='缺少车牌号')
-    conn = get_db()
-    try:
-        rec = conn.execute("SELECT * FROM parking_records WHERE plate=? AND status='parked' ORDER BY id DESC LIMIT 1", (plate,)).fetchone()
-        if not rec:
-            return jsonify(ok=False, error=f'未查询到车牌 {plate} 的在场记录')
-        entry = datetime.fromisoformat(rec['entry_time']) if rec['entry_time'] else datetime.now()
-        now = datetime.now()
-        duration_min = max(0, int((now - entry).total_seconds() // 60))
-        original_fee, charge_min = _calc_parking_fee(duration_min)
-
-        member_id = rec['member_id']
-        level = ''
-        user_points = 0
-        if member_id:
-            u = conn.execute("SELECT membership_level, points FROM users WHERE id=?", (member_id,)).fetchone()
-            if u:
-                level = u['membership_level'] or '普卡'
-                user_points = u['points'] or 0
-
-        # 1) 会员等级免费时长
-        benefit_min = _member_free_minutes(level)
-        remain_min = max(0, charge_min - benefit_min)
-        if remain_min <= 0:
-            after_benefit = 0.0
-        else:
-            after_benefit = min(5.0 * ((remain_min + 59) // 60), 40.0)
-        after_benefit = round(after_benefit, 2)
-        benefit_fee = round(original_fee - after_benefit, 2)
-
-        # 2) 停车券抵扣（每张抵2小时），优先用最早未使用的
-        coupon_hours_used = 0.0
-        if remain_min > 0 and member_id:
-            coupons = conn.execute("SELECT id, hours FROM parking_coupons WHERE user_id=? AND used=0 ORDER BY id", (member_id,)).fetchall()
-            for c in coupons:
-                if remain_min <= 0:
-                    break
-                use = min(remain_min, c['hours'] * 60)
-                remain_min -= use
-                coupon_hours_used += use / 60.0
-                conn.execute("UPDATE parking_coupons SET used=1 WHERE id=?", (c['id'],))
-        if remain_min <= 0:
-            after_coupon = 0.0
-        else:
-            after_coupon = min(5.0 * ((remain_min + 59) // 60), 40.0)
-        after_coupon = round(after_coupon, 2)
-        coupon_fee = round(after_benefit - after_coupon, 2)
-
-        # 3) 积分抵扣（100积分=1元）
-        points_used = 0
-        payable = after_coupon
-        if payable > 0 and user_points > 0:
-            max_pay = user_points / 100.0
-            if max_pay >= payable:
-                points_used = int(round(payable * 100))
-                payable = 0.0
-            else:
-                points_used = user_points
-                payable = round(payable - max_pay, 2)
-        payable = round(payable, 2)
-
-        if benefit_fee >= original_fee and original_fee > 0:
-            settle_type = 'vip_free'
-        elif coupon_fee > 0:
-            settle_type = 'coupon'
-        elif points_used > 0:
-            settle_type = 'points'
-        else:
-            settle_type = 'cash' if payable > 0 else 'free'
-
-        if points_used > 0 and member_id:
-            conn.execute("UPDATE users SET points = points - ? WHERE id=?", (points_used, member_id))
-
-        conn.execute(
-            """UPDATE parking_records SET status='paid', exit_time=?, duration_minutes=?,
-               member_id=?, free_minutes=?, coupon_hours=?, points_used=?,
-               original_fee=?, discount_fee=?, payable_fee=?, settle_type=?
-               WHERE id=?""",
-            (now.isoformat(), duration_min, member_id, benefit_min, round(coupon_hours_used, 2),
-             points_used, original_fee, round(original_fee - payable, 2), payable, settle_type, rec['id'])
-        )
-        conn.commit()
-
-        h = duration_min // 60
-        m = duration_min % 60
-        auto = (benefit_fee > 0 or coupon_fee > 0 or points_used > 0)
-        return jsonify(ok=True, data={
-            'plate': plate,
-            'entry_time': entry.strftime('%Y-%m-%d %H:%M'),
-            'exit_time': now.strftime('%Y-%m-%d %H:%M'),
-            'duration': f'{h} 小时 {m} 分钟',
-            'duration_minutes': duration_min,
-            'member_level': level or '访客',
-            'original_fee': original_fee,
-            'member_benefit_min': benefit_min,
-            'coupon_hours_used': round(coupon_hours_used, 2),
-            'points_used': points_used,
-            'discount_total': round(original_fee - payable, 2),
-            'payable': payable,
-            'settle_type': settle_type,
-            'barrier': 'OPEN' if payable <= 0 else 'PAY_FIRST',
-            'message': ('会员权益/停车券/积分已自动抵扣，' if auto else '') + ('道闸已放行' if payable <= 0 else f'仍需支付 ¥{payable:.2f}')
-        })
-    finally:
-        conn.close()
-
 # ========== robots.txt ==========
-# ========== 前端 Vue 生产构建（/vue/ 由 nginx 反代到此，或本地直接访问） ==========
-_VUE_DIR = os.path.join(HERE, 'static', 'vue')
-
-@app.route('/vue/')
-def vue_index():
-    return send_from_directory(_VUE_DIR, 'index.html')
-
-@app.route('/vue/<path:filename>')
-def vue_static(filename):
-    # SPA history 模式回退：请求的文件不存在时返回 index.html（前端路由自行处理）
-    target = os.path.join(_VUE_DIR, filename)
-    if os.path.isfile(target):
-        return send_from_directory(_VUE_DIR, filename)
-    return send_from_directory(_VUE_DIR, 'index.html')
-
-
 @app.route('/robots.txt')
 def robots_txt():
     return app.response_class(
         'User-agent: *\nDisallow: /api/\nDisallow: /admin\nDisallow: /manage\n',
         mimetype='text/plain'
     )
-
-
-# ========== 启动入口（置于文件末尾，确保上面所有路由先注册完再 app.run） ==========
-if __name__ == '__main__':
-    sys.stdout.reconfigure(encoding='utf-8')
-    print('[OK] Dajudali V1.0: http://localhost:8765')
-    try:
-        from pyngrok import ngrok
-        tunnel = ngrok.connect(8765, 'http')
-        print('[Tunnel] ' + tunnel.public_url)
-    except Exception as e:
-        print('[Tunnel] ngrok unavailable: ' + str(e))
-    app.run(host='0.0.0.0', port=8765, debug=False)
 

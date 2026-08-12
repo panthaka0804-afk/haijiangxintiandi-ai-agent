@@ -1,10 +1,10 @@
 <template>
   <div class="rp-page">
-    <div class="rp-pts-card">
+    <div class="rp-pts-card" :style="{ '--ac-bg': theme.bg, '--ac-bd': theme.bd, '--ac-accent': theme.accent }">
       <div class="rp-pts-shine"></div>
       <div class="rp-pts-ring"></div>
-      <div class="rp-pts-level">{{ memberInfo.level || '会员' }} · {{ memberInfo.discount || '' }}</div>
-      <div class="rp-pts-num">{{ memberInfo.points || '--' }}</div>
+      <div class="rp-pts-level">{{ memberStore.member ? (memberStore.member.membership_level || '普卡') : '未登录' }} · {{ memberStore.member && memberStore.member.discount ? memberStore.member.discount + '折' : '' }}</div>
+      <div class="rp-pts-num">{{ memberStore.member ? (memberStore.member.points || 0) : '--' }}</div>
       <div class="rp-pts-label">可用积分</div>
     </div>
 
@@ -16,17 +16,18 @@
     <div v-if="loading" class="loading-state">加载中...</div>
 
     <div class="rp-grid" v-else>
-      <div v-for="g in filtered" :key="g.id" class="rp-item" @click="$router.push(`/redeem/${g.id}`)">
-        <div class="rp-item-img" :style="{background: g.gradient}">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="M22 7H2v5h20z"/></svg>
+      <div v-for="(g, i) in decorated" :key="g.id" class="rp-item" :style="{ '--ac-bg': g.bg, '--ac-bd': g.bd }" @click="$router.push(`/redeem/${g.id}`)">
+        <div class="rp-item-img" :style="{ background: g.grad }">
+          <span class="rp-item-cat">{{ g.category || '好礼' }}</span>
+          <div class="rp-img-text">{{ g.name }}</div>
         </div>
         <div class="rp-item-info">
           <div class="rp-item-name">{{ g.name }}</div>
           <div class="rp-item-pts">{{ g.points }} 积分</div>
         </div>
-        <button class="rp-item-btn">兑换</button>
+        <button class="rp-item-btn">立即兑换</button>
       </div>
-      <div v-if="!filtered.length" class="empty-state">暂无商品</div>
+      <div v-if="!decorated.length" class="empty-state">暂无商品</div>
     </div>
     <div class="spacer"></div>
   </div>
@@ -34,13 +35,24 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getRedeemGoods, lookupMember } from '@/api'
+import { getRedeemGoods } from '@/api'
+import { useMemberStore } from '@/stores/member'
 
 const activeCat = ref('全部')
 const cats = ['全部', '餐饮', '购物', '娱乐', '亲子', '生活服务', '停车']
 const loading = ref(true)
 const goods = ref([])
-const memberInfo = ref({ points: null, level: '', discount: '' })
+
+// 接入全局会员 store：积分/等级与首页、会员中心、我的页完全同步（不单独查 localStorage）
+const memberStore = useMemberStore()
+// 从 sessionStorage 恢复登录态，保证进入兑换页时与其它页一致
+memberStore.restore()
+
+// 积分卡主题色：按登录会员等级取统一主题色（各页共用 levelTheme）
+const theme = computed(() => {
+  const lv = memberStore.member && memberStore.member.membership_level
+  return memberStore.levelTheme(lv || '普卡')
+})
 
 // 本地兜底（后台异常时也能展示）— 真实招商落位商户
 const FALLBACK_GOODS = [
@@ -68,23 +80,27 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-  // 尝试获取会员积分（如果 localStorage 有手机号）
-  const phone = localStorage.getItem('member_phone')
-  if (phone) {
-    try {
-      const mResp = await lookupMember(phone)
-      if (mResp.ok && mResp.member) {
-        memberInfo.value = {
-          points: mResp.member.points?.toLocaleString(),
-          level: mResp.member.membership_level,
-          discount: mResp.member.discount,
-        }
-      }
-    } catch {}
-  }
 })
 
+// 多彩卡片调色板（与活动报名页同款：bg 实色底 + bd 深边框色；grad 同色系低饱和渐变图头）
+const PALETTE = [
+  { bg: '#C4923A', bd: '#9A7425', grad: 'linear-gradient(135deg, #DDB873, #9A7425)' },
+  { bg: '#9B4A3E', bd: '#6E332A', grad: 'linear-gradient(135deg, #BE7468, #6E332A)' },
+  { bg: '#8B8B90', bd: '#6A6A6E', grad: 'linear-gradient(135deg, #A9A9AE, #6A6A6E)' },
+  { bg: '#C9956C', bd: '#A87C48', grad: 'linear-gradient(135deg, #E0B288, #A87C48)' },
+  { bg: '#6B6E64', bd: '#4E5049', grad: 'linear-gradient(135deg, #8C8F82, #4E5049)' },
+  { bg: '#D4A59A', bd: '#A67D72', grad: 'linear-gradient(135deg, #E5C2B9, #A67D72)' },
+]
+
+// 先按分类筛选，再为每条商品补齐同色系主题色（图头渐变不再用后台高饱和 gradient）
 const filtered = computed(() => activeCat.value === '全部' ? goods.value : goods.value.filter(g => g.category === activeCat.value))
+
+const decorated = computed(() => {
+  return filtered.value.map((g, i) => {
+    const p = PALETTE[i % PALETTE.length]
+    return { ...g, grad: p.grad, bg: p.bg, bd: p.bd }
+  })
+})
 </script>
 
 <style scoped>
@@ -96,43 +112,58 @@ const filtered = computed(() => activeCat.value === '全部' ? goods.value : goo
 
 .rp-pts-card {
   background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
-  border-radius: 16px; padding: 24px; position: relative; overflow: hidden; margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  border: 3px solid var(--ac-bd, #4E5049); border-radius: 18px; padding: 24px; position: relative; overflow: hidden; margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
   text-align: center;
 }
-.rp-pts-shine { position: absolute; top: -50px; right: -30px; width: 120px; height: 120px; background: radial-gradient(circle, #1A1A1A 0%, transparent 70%); border-radius: 50%; }
-.rp-pts-ring { position: absolute; right: -10px; bottom: -8px; width: 80px; height: 40px; border: 2px solid rgba(255,255,255,0.1); border-radius: 50%; transform: rotate(-10deg); }
-.rp-pts-level { position: relative; z-index: 1; font-size: 14px; color: rgba(255,255,255,0.7); }
+.rp-pts-shine { position: absolute; top: -50px; right: -30px; width: 120px; height: 120px; background: radial-gradient(circle, var(--ac-accent, #2A2A2A) 0%, transparent 70%); border-radius: 50%; opacity: 0.35; }
+.rp-pts-ring { position: absolute; right: -10px; bottom: -8px; width: 80px; height: 40px; border: 2px solid var(--ac-bd, rgba(255,255,255,0.1)); border-radius: 50%; transform: rotate(-10deg); }
+.rp-pts-level { position: relative; z-index: 1; font-size: 14px; color: var(--ac-accent, rgba(255,255,255,0.7)); }
 .rp-pts-num { position: relative; z-index: 1; font-size: 42px; font-weight: 800; color: #fff; margin-top: 6px; }
 .rp-pts-label { position: relative; z-index: 1; font-size: 13px; color: rgba(255,255,255,0.65); margin-top: 4px; }
 
-.rp-cats { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; }
+.rp-cats { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 14px; -webkit-overflow-scrolling: touch; }
 .rp-cats::-webkit-scrollbar { display: none; }
 .rp-cat-btn {
-  flex-shrink: 0; padding: 7px 18px; border: 1px solid #333; border-radius: 12px;
-  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
-  background: #222222; color: #999;
+  flex-shrink: 0; padding: 10px 16px; border: 3px solid #4E5049; border-radius: 12px;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  background: #6B6E64; color: #fff;
   transition: all 0.15s;
 }
-.rp-cat-btn.active { background: #1A1A1A; color: #fff; border-color: #999999; }
+.rp-cat-btn.active { background: #8B8B90; border-color: #6A6A6E; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); }
 
+/* 两列多彩卡片（视觉与活动报名页同款：实色底 + 深边框 + 同色系渐变图头 + 内凹按钮），排列保持原网格格式 */
 .rp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .rp-item {
-  background: #222222; border-radius: 12px; overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background-color: var(--ac-bg, #C4923A);
+  border: 3px solid var(--ac-bd, #9A7425);
+  border-radius: 14px; overflow: hidden; box-sizing: border-box;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
   cursor: pointer; transition: opacity 0.15s;
 }
-.rp-item:active { opacity: 0.8; }
-.rp-item-img { height: 90px; display: flex; align-items: center; justify-content: center; }
+.rp-item:active { opacity: 0.85; }
+.rp-item-img { height: 90px; display: flex; flex-direction: column; justify-content: flex-end; padding: 14px 12px; position: relative; }
+.rp-item-cat {
+  position: absolute; top: 10px; left: 10px;
+  padding: 2px 8px; border-radius: 999px;
+  font-size: 10px; font-weight: 700; color: #fff;
+  background: var(--ac-bd, #9A7425);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.rp-img-text { font-size: 15px; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 .rp-item-info { padding: 10px 12px 8px; }
-.rp-item-name { font-size: 14px; font-weight: 600; color: #F0F0F0; }
-.rp-item-pts { font-size: 12px; color: #999999; font-weight: 600; margin-top: 3px; }
+.rp-item-name { font-size: 14px; font-weight: 600; color: #fff; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.rp-item-pts { font-size: 12px; color: #fff; font-weight: 600; margin-top: 3px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+/* 立即兑换按钮：内凹（inset 阴影）风格，与活动页一致 */
 .rp-item-btn {
   margin: 0 12px 12px; width: calc(100% - 24px); padding: 8px 0;
-  border: none; border-radius: 12px; background: #1A1A1A; color: #fff;
+  border: 3px solid var(--ac-bd, #9A7425);
+  border-radius: 14px;
+  background-color: var(--ac-bd, #9A7425); color: #fff;
   font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
-  transition: opacity 0.15s;
+  box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196, 146, 58, 0.45);
+  transition: transform 0.15s;
 }
-.rp-item-btn:active { opacity: 0.8; }
+.rp-item-btn:active { transform: scale(0.99); }
 .spacer { height: 24px; }
 </style>

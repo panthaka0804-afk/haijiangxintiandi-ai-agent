@@ -41,7 +41,7 @@
             <svg v-else width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
           <div class="m-head-text">
-            <span class="level-badge" :class="member.level">{{ member.level }}</span>
+            <span class="level-badge" :style="{ background: member.theme.bg, borderColor: member.theme.bd }">{{ member.level }}</span>
             <span class="card-name">{{ member.name }}</span>
           </div>
         </div>
@@ -110,11 +110,13 @@ const coupons = ref([])
 const member = computed(() => {
   const m = memberStore.member
   if (!m) return null
+  const level = m.membership_level || '普卡'
   return {
     name: m.display_name || '海江会员',
     phone: m.phone || '',
     points: m.points || 0,
-    level: m.membership_level || '普卡',
+    level,
+    theme: memberStore.levelTheme(level),
     discount: m.discount || '98折',
     avatar: m.headimgurl || '',
     needUpgrade: '-',
@@ -235,15 +237,9 @@ async function showRedeemConfirm(item) {
   font-size: 12px;
   font-weight: 600;
   color: #fff;
-  background: #999;
+  border: 1px solid rgba(0,0,0,0.2);
   flex-shrink: 0;
 }
-.level-badge.普卡 { background: #8B8B90; }
-.level-badge.银卡 { background: #9CA1A8; }
-.level-badge.金卡 { background: #C4923A; }
-.level-badge.铂金卡 { background: #9DA7B5; }
-.level-badge.钻石卡 { background: #4F9CC9; }
-.level-badge.黑钻卡 { background: #2E2E33; border: 1px solid #555; }
 
 .card-name {
   font-size: 18px;
