@@ -219,9 +219,9 @@ onMounted(() => {
 .sign-card { margin: 0 16px 16px; padding: 16px; background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; }
 .sign-title { font-size: 16px; color: #fff; font-weight: 600; }
 .sign-days { font-size: 12px; color: #999; margin-top: 4px; }
-.sign-days b { color: #FF7B2C; }
-.sign-btn { padding: 12px 22px; border-radius: 22px; border: none; background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
-.sign-btn.signed { background: #2e2e2e; color: #888; cursor: default; }
+.sign-days b { color: #C4923A; }
+.sign-btn { padding: 12px 22px; border-radius: 22px; border: none; background: #FFFFFF; color: #C4923A; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+.sign-btn.signed { background: #2e2e2e; color: #888; cursor: default; box-shadow: none; }
 .sign-coupon { font-size: 12px; color: #FFF3D6; margin-top: 6px; }
 
 .memberday-card { margin: 0 16px 16px; padding: 16px; border: 3px solid #5C241D; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,.20), 0 3px 10px rgba(0,0,0,.35); }
@@ -250,7 +250,7 @@ onMounted(() => {
 .log-item:last-child { border-bottom: none; }
 .log-remark { font-size: 14px; color: #eee; }
 .log-time { font-size: 11px; color: #666; margin-top: 2px; }
-.log-points { font-size: 16px; font-weight: 700; color: #FF7B2C; }
+.log-points { font-size: 16px; font-weight: 700; color: #C4923A; }
 .log-points.minus { color: #3E8E41; }
 .log-empty { padding: 24px; text-align: center; color: #888; font-size: 13px; }
 </style>

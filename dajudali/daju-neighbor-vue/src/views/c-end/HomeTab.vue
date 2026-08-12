@@ -791,9 +791,9 @@ function go(route) {
 .dd-illus, .biz-hero-illus, .biz-card-illus, .shop-illus, .oe-illus, .bce-illus, .pe-illus, .cm-illus { position: absolute; right: 0; top: 0; width: 64%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.28; stroke: #FFFFFF; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .dd-icon-box, .dd-left, .dd-right, .biz-card-content, .shop-logo, .shop-info, .shop-arrow, .oe-icon-box, .oe-left, .oe-right, .bce-icon-box, .bce-left, .bce-right, .pe-icon-box, .pe-left, .pe-right, .cm-icon-box, .cm-left, .cm-right { position: relative; z-index: 2; }
 
-/* 激励中心 — 深橙红 · 高亮引流（原色 #FF7B2C 邻里圈，此处用 #E85D04 加深区分） */
-.points-entry { display: flex; align-items: center; gap: 12px; margin: 4px 16px 20px; padding: 14px 16px; min-height: 82px; box-sizing: border-box; background-color: #E85D04; border: 3px solid #C44A02; border-radius: 18px; box-shadow: 0 0 0 3px rgba(232,93,4,0.22), 0 6px 16px rgba(232,93,4,0.45), inset 0 1px 0 rgba(255,255,255,0.22); cursor: pointer; -webkit-tap-highlight-color: transparent; animation: pcGlow 2.6s ease-in-out infinite; }
-@keyframes pcGlow { 0%,100% { box-shadow: 0 0 0 3px rgba(232,93,4,0.18), 0 6px 16px rgba(232,93,4,0.40), inset 0 1px 0 rgba(255,255,255,0.22); } 50% { box-shadow: 0 0 0 6px rgba(232,93,4,0.10), 0 8px 22px rgba(232,93,4,0.60), inset 0 1px 0 rgba(255,255,255,0.22); } }
+/* 激励中心 — 多彩卡片（金黄，对齐首页多彩卡配色） */
+.points-entry { display: flex; align-items: center; gap: 12px; margin: 4px 16px 20px; padding: 14px 16px; min-height: 82px; box-sizing: border-box; background-color: #C4923A; border: 3px solid #9A7425; border-radius: 18px; box-shadow: 0 0 0 3px rgba(196,146,58,0.22), 0 6px 16px rgba(196,146,58,0.45), inset 0 1px 0 rgba(255,255,255,0.22); cursor: pointer; -webkit-tap-highlight-color: transparent; animation: pcGlow 2.6s ease-in-out infinite; }
+@keyframes pcGlow { 0%,100% { box-shadow: 0 0 0 3px rgba(196,146,58,0.18), 0 6px 16px rgba(196,146,58,0.40), inset 0 1px 0 rgba(255,255,255,0.22); } 50% { box-shadow: 0 0 0 6px rgba(196,146,58,0.10), 0 8px 22px rgba(196,146,58,0.60), inset 0 1px 0 rgba(255,255,255,0.22); } }
 .points-entry:active { opacity: 0.82; }
 .pc-illus { position: absolute; right: 0; top: 0; width: 64%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.30; fill: #FFFFFF; stroke: #FFFFFF; stroke-width: 1; }
 .pc-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 2; }
