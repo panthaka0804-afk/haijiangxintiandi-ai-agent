@@ -10,7 +10,7 @@
     <!-- 我的拼团 -->
     <section v-if="myGroups.length" class="gb-my">
       <div class="gb-sec-title">我的拼团</div>
-      <div v-for="g in myGroups" :key="g.id" class="gb-my-card">
+      <div v-for="(g, i) in myGroups" :key="g.id" class="gb-my-card" :class="'gb-c-' + (i % 5)">
         <div class="gb-my-left">
           <div class="gb-my-shop">{{ g.shop_name }}</div>
           <div class="gb-my-title">{{ g.title }}</div>
@@ -24,7 +24,7 @@
       <div class="gb-sec-title">进行中的拼团</div>
       <div v-if="loading" class="gb-loading">加载中…</div>
       <div v-else-if="!groups.length" class="gb-empty">暂无进行中的拼团，敬请期待~</div>
-      <div v-for="g in groups" :key="g.id" class="gb-card">
+      <div v-for="(g, i) in groups" :key="g.id" class="gb-card" :class="'gb-c-' + (i % 5)">
         <div class="gb-card-top">
           <span class="gb-shop">{{ g.shop_name }}</span>
           <span class="gb-need">需 {{ g.need_count }} 人成团</span>
@@ -128,28 +128,39 @@ async function join(g) {
 
 .gb-sec-title { font-size: 14px; font-weight: 700; color: #fff; margin: 18px 16px 10px; letter-spacing: 0.5px; }
 .gb-my { margin: 0 16px; }
-.gb-my-card { display: flex; align-items: center; justify-content: space-between; background: #161618; border: 1px solid rgba(255,255,255,0.10); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
-.gb-my-shop { font-size: 13px; font-weight: 700; color: #FF7B2C; }
-.gb-my-title { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
-.gb-my-status { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
-.gb-my-status.full { background: rgba(255,123,44,0.18); color: #FF7B2C; }
-.gb-my-status.open { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.7); }
+/* 多彩卡片：实色渐变底 + 3px 深边框 + 内高光 + 白字 */
+.gb-my-card, .gb-card {
+  border: 3px solid transparent; border-radius: 16px; padding: 14px; margin-bottom: 12px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.22);
+}
+.gb-my-card { display: flex; align-items: center; justify-content: space-between; }
+.gb-card { margin-left: 16px; margin-right: 16px; }
+/* 5 色循环（与首页多彩卡一致：金黄/浅橙棕/深红棕/灰紫/深灰绿） */
+.gb-c-0 { background: linear-gradient(135deg, #C4923A, #A8741C); border-color: #8A5E12; }
+.gb-c-1 { background: linear-gradient(135deg, #C9956C, #B07E4E); border-color: #A87C48; }
+.gb-c-2 { background: linear-gradient(135deg, #9B4A3E, #7E3328); border-color: #5C241D; }
+.gb-c-3 { background: linear-gradient(135deg, #8B8B90, #6F6F76); border-color: #54545A; }
+.gb-c-4 { background: linear-gradient(135deg, #6B6E64, #505247); border-color: #3C3E36; }
 
-.gb-card { margin: 0 16px 14px; background: #161618; border: 1px solid rgba(255,255,255,0.10); border-radius: 16px; padding: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
+.gb-my-shop { font-size: 13px; font-weight: 700; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
+.gb-my-title { font-size: 12px; color: rgba(255,255,255,0.82); margin-top: 2px; }
+.gb-my-status { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: rgba(0,0,0,0.25); color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.3); }
+.gb-my-status.open { background: rgba(255,255,255,0.18); color: #fff; }
+
 .gb-card-top { display: flex; align-items: center; justify-content: space-between; }
-.gb-shop { font-size: 13px; font-weight: 700; color: #FF7B2C; }
-.gb-need { font-size: 11px; color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 10px; }
-.gb-title { font-size: 15px; font-weight: 700; margin: 8px 0 12px; }
-.gb-coupon { display: flex; align-items: baseline; gap: 8px; background: linear-gradient(135deg, rgba(232,93,4,0.20), rgba(255,123,44,0.10)); border: 1px dashed rgba(255,123,44,0.45); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
-.gb-coupon-amt { font-size: 22px; font-weight: 800; color: #FF7B2C; }
-.gb-coupon-label { font-size: 13px; color: rgba(255,255,255,0.8); }
+.gb-shop { font-size: 13px; font-weight: 700; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
+.gb-need { font-size: 11px; color: #fff; background: rgba(0,0,0,0.22); padding: 2px 8px; border-radius: 10px; }
+.gb-title { font-size: 15px; font-weight: 700; margin: 8px 0 12px; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
+.gb-coupon { display: flex; align-items: baseline; gap: 8px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.30); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+.gb-coupon-amt { font-size: 22px; font-weight: 800; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.4); }
+.gb-coupon-label { font-size: 13px; color: rgba(255,255,255,0.9); }
 .gb-progress { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.gb-progress-bar { flex: 1; height: 8px; background: rgba(255,255,255,0.10); border-radius: 4px; overflow: hidden; }
-.gb-progress-fill { height: 100%; background: linear-gradient(90deg, #E85D04, #FF7B2C); border-radius: 4px; transition: width 0.4s; }
-.gb-progress-txt { font-size: 12px; color: rgba(255,255,255,0.6); white-space: nowrap; }
-.gb-btn { width: 100%; height: 44px; border: none; border-radius: 12px; background: linear-gradient(135deg, #E85D04, #FF7B2C); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(232,93,4,0.35); }
-.gb-btn:active { transform: translateY(1px); }
-.gb-btn.joined { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6); box-shadow: none; }
+.gb-progress-bar { flex: 1; height: 8px; background: rgba(0,0,0,0.30); border-radius: 4px; overflow: hidden; }
+.gb-progress-fill { height: 100%; background: linear-gradient(90deg, rgba(0,0,0,0.35), rgba(255,255,255,0.55)); border-radius: 4px; transition: width 0.4s; }
+.gb-progress-txt { font-size: 12px; color: rgba(255,255,255,0.85); white-space: nowrap; text-shadow: 0 1px 1px rgba(0,0,0,.3); }
+.gb-btn { width: 100%; height: 44px; border: 1px solid #8A5E12; border-radius: 12px; background: #9A7425; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
+.gb-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(196,146,58,.35); }
+.gb-btn.joined { background: rgba(0,0,0,0.30); border-color: rgba(255,255,255,0.30); color: rgba(255,255,255,0.8); box-shadow: inset 3px 3px 7px rgba(0,0,0,.5), inset -2px -2px 5px rgba(255,255,255,.08); }
 .gb-expire { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 8px; text-align: center; }
 .gb-tip { font-size: 12px; color: rgba(255,255,255,0.45); margin: 16px; line-height: 1.6; text-align: center; }
 .gb-loading, .gb-empty { text-align: center; color: rgba(255,255,255,0.5); padding: 30px 0; font-size: 14px; }
