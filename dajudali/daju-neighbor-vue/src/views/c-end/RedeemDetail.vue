@@ -79,7 +79,7 @@ const goods = ref(goodsMap[route.params.id] || { name: '兑换商品', points: 0
 .rd-desc-title { font-size: 14px; font-weight: 600; color: #999; margin-bottom: 8px; }
 .rd-desc-card p { margin: 0; font-size: 14px; color: #AAA; line-height: 1.7; }
 
-.rd-actions { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px 20px; display: flex; gap: 12px; background: linear-gradient(transparent, #1A1A1A 40%); }
+.rd-actions { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 12px; background: linear-gradient(transparent, #1A1A1A 40%); }
 .rd-cancel, .rd-confirm { flex: 1; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
 .rd-cancel { background: #2A2A2A; color: #999; }
 .rd-confirm { background: #1A1A1A; color: #fff; }

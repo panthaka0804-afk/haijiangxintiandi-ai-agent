@@ -360,7 +360,7 @@ async function sendMsg(d) {
 .ic-msg-name { color: #FF7B2C; font-weight: 700; margin-right: 8px; }
 .ic-msg-content { color: #fff; }
 .ic-msg-time { color: rgba(255,255,255,0.4); font-size: 11px; margin-left: 8px; }
-.ic-sheet-ft { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 10px; background: #161618; }
+.ic-sheet-ft { padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 10px; background: #161618; }
 .ic-join-btn { flex: 1; height: 46px; border: none; border-radius: 12px; background: linear-gradient(135deg,#E85D04,#FF7B2C); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(232,93,4,0.35); }
 .ic-msg-input { flex: 1; height: 44px; border: 1px solid rgba(255,255,255,0.15); background: #0F0F11; color: #fff; border-radius: 12px; padding: 0 14px; font-size: 14px; }
 .ic-send-btn { height: 44px; padding: 0 18px; border: none; border-radius: 12px; background: linear-gradient(135deg,#E85D04,#FF7B2C); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
