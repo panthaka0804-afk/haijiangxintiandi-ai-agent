@@ -224,7 +224,7 @@ onMounted(() => {
 .sign-days { font-size: 12px; color: rgba(255,255,255,0.92); margin-top: 4px; }
 .sign-days b { color: #FFF3D6; }
 .sign-btn { padding: 12px 22px; border-radius: 20px; border: 3px solid #9A7425; background-color: #9A7425; color: #FFFFFF; font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
-.sign-btn.signed { background: rgba(0,0,0,0.30); border-color: rgba(0,0,0,0.30); color: rgba(255,255,255,0.85); cursor: default; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.08); }
+.sign-btn.signed { background: #7E5413; border-color: #7E5413; color: rgba(255,255,255,0.92); cursor: default; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(196,146,58,0.45); }
 .sign-coupon { font-size: 12px; color: #FFF3D6; margin-top: 6px; }
 
 /* 周三会员日卡 — 深红棕多彩卡 */
@@ -234,8 +234,8 @@ onMounted(() => {
 .md-sub b { color: #FFF3D6; }
 .md-got { font-size: 11px; color: #FFF3D6; margin-top: 4px; }
 .md-btn { padding: 12px 20px; border-radius: 20px; border: 3px solid #9A7425; background-color: #9A7425; color: #FFFFFF; font-size: 14px; font-weight: 600; cursor: pointer; flex-shrink: 0; white-space: nowrap; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
-.md-btn.got { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.25); color: #fff; cursor: default; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.4), inset -2px -2px 5px rgba(255,255,255,0.15); }
-.md-btn.off { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.18); color: rgba(255,255,255,0.8); box-shadow: inset 3px 3px 7px rgba(0,0,0,0.4), inset -2px -2px 5px rgba(255,255,255,0.10); }
+.md-btn.got { background: #5C241D; border-color: #5C241D; color: #fff; cursor: default; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(155,74,62,0.45); }
+.md-btn.off { background: #5C241D; border-color: #5C241D; color: rgba(255,255,255,0.85); box-shadow: inset 3px 3px 7px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(155,74,62,0.45); }
 
 /* 徽章墙 — 玻璃容器 + 多彩徽章 */
 .badge-section { margin: 0 16px 16px; }
