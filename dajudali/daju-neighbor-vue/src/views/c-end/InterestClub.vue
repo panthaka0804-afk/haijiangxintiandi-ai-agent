@@ -139,7 +139,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useMemberStore } from '@/stores/member'
 import { showToast } from 'vant'
 import {
@@ -160,9 +160,16 @@ const myEvents = ref([])
 const detail = ref(null)
 const msgText = ref('')
 
-onMounted(async () => {
+// 从持久化登录态恢复手机号；并监听会员登录态变化（登录/绑定后自动刷新）
+memberStore.restore()
+function syncPhone() {
   const m = memberStore.member
   if (m && m.phone) phone.value = m.phone
+}
+syncPhone()
+watch(() => memberStore.member, syncPhone)
+
+onMounted(async () => {
   await loadClubs()
   if (phone.value) await loadMine()
 })
