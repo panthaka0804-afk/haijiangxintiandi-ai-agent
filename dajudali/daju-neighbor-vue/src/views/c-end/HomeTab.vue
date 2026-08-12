@@ -802,7 +802,7 @@ function go(route) {
 .pc-title { font-size: var(--fs-body); font-weight: 700; color: #FFFFFF; margin-bottom: 2px; text-shadow: 0 -1px 1px rgba(0,0,0,0.45), 0 1px 1px rgba(255,255,255,0.25); }
 .pc-desc { font-size: var(--fs-secondary); color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 -1px 1px rgba(0,0,0,0.45), 0 1px 1px rgba(255,255,255,0.25); }
 .pc-right { flex-shrink: 0; position: relative; z-index: 2; }
-.pc-btn { display: inline-block; padding: 8px 20px; background-color: #FF7B2C; border: 3px solid #FF7B2C; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.35), inset -2px -2px 5px rgba(255,123,44,0.5); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+.pc-btn { display: inline-block; padding: 8px 20px; background-color: #FFFFFF; border: 3px solid #FFFFFF; border-radius: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); color: #A8761F; font-size: var(--fs-aux); font-weight: 700; white-space: nowrap; }
 
 /* 邻里圈栏目 — 2×2 多彩网格（复用 .biz-card 卡片样式） */
 .neighbor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; margin-bottom: 20px; }
