@@ -2176,6 +2176,200 @@ def api_member_lookup():
         'desc': info['desc'],
         'can_use_double_points': 'birthday' in info['desc'].lower()
     })
+
+# ========== API - 会员互赠 / 人脉引荐（邻里特权） ==========
+
+@app.route('/api/gift/quota', methods=['POST'])
+def api_gift_quota():
+    """查询当前会员本月可赠折扣权次数 + 我的引荐码 + 待核销券。"""
+    phone = (request.json or {}).get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='缺少手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    reset_gift_quota_if_new_month(conn)
+    u = conn.execute('SELECT membership_level, gift_quota, temp_level FROM users WHERE phone=?', (phone,)).fetchone()
+    if not u:
+        conn.close()
+        return jsonify(ok=False, error='会员不存在')
+    level = u['membership_level'] or '普卡'
+    is_high = level in _HIGH_TIERS
+    # 我的引荐码（用手机号可逆编码，NB 前缀 + 完整手机号，解码可直接还原引荐人）
+    ref_code = 'NB' + phone
+    # 待核销的券（我赠出的、unused 的）
+    my_cards = conn.execute(
+        "SELECT code, from_level, to_phone, status, expire_at, created_at FROM gift_cards WHERE from_phone=? ORDER BY id DESC LIMIT 20",
+        (phone,)).fetchall()
+    cards = [dict(c) for c in my_cards]
+    # 我收到的券（to_phone 为我、unused）
+    received = conn.execute(
+        "SELECT code, from_level, from_phone, status, expire_at FROM gift_cards WHERE to_phone=? AND status='unused' ORDER BY id DESC LIMIT 5",
+        (phone,)).fetchall()
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={
+        'level': level,
+        'is_high_tier': is_high,
+        'gift_quota': (u['gift_quota'] or 0) if is_high else 0,
+        'referral_code': ref_code,
+        'sent_cards': cards,
+        'received_cards': [dict(r) for r in received],
+        'gift_card_valid_days': GIFT_CARD_VALID_DAYS,
+    })
+
+
+@app.route('/api/gift/send', methods=['POST'])
+def api_gift_send():
+    """高阶会员赠出一张折扣权券（朋友凭码核销后临时升级）。"""
+    data = request.json or {}
+    phone = (data.get('phone') or '').strip()
+    friend_phone = (data.get('friend_phone') or '').strip()
+    friend_name = (data.get('friend_name') or '邻居').strip()
+    if not phone or not friend_phone:
+        return jsonify(ok=False, error='信息不完整')
+    if not re.match(r'^1\d{10}$', friend_phone):
+        return jsonify(ok=False, error='朋友手机号格式不正确')
+    conn = get_db()
+    _ensure_tables(conn)
+    reset_gift_quota_if_new_month(conn)
+    u = conn.execute('SELECT membership_level, gift_quota FROM users WHERE phone=?', (phone,)).fetchone()
+    if not u:
+        conn.close()
+        return jsonify(ok=False, error='会员不存在')
+    level = u['membership_level'] or '普卡'
+    if level not in _HIGH_TIERS:
+        conn.close()
+        return jsonify(ok=False, error='仅金卡/钻石卡会员可赠出折扣权')
+    if (u['gift_quota'] or 0) <= 0:
+        conn.close()
+        return jsonify(ok=False, error='本月赠出次数已用完（每月1次）')
+    # 朋友必须是已注册会员（低阶），不允许给自己赠
+    fu = conn.execute('SELECT id, membership_level FROM users WHERE phone=?', (friend_phone,)).fetchone()
+    if not fu:
+        conn.close()
+        return jsonify(ok=False, error='朋友尚未注册会员，请先让TA注册')
+    if friend_phone == phone:
+        conn.close()
+        return jsonify(ok=False, error='不能赠给自己')
+    code = gen_gift_code()
+    expire = (datetime.now() + timedelta(days=GIFT_CARD_VALID_DAYS)).strftime('%Y-%m-%d')
+    conn.execute(
+        "INSERT INTO gift_cards (code, from_phone, from_level, to_phone, to_name, status, expire_at) VALUES (?,?,?,?,?, 'unused', ?)",
+        (code, phone, level, friend_phone, friend_name, expire))
+    # 赠卡人得社交勋章分（复用主连接）
+    add_points(phone, GIFT_BASE_POINTS, 'gift_send', f'赠折扣权给{friend_name}', conn)
+    # 扣配额 + 记录月份
+    conn.execute('UPDATE users SET gift_quota=gift_quota-1, gift_month=? WHERE phone=?',
+                 (datetime.now().strftime('%Y-%m'), phone))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={
+        'code': code, 'from_level': level, 'expire_at': expire,
+        'message': f'已赠出{level}折扣权，朋友核销后首单享{int(_LEVEL_DISCOUNT[level]*100)}折'
+    })
+
+
+@app.route('/api/gift/redeem', methods=['POST'])
+def api_gift_redeem():
+    """朋友核销折扣权券 → 临时升级为赠卡人卡级（有效期30天，首单后回落）。"""
+    data = request.json or {}
+    phone = (data.get('phone') or '').strip()
+    code = (data.get('code') or '').strip().upper()
+    if not phone or not code:
+        return jsonify(ok=False, error='信息不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    card = conn.execute('SELECT * FROM gift_cards WHERE code=?', (code,)).fetchone()
+    if not card:
+        conn.close()
+        return jsonify(ok=False, error='券码不存在')
+    if card['status'] != 'unused':
+        conn.close()
+        return jsonify(ok=False, error='该券已使用或已失效')
+    if card['to_phone'] and card['to_phone'] != phone:
+        conn.close()
+        return jsonify(ok=False, error='该券非赠予您')
+    # 过期判断
+    try:
+        if datetime.strptime(card['expire_at'], '%Y-%m-%d').date() < datetime.now().date():
+            conn.execute("UPDATE gift_cards SET status='expired' WHERE code=?", (code,))
+            conn.commit(); conn.close()
+            return jsonify(ok=False, error='该券已过期')
+    except Exception:
+        pass
+    # 临时升级
+    expire = (datetime.now() + timedelta(days=GIFT_CARD_VALID_DAYS)).strftime('%Y-%m-%d')
+    conn.execute('UPDATE users SET temp_level=?, temp_level_expire=? WHERE phone=?',
+                 (card['from_level'], expire, phone))
+    conn.execute("UPDATE gift_cards SET status='used', to_phone=?, to_name=?, used_at=CURRENT_TIMESTAMP WHERE code=?",
+                 (phone, card['to_name'] or '邻居', code))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={
+        'temp_level': card['from_level'],
+        'expire_at': expire,
+        'discount': int(_LEVEL_DISCOUNT.get(card['from_level'], 0.98) * 100),
+        'message': f'已升级为{card["from_level"]}，有效期至{expire}，首单消费后恢复本人卡级'
+    })
+
+
+@app.route('/api/referral/bind', methods=['POST'])
+def api_referral_bind():
+    """朋友注册后填引荐码，建立邻里引荐关系 + 双方各得基础分。"""
+    data = request.json or {}
+    phone = (data.get('phone') or '').strip()
+    name = (data.get('name') or '邻居').strip()
+    code = (data.get('code') or '').strip().upper()
+    if not phone or not code:
+        return jsonify(ok=False, error='信息不完整')
+    # 解析引荐人手机号（NB 前缀 + 完整手机号）
+    if not code.startswith('NB') or len(code) != 13:
+        return jsonify(ok=False, error='引荐码格式不正确')
+    referrer_phone = code[2:]
+    if not re.match(r'^1\d{10}$', referrer_phone):
+        return jsonify(ok=False, error='引荐码无效')
+    if referrer_phone == phone:
+        return jsonify(ok=False, error='不能填自己的引荐码')
+    conn = get_db()
+    _ensure_tables(conn)
+    ref_u = conn.execute('SELECT id FROM users WHERE phone=?', (referrer_phone,)).fetchone()
+    if not ref_u:
+        conn.close()
+        return jsonify(ok=False, error='引荐人不存在')
+    me = conn.execute('SELECT id FROM users WHERE phone=?', (phone,)).fetchone()
+    if not me:
+        conn.close()
+        return jsonify(ok=False, error='请先注册会员')
+    # 记录 referrer_phone 到 users（便于展示"我引荐了谁"），并发基础分
+    conn.execute('UPDATE users SET referrer_phone=? WHERE phone=?', (referrer_phone, phone))
+    res = grant_referral_base(referrer_phone, phone, name, conn)
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={
+        'base_awarded': res['base_awarded'],
+        'first_order_pending': res['first_order_pending'],
+        'base_points': REFER_BASE_POINTS,
+        'message': '引荐关系已建立，双方各得%d分；朋友首单再各得%d分' % (REFER_BASE_POINTS, REFER_FIRST_ORDER_POINTS)
+    })
+
+
+@app.route('/api/consumption/record', methods=['POST'])
+def api_consumption_record():
+    """记录会员消费（邻里消费/活动报名等），触发引荐首单奖励 + 被赠临时卡级回落。"""
+    data = request.json or {}
+    phone = (data.get('phone') or '').strip()
+    amount = float(data.get('amount', 0) or 0)
+    source = (data.get('source') or '邻里消费').strip()
+    if not phone:
+        return jsonify(ok=False, error='缺少手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    info = mark_consumption(phone, amount, source, conn)
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data=info)
+
+
 # ========== API - Dashboard ==========
 @app.route('/api/dashboard')
 @admin_required
@@ -2419,6 +2613,26 @@ def api_member_qrcode():
         img.save(buf, format='PNG')
         b64 = base64.b64encode(buf.getvalue()).decode()
         return jsonify(ok=True, qr='data:image/png;base64,' + b64)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e))
+
+@app.route('/api/referral/qrcode', methods=['GET'])
+def api_referral_qrcode():
+    """生成我的引荐码二维码（前端展示，朋友扫码可识别码值后手动填码）。"""
+    code = request.args.get('code', '').strip()
+    if not code:
+        return jsonify(ok=False, error='缺少引荐码')
+    try:
+        import qrcode, io, base64
+        from PIL import Image
+        qr = qrcode.QRCode(box_size=8, border=2, error_correction=qrcode.constants.ERROR_CORRECT_M)
+        qr.add_data('HJXTD://referral/' + code)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='#FF7B2C', back_color='#1C1C1E').convert('RGB').resize((220, 220))
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        b64 = base64.b64encode(buf.getvalue()).decode()
+        return jsonify(ok=True, qr='data:image/png;base64,' + b64, code=code)
     except Exception as e:
         return jsonify(ok=False, error=str(e))
 
@@ -2682,12 +2896,8 @@ def api_activity_register():
         amount = 0
     elif pay_method == 'pay':
         if amount > 0 and user:
-            # 会员折扣
-            discount = 0.98
-            level = user[8] or '普卡'
-            if level == '银卡': discount = 0.95
-            elif level == '金卡': discount = 0.9
-            elif level == '钻石卡': discount = 0.88
+            # 会员折扣（含被赠临时卡级：朋友临时升级后首单同样享高阶折扣）
+            discount = effective_discount(phone, conn) if conn else effective_discount(phone)
             amount = round(amount * discount, 2)
 
     # 生成票号
@@ -2704,6 +2914,10 @@ def api_activity_register():
     # 积分抵扣
     if points_used > 0:
         c.execute('UPDATE users SET points = points - ? WHERE username=?', (points_used, f'm{phone}'))
+
+    # 真实付费（pay 且金额>0）记为消费，触发引荐首单奖励 / 被赠临时卡级首单回落
+    if pay_method == 'pay' and amount > 0:
+        mark_consumption(phone, amount, '活动报名', conn)
 
     conn.commit()
 
@@ -2960,9 +3174,44 @@ def _release_init_flock():
         except Exception:
             pass
 
+def _col_add(conn, table, col, ddl):
+    """幂等给表加列（仅当该列不存在时 ALTER）。"""
+    try:
+        cols = [r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()]
+        if col not in cols:
+            conn.execute(f'ALTER TABLE {table} ADD COLUMN {col} {ddl}')
+    except Exception:
+        pass
+
+def _migrate_schema(conn):
+    """幂等 DDL 迁移：无论 _init_done 如何，每个进程都确保表结构到位（防 gunicorn 多 worker 初始化竞态漏建）。"""
+    try:
+        _col_add(conn, 'users', 'referrer_phone', "TEXT DEFAULT ''")
+        _col_add(conn, 'users', 'gift_quota', 'INTEGER DEFAULT 1')
+        _col_add(conn, 'users', 'gift_month', "TEXT DEFAULT ''")
+        _col_add(conn, 'users', 'temp_level', "TEXT DEFAULT ''")
+        _col_add(conn, 'users', 'temp_level_expire', "TEXT DEFAULT ''")
+        conn.execute('''CREATE TABLE IF NOT EXISTS gift_cards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE NOT NULL,
+            from_phone TEXT NOT NULL, from_level TEXT NOT NULL,
+            to_phone TEXT DEFAULT '', to_name TEXT DEFAULT '', status TEXT DEFAULT 'unused',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, expire_at TEXT DEFAULT '', used_at TIMESTAMP DEFAULT NULL)''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS referrals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, referrer_phone TEXT NOT NULL, referee_phone TEXT NOT NULL,
+            referee_name TEXT DEFAULT '', base_awarded INTEGER DEFAULT 0, first_order_awarded INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(referrer_phone, referee_phone))''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS member_consumptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT NOT NULL, amount REAL DEFAULT 0,
+            source TEXT DEFAULT '', awarded_first_order INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        conn.commit()
+    except Exception:
+        pass
+
 def _ensure_tables(conn):
     """确保数据表存在并填充初始数据。表结构(DDL)并发安全；初始数据写入每个进程只跑一次，避免 gunicorn 多 worker 并发竞争 SQLite 锁。"""
     global _init_done
+    # 每进程都先确保表结构到位（防多 worker 初始化竞态漏建），幂等开销极小
+    _migrate_schema(conn)
     if _init_done:
         return
     _acquire_init_flock()
@@ -3526,9 +3775,172 @@ def _ensure_tables(conn):
                 (club_id, title, tag, detail, place, meet, end, need)
             )
 
+    # ========== 会员互赠 / 人脉引荐 扩展字段 ==========
+    # users 表加列（幂等：仅当列不存在时 ALTER）
+    _col_add(conn, 'users', 'referrer_phone', 'TEXT DEFAULT \'\'')
+    _col_add(conn, 'users', 'gift_quota', 'INTEGER DEFAULT 1')        # 本月可赠折扣权次数（高阶会员默认1）
+    _col_add(conn, 'users', 'gift_month', 'TEXT DEFAULT \'\'')        # 上次赠送对应的月份(YYYY-MM)，用于每月重置配额
+    _col_add(conn, 'users', 'temp_level', 'TEXT DEFAULT \'\'')        # 被赠后临时卡级（如 钻石卡），空=无
+    _col_add(conn, 'users', 'temp_level_expire', 'TEXT DEFAULT \'\'') # 临时卡级有效期(YYYY-MM-DD)，过期回落
+
+    # 会员互赠折扣权（券）
+    conn.execute('''CREATE TABLE IF NOT EXISTS gift_cards (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT UNIQUE NOT NULL,
+        from_phone TEXT NOT NULL,
+        from_level TEXT NOT NULL,
+        to_phone TEXT DEFAULT '',
+        to_name TEXT DEFAULT '',
+        status TEXT DEFAULT 'unused',       -- unused / used / expired
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expire_at TEXT DEFAULT '',
+        used_at TIMESTAMP DEFAULT NULL
+    )''')
+    # 人脉引荐关系
+    conn.execute('''CREATE TABLE IF NOT EXISTS referrals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        referrer_phone TEXT NOT NULL,        -- 引荐人（老会员）
+        referee_phone TEXT NOT NULL,         -- 被引荐人（新会员）
+        referee_name TEXT DEFAULT '',
+        base_awarded INTEGER DEFAULT 0,      -- 注册基础分是否已发(双方)
+        first_order_awarded INTEGER DEFAULT 0, -- 首单奖励分是否已发(双方)
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(referrer_phone, referee_phone)
+    )''')
+    # 会员消费记录（邻里消费 / 首单触发）
+    conn.execute('''CREATE TABLE IF NOT EXISTS member_consumptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        phone TEXT NOT NULL,
+        amount REAL DEFAULT 0,
+        source TEXT DEFAULT '',              -- 来源备注（如 活动报名/停车/邻里消费）
+        awarded_first_order INTEGER DEFAULT 0, -- 本条是否已触发引荐首单奖励
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
     conn.commit()
     _init_done = True
     _release_init_flock()
+
+
+# ========== 会员互赠 / 人脉引荐 核心逻辑 ==========
+# 会员等级 -> 折扣率（被赠朋友临时升级后也走这套）
+_LEVEL_DISCOUNT = {'普卡': 0.98, '银卡': 0.95, '金卡': 0.90, '钻石卡': 0.88}
+# 高阶卡（可赠折扣权）：金卡 / 钻石卡
+_HIGH_TIERS = ('金卡', '钻石卡')
+# 互赠 / 引荐 积分配置
+GIFT_BASE_POINTS = 20        # 赠出折扣权，赠卡人得（社交勋章感）
+REFER_BASE_POINTS = 50       # 朋友注册，双方各得
+REFER_FIRST_ORDER_POINTS = 150  # 朋友首单，双方各得
+GIFT_CARD_VALID_DAYS = 30    # 折扣权券有效期
+
+
+def effective_level(phone, conn=None):
+    """用户当前有效卡级：优先临时卡级（被赠且在有效期内），否则真实卡级。"""
+    own = conn is None
+    if own:
+        conn = get_db()
+    _ensure_tables(conn)
+    u = conn.execute('SELECT membership_level, temp_level, temp_level_expire FROM users WHERE phone=?', (phone,)).fetchone()
+    if own:
+        conn.close()
+    if not u:
+        return '普卡'
+    temp = u['temp_level'] or ''
+    exp = u['temp_level_expire'] or ''
+    if temp and exp:
+        try:
+            if datetime.strptime(exp, '%Y-%m-%d').date() >= datetime.now().date():
+                return temp
+        except Exception:
+            pass
+    return u['membership_level'] or '普卡'
+
+
+def effective_discount(phone, conn=None):
+    """用户当前有效折扣率（含被赠临时卡级）。"""
+    return _LEVEL_DISCOUNT.get(effective_level(phone, conn), 0.98)
+
+
+def reset_gift_quota_if_new_month(conn):
+    """把 gift_quota 按月重置（高阶会员默认1次/月）。返回当前月字符串。"""
+    this_month = datetime.now().strftime('%Y-%m')
+    rows = conn.execute('SELECT phone, gift_month, membership_level FROM users WHERE gift_month IS NOT NULL AND gift_month != ?', (this_month,)).fetchall()
+    for r in rows:
+        # 仅高阶会员恢复配额；低阶本就无赠权，配额保持0也无妨
+        if (r['membership_level'] or '普卡') in _HIGH_TIERS:
+            conn.execute('UPDATE users SET gift_quota=1, gift_month=? WHERE phone=?', (this_month, r['phone']))
+        else:
+            conn.execute('UPDATE users SET gift_month=? WHERE phone=?', (this_month, r['phone']))
+    return this_month
+
+
+def gen_gift_code():
+    return 'GJ' + uuid.uuid4().hex[:10].upper()
+
+
+def grant_referral_base(referrer_phone, referee_phone, referee_name, conn=None):
+    """朋友用引荐码注册：建立关系 + 双方各得基础分（幂等：关系已存在则补发漏发的分）。"""
+    own = conn is None
+    if own:
+        conn = get_db()
+    _ensure_tables(conn)
+    reset_gift_quota_if_new_month(conn)
+    ref = conn.execute('SELECT * FROM referrals WHERE referrer_phone=? AND referee_phone=?',
+                       (referrer_phone, referee_phone)).fetchone()
+    if not ref:
+        conn.execute('INSERT INTO referrals (referrer_phone, referee_phone, referee_name, base_awarded) VALUES (?,?,?,1)',
+                     (referrer_phone, referee_phone, referee_name))
+        # 双方各得基础分（复用主连接，统一提交）
+        add_points(referrer_phone, REFER_BASE_POINTS, 'refer_base', f'引荐{referee_name}注册', conn)
+        add_points(referee_phone, REFER_BASE_POINTS, 'refer_base', '被引荐注册奖励', conn)
+        result = {'ok': True, 'base_awarded': True, 'first_order_pending': True}
+    else:
+        result = {'ok': True, 'base_awarded': False, 'first_order_pending': not ref['first_order_awarded']}
+        if not ref['base_awarded']:
+            conn.execute('UPDATE referrals SET base_awarded=1 WHERE id=?', (ref['id'],))
+            add_points(referrer_phone, REFER_BASE_POINTS, 'refer_base', f'引荐{referee_name}注册', conn)
+            add_points(referee_phone, REFER_BASE_POINTS, 'refer_base', '被引荐注册奖励', conn)
+            result['base_awarded'] = True
+    if own:
+        conn.commit()
+        conn.close()
+    return result
+
+
+def mark_consumption(phone, amount, source='', conn=None):
+    """记录会员消费。触发：①引荐首单奖励（朋友首单双方各得奖励分）②被赠临时卡级首单后回落。返回 dict。"""
+    own = conn is None
+    if own:
+        conn = get_db()
+    _ensure_tables(conn)
+    reset_gift_quota_if_new_month(conn)
+    # 写入消费记录
+    conn.execute('INSERT INTO member_consumptions (phone, amount, source, awarded_first_order) VALUES (?,?,?,0)',
+                 (phone, amount, source))
+    cid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+    info = {'first_order_awarded': False, 'gift_reverted': False}
+    # ① 引荐首单奖励
+    ref = conn.execute('SELECT * FROM referrals WHERE referee_phone=? AND first_order_awarded=0', (phone,)).fetchone()
+    if ref and amount and amount > 0:
+        conn.execute('UPDATE referrals SET first_order_awarded=1 WHERE id=?', (ref['id'],))
+        conn.execute('UPDATE member_consumptions SET awarded_first_order=1 WHERE id=?', (cid,))
+        # 双方各得首单奖励分
+        add_points(ref['referrer_phone'], REFER_FIRST_ORDER_POINTS, 'refer_first_order', f'引荐{ref["referee_name"] or ""}首单', conn)
+        add_points(phone, REFER_FIRST_ORDER_POINTS, 'refer_first_order', '首单达成奖励', conn)
+        info['first_order_awarded'] = True
+
+    # ② 被赠临时卡级：首单消费后回落（仅当是通过赠卡获得临时卡级的情况）
+    u = conn.execute('SELECT temp_level, temp_level_expire FROM users WHERE phone=?', (phone,)).fetchone()
+    if u and u['temp_level']:
+        # 临时卡级在"首单消费"后回落为真实卡级（被赠人自己的普卡等）
+        conn.execute('UPDATE users SET temp_level=?, temp_level_expire=? WHERE phone=?', ('', '', phone))
+        info['gift_reverted'] = True
+
+    if own:
+        conn.commit()
+        conn.close()
+    return info
 
 
 # ========== 激励层：成长值/积分/徽章 ==========

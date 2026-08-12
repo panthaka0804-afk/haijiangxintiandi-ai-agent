@@ -282,6 +282,35 @@ export function getMyClubs(phone) {
   return request('/api/club-event/my?phone=' + encodeURIComponent(phone))
 }
 
+// ========== 会员互赠 / 人脉引荐（邻里特权） ==========
+export function getGiftQuota(phone) {
+  return request('/api/gift/quota', { method: 'POST', body: JSON.stringify({ phone }) })
+}
+export function sendGift(phone, friendPhone, friendName) {
+  return request('/api/gift/send', {
+    method: 'POST',
+    body: JSON.stringify({ phone, friend_phone: friendPhone, friend_name: friendName })
+  })
+}
+export function redeemGift(phone, code) {
+  return request('/api/gift/redeem', {
+    method: 'POST',
+    body: JSON.stringify({ phone, code })
+  })
+}
+export function bindReferrer(phone, name, code) {
+  return request('/api/referral/bind', {
+    method: 'POST',
+    body: JSON.stringify({ phone, name, code })
+  })
+}
+export function recordConsumption(phone, amount, source = '邻里消费') {
+  return request('/api/consumption/record', {
+    method: 'POST',
+    body: JSON.stringify({ phone, amount, source })
+  })
+}
+
 // 通用 HTTP 客户端（ActivityDetail 等使用）
 const http = {
   get: (url, opts) => {
