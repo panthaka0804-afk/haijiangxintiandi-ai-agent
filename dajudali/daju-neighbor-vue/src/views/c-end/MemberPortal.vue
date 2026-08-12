@@ -66,74 +66,105 @@
       </div>
 
       <!-- 激励中心入口 -->
-      <van-cell-group inset style="margin-top: 16px;">
-        <van-cell
-          title="激励中心"
-          label="每日签到 · 成长值 · 成就徽章"
-          value="去签到"
-          icon="gift-o"
-          is-link
-          @click="$router.push('/points')"
-        />
-      </van-cell-group>
+      <div class="mp-card mp-gift-send" @click="$router.push('/points')">
+        <div class="mp-icon-box">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+        </div>
+        <div class="mp-left">
+          <div class="mp-title">激励中心</div>
+          <div class="mp-desc">每日签到 · 成长值 · 成就徽章</div>
+        </div>
+        <span class="mp-arrow">›</span>
+      </div>
 
       <!-- 邻里特权：会员互赠 + 人脉引荐 -->
-      <van-cell-group inset title="邻里特权" style="margin-top: 16px;">
-        <!-- 我的引荐码 -->
-        <div class="nb-refer">
-          <div class="nb-refer-left">
-            <div class="nb-refer-code">{{ gift.referral_code || '—' }}</div>
-            <div class="nb-refer-tip">把码发给邻居，TA 注册时填写，双方各得 {{ referBase }} 分</div>
-            <div class="nb-refer-actions">
-              <van-button size="mini" round plain @click="copyCode">复制引荐码</van-button>
-              <van-button size="mini" round plain @click="openQr">看二维码</van-button>
-            </div>
+      <div class="mp-section">
+        <span class="mp-section-en">neighbor privilege</span>
+        <span class="mp-section-cn">邻里特权</span>
+      </div>
+
+      <!-- 人脉引荐 hero -->
+      <div class="mp-card mp-refer">
+        <div class="mp-refer-head">
+          <div class="mp-icon-box">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
-          <img v-if="refQr" :src="refQr" class="nb-refer-qr" alt="引荐二维码" />
+          <div class="mp-refer-title">邻里引荐</div>
         </div>
+        <div class="mp-refer-code">{{ gift.referral_code || '—' }}</div>
+        <div class="mp-refer-tip">把码发给邻居，TA 注册时填写，双方各得 {{ referBase }} 分</div>
+        <div class="mp-refer-foot">
+          <button class="mp-pill" @click="copyCode">复制引荐码</button>
+          <button class="mp-pill" @click="openQr">看二维码</button>
+          <img v-if="refQr" :src="refQr" class="mp-refer-qr" alt="引荐二维码" />
+        </div>
+      </div>
 
-        <!-- 高阶会员：赠折扣权 -->
-        <template v-if="gift.is_high_tier">
-          <van-cell title="赠折扣权给朋友" :label="`本月还可赠 ${gift.gift_quota} 次 · 朋友核销后首单享你的卡级`"
-            icon="diamond-o" is-link @click="showSend = true" />
-        </template>
-        <template v-else>
-          <van-cell title="升级金卡/钻石卡可赠折扣权" label="高阶会员每月可赠朋友一次折扣权" icon="diamond-o" is-link @click="showUpgradeTip" />
-        </template>
+      <!-- 会员互赠：高阶赠折扣权 / 低阶升级 -->
+      <div class="mp-card" :class="gift.is_high_tier ? 'mp-gift-send' : 'mp-gift-up'">
+        <div class="mp-icon-box">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        </div>
+        <div class="mp-left">
+          <div class="mp-title">{{ gift.is_high_tier ? '赠折扣权给朋友' : '升级可赠折扣权' }}</div>
+          <div class="mp-desc">{{ gift.is_high_tier ? `本月还可赠 ${gift.gift_quota} 次 · 朋友核销后首单享你的卡级` : '金卡/钻石卡每月可赠朋友一次折扣权' }}</div>
+        </div>
+        <button class="mp-pill" v-if="gift.is_high_tier" @click="showSend = true">去赠送</button>
+        <button class="mp-pill" v-else @click="showUpgradeTip">去升级</button>
+      </div>
 
-        <!-- 我收到的折扣权券（待核销） -->
-        <van-cell v-if="gift.received_cards && gift.received_cards.length"
-          title="我收到的折扣权" :label="`${gift.received_cards.length} 张待核销`"
-          icon="coupon-o" is-link @click="showRedeem = true" />
+      <!-- 我收到的折扣权 -->
+      <div class="mp-card mp-gift-recv" v-if="gift.received_cards && gift.received_cards.length"
+        @click="showRedeem = true">
+        <div class="mp-icon-box">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/></svg>
+        </div>
+        <div class="mp-left">
+          <div class="mp-title">我收到的折扣权</div>
+          <div class="mp-desc">{{ gift.received_cards.length }} 张待核销</div>
+        </div>
+        <span class="mp-arrow">›</span>
+      </div>
 
-        <!-- 我赠出的券 -->
-        <van-cell v-if="gift.sent_cards && gift.sent_cards.length"
-          :title="`我赠出的折扣权 (${gift.sent_cards.length})`" icon="send-gift-o" is-link @click="showSent = true" />
-      </van-cell-group>
+      <!-- 我赠出的折扣权 -->
+      <div class="mp-card mp-gift-sent" v-if="gift.sent_cards && gift.sent_cards.length"
+        @click="showSent = true">
+        <div class="mp-icon-box">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </div>
+        <div class="mp-left">
+          <div class="mp-title">我赠出的折扣权 ({{ gift.sent_cards.length }})</div>
+          <div class="mp-desc">点击查看核销状态</div>
+        </div>
+        <span class="mp-arrow">›</span>
+      </div>
 
-      <!-- 兑换列表 -->
-      <van-cell-group inset title="积分兑换" style="margin-top: 16px;">
-        <van-cell
-          v-for="item in redeemList"
-          :key="item.id"
-          :title="item.name"
-          :label="`所需积分: ${item.points}`"
-          :value="item.value"
-          @click="showRedeemConfirm(item)"
-          is-link
-        />
-      </van-cell-group>
+      <!-- 积分兑换 -->
+      <div class="mp-section">
+        <span class="mp-section-en">redeem</span>
+        <span class="mp-section-cn">积分兑换</span>
+      </div>
+      <div class="mp-grid">
+        <div v-for="(item, i) in redeemList" :key="item.id" class="mp-card mp-redeem" :class="'mp-redeem-' + (i % 5)"
+          @click="showRedeemConfirm(item)">
+          <div class="mp-value">{{ item.value }}</div>
+          <div class="mp-title">{{ item.name }}</div>
+          <div class="mp-desc">{{ item.points }} 积分</div>
+        </div>
+      </div>
 
       <!-- 我的券 -->
-      <van-cell-group inset title="我的券" style="margin-top: 16px" v-if="coupons && coupons.length">
-        <van-cell
-          v-for="(c, i) in coupons"
-          :key="(c.code || 'c') + '-' + i"
-          :title="c.item || '优惠券'"
-          :label="'有效期至 ' + (c.time || '—')"
-          :value="c.code || '—'"
-        />
-      </van-cell-group>
+      <div class="mp-section" v-if="coupons && coupons.length">
+        <span class="mp-section-en">my coupons</span>
+        <span class="mp-section-cn">我的券</span>
+      </div>
+      <div class="mp-grid" v-if="coupons && coupons.length">
+        <div v-for="(c, i) in coupons" :key="(c.code || 'c') + '-' + i" class="mp-card mp-coupon" :class="'mp-coupon-' + (i % 5)">
+          <div class="mp-title">{{ c.item || '优惠券' }}</div>
+          <div class="mp-desc">有效期至 {{ c.time || '—' }}</div>
+          <div class="mp-coupon-code">{{ c.code || '—' }}</div>
+        </div>
+      </div>
 
       <!-- 赠折扣权弹窗 -->
       <van-dialog v-model:show="showSend" title="赠折扣权给朋友" show-cancel-button @confirm="doSend">
@@ -166,7 +197,7 @@
       <van-dialog v-model:show="showQr" title="我的引荐二维码">
         <div style="padding: 16px;text-align:center;">
           <img v-if="refQr" :src="refQr" style="width:200px;height:200px;border-radius:8px;" alt="二维码" />
-          <p style="font-size:13px;color:#FFB877;margin-top:8px;">引荐码：{{ gift.referral_code }}</p>
+          <p style="font-size:13px;color:#FFB877;margin-top:8px;text-shadow:0 -1px 1px rgba(0,0,0,0.4),0 1px 1px rgba(255,255,255,0.25);">引荐码：{{ gift.referral_code }}</p>
           <p style="font-size:12px;color:#999;">朋友扫码后手动填写引荐码即可建立邻里关系</p>
         </div>
       </van-dialog>
@@ -443,37 +474,173 @@ async function showRedeemConfirm(item) {
   color: #fff;
 }
 
-.nb-refer {
+/* ============ 多彩卡片（对齐首页风格） ============ */
+/* 统一：实色底 + 同色系深边框(3px) + 内高光 + 白字 text-shadow */
+.mp-section {
+  display: flex;
+  flex-direction: column;
+  margin: 26px 16px 12px;
+}
+.mp-section-en {
+  font-family: 'Gayathri', var(--font-primary);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  line-height: 1.2;
+  color: rgba(255,255,255,0.92);
+  text-transform: capitalize;
+  -webkit-text-stroke: 0.5px rgba(255,255,255,0.92);
+}
+.mp-section-cn {
+  font-size: 20px;
+  font-weight: 400;
+  color: #FFFFFF;
+  margin-top: 8px;
+  text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.18);
+}
+
+.mp-card {
+  position: relative;
+  box-sizing: border-box;
+  border-radius: 18px;
+  overflow: hidden;
+  margin: 0 16px 12px;
+  padding: 16px 18px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 4px;
+  gap: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border: 3px solid #9A7425;
+  background-color: #C4923A;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
 }
-.nb-refer-left { min-width: 0; flex: 1; }
-.nb-refer-code {
-  font-size: 22px;
+.mp-card:active { transform: scale(0.985); }
+
+/* 配色循环（与首页一致：金黄/浅橙棕/深红棕/灰紫/深灰绿） */
+.mp-gift-send  { background-color: #C9956C; border-color: #A87C48; } /* 浅橙棕 */
+.mp-gift-up    { background-color: #8B8B90; border-color: #6A6A6E; } /* 灰紫 */
+.mp-gift-recv  { background-color: #6B6E64; border-color: #4E5049; } /* 深灰绿 */
+.mp-gift-sent  { background-color: #9B4A3E; border-color: #6E332A; } /* 深红棕 */
+.mp-refer      { background-color: #D4A59A; border-color: #A67D72; } /* 浅粉棕 */
+
+.mp-icon-box {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.16);
+  box-shadow: inset 1px 1px 2px rgba(255,255,255,0.30), inset -1px -1px 3px rgba(0,0,0,0.20);
+}
+.mp-icon-box svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
+
+.mp-left { flex: 1; min-width: 0; }
+.mp-title {
+  font-size: 16px;
   font-weight: 700;
-  color: #FFB877;
-  letter-spacing: 2px;
-  font-family: 'SF Mono', 'Roboto Mono', monospace;
+  color: #FFFFFF;
+  margin-bottom: 2px;
+  text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25);
 }
-.nb-refer-tip {
+.mp-desc {
   font-size: 12px;
-  color: #999;
-  margin: 6px 0 10px;
+  color: #FFFFFF;
+  text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25);
+}
+.mp-arrow {
+  flex-shrink: 0;
+  font-size: 26px;
+  color: #FFFFFF;
+  line-height: 1;
+  text-shadow: 0 -1px 1px rgba(0,0,0,0.4);
+}
+
+.mp-pill {
+  flex-shrink: 0;
+  padding: 8px 18px;
+  border: 3px solid rgba(255,255,255,0.0);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #FFFFFF;
+  cursor: pointer;
+  background-color: rgba(0,0,0,0.22);
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.35), inset -2px -2px 4px rgba(255,255,255,0.18);
+}
+.mp-pill:active { opacity: 0.86; }
+
+/* 邻里引荐 hero（竖向大卡） */
+.mp-refer { flex-direction: column; align-items: stretch; gap: 10px; }
+.mp-refer-head { display: flex; align-items: center; gap: 12px; }
+.mp-refer-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: 0.5px;
+  text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25);
+}
+.mp-refer-code {
+  font-size: 26px;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: 3px;
+  font-family: 'SF Mono', 'Roboto Mono', monospace;
+  text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25);
+}
+.mp-refer-tip {
+  font-size: 12px;
+  color: #FFFFFF;
   line-height: 1.5;
+  text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.2);
 }
-.nb-refer-actions { display: flex; gap: 8px; }
-.nb-refer-actions :deep(.van-button) {
-  border-color: #FFB877;
-  color: #FFB877;
-}
-.nb-refer-qr {
-  width: 84px;
-  height: 84px;
+.mp-refer-foot { display: flex; align-items: center; gap: 10px; }
+.mp-refer-qr {
+  width: 64px;
+  height: 64px;
   border-radius: 8px;
   flex-shrink: 0;
-  background: #1C1C1E;
+  background: #FFFFFF;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.25);
 }
+
+/* 网格卡（积分兑换 / 我的券） */
+.mp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 16px 4px;
+}
+.mp-grid .mp-card {
+  margin: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  min-height: 92px;
+  padding: 14px 16px;
+}
+.mp-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #FFFFFF;
+  text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25);
+}
+.mp-coupon-code {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #FFFFFF;
+  opacity: 0.85;
+  font-family: 'SF Mono', 'Roboto Mono', monospace;
+  letter-spacing: 0.5px;
+}
+
+/* 兑换/券 5 色循环 */
+.mp-redeem-0, .mp-coupon-0 { background-color: #C4923A; border-color: #9A7425; } /* 金黄 */
+.mp-redeem-1, .mp-coupon-1 { background-color: #C9956C; border-color: #A87C48; } /* 浅橙棕 */
+.mp-redeem-2, .mp-coupon-2 { background-color: #9B4A3E; border-color: #6E332A; } /* 深红棕 */
+.mp-redeem-3, .mp-coupon-3 { background-color: #8B8B90; border-color: #6A6A6E; } /* 灰紫 */
+.mp-redeem-4, .mp-coupon-4 { background-color: #6B6E64; border-color: #4E5049; } /* 深灰绿 */
 </style>
