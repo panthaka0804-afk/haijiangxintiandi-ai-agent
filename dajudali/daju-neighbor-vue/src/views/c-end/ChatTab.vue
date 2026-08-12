@@ -19,7 +19,10 @@
           <div class="msg-bubble user-bubble">{{ msg.content }}</div>
         </template>
         <template v-else>
-          <div class="msg-avatar"><svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#1A1A1A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 25 C4 22 8 16 15 15 C24 14 32 17 35 21 C37 21 39 18 42 15 C44 13 46 15 44 18 C46 21 43 23 40 24 C38 28 35 36 27 37 C18 38 10 35 8 29 C6 27 5 26 5 25 Z" fill="#FFFFFF"/><path d="M5 25 C8 26 11 26 13 25"/><circle cx="15" cy="20" r="1.8" fill="#1A1A1A" stroke="none"/><path d="M18 33 C17 37 20 39 22 36"/></svg></div>
+          <div class="msg-head">
+            <div class="msg-avatar"><svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#1A1A1A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 25 C4 22 8 16 15 15 C24 14 32 17 35 21 C37 21 39 18 42 15 C44 13 46 15 44 18 C46 21 43 23 40 24 C38 28 35 36 27 37 C18 38 10 35 8 29 C6 27 5 26 5 25 Z" fill="#FFFFFF"/><path d="M5 25 C8 26 11 26 13 25"/><circle cx="15" cy="20" r="1.8" fill="#1A1A1A" stroke="none"/><path d="M18 33 C17 37 20 39 22 36"/></svg></div>
+            <span class="msg-nick">小江同学</span>
+          </div>
           <div class="msg-bubble ai-bubble" v-html="formatMsg(msg.content)"></div>
           <!-- 智能快捷操作按钮 -->
           <div v-if="getQuickActions(msg.content).length" class="quick-actions-row">
@@ -74,12 +77,34 @@
             <div class="ai-card-footer">{{ msg.card.footer }}</div>
           </div>
         </template>
+        <!-- 老年用户一键转人工 -->
+        <div v-if="msg.transfer_btn" class="transfer-btn-wrapper">
+          <div class="transfer-note">{{ msg.transfer_btn.note }}</div>
+          <button class="transfer-btn" @click="startHumanChat(msg.transfer_btn)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            {{ msg.transfer_btn.label }}
+          </button>
+        </div>
+        <!-- 人工客服对话状态 -->
+        <div v-if="humanChatActive" class="human-chat-banner">
+          <div class="hc-banner-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="hc-banner-text">
+            <template v-if="humanChatWaiting">正在为您转接人工客服，请稍候...</template>
+            <template v-else-if="humanChatReplied">人工客服已回复，请查看下方消息</template>
+            <template v-else>已进入人工客服模式，请描述您的问题</template>
+          </div>
+        </div>
         <div class="msg-time">{{ msg.time }}</div>
       </div>
 
       <!-- 打字动画 -->
       <div class="message-wrapper ai" v-if="typing">
-        <div class="msg-avatar"><svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#1A1A1A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 25 C4 22 8 16 15 15 C24 14 32 17 35 21 C37 21 39 18 42 15 C44 13 46 15 44 18 C46 21 43 23 40 24 C38 28 35 36 27 37 C18 38 10 35 8 29 C6 27 5 26 5 25 Z" fill="#FFFFFF"/><path d="M5 25 C8 26 11 26 13 25"/><circle cx="15" cy="20" r="1.8" fill="#1A1A1A" stroke="none"/><path d="M18 33 C17 37 20 39 22 36"/></svg></div>
+        <div class="msg-head">
+          <div class="msg-avatar"><svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#1A1A1A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 25 C4 22 8 16 15 15 C24 14 32 17 35 21 C37 21 39 18 42 15 C44 13 46 15 44 18 C46 21 43 23 40 24 C38 28 35 36 27 37 C18 38 10 35 8 29 C6 27 5 26 5 25 Z" fill="#FFFFFF"/><path d="M5 25 C8 26 11 26 13 25"/><circle cx="15" cy="20" r="1.8" fill="#1A1A1A" stroke="none"/><path d="M18 33 C17 37 20 39 22 36"/></svg></div>
+          <span class="msg-nick">小江同学</span>
+        </div>
         <div class="msg-bubble ai-bubble typing-bubble">
           <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         </div>
@@ -171,6 +196,15 @@
         </div>
       </div>
     </div>
+
+    <RatingModal
+      :visible="ratingVisible"
+      :title="ratingTitle"
+      :subtitle="ratingSubtitle"
+      :feedback-type="ratingType"
+      :phone="memberStore.member?.phone || ''"
+      @close="ratingVisible = false"
+    />
   </div>
 </template>
 
@@ -180,8 +214,19 @@ import { showToast } from 'vant'
 import { useChatStore } from '@/stores/chat'
 import { sendChat } from '@/api'
 import SvgIcon from '@/components/c-end/SvgIcon.vue'
+import RatingModal from '@/components/c-end/RatingModal.vue'
+import { useUserStore } from '@/stores/user'
+import { useMemberStore } from '@/stores/member'
 
 const chatStore = useChatStore()
+const userStore = useUserStore()
+const memberStore = useMemberStore()
+
+// 满意度评价
+const ratingVisible = ref(false)
+const ratingType = ref('chat_ai')
+const ratingTitle = ref('请评价小江的本次服务')
+const ratingSubtitle = ref('您的反馈将帮助我们持续优化')
 
 const inputText = ref('')
 const typing = ref(false)
@@ -561,6 +606,7 @@ function getLocalReply(text) {
 }
 
 async function sendMsg() {
+  if (humanChatActive.value) return sendHumanMsg()
   const text = inputText.value.trim()
   if (!text || chatStore.loading.value) return
   if (text.length > 500) {
@@ -575,22 +621,87 @@ async function sendMsg() {
   chatStore.loading = true
   await scrollBottom()
 
+  // AI 消息延迟创建：先让 typing 打字动画显示，首字到达后再生成真正的消息气泡，避免双头像
+  let aiMsg = null
+  let firstToken = true
+
   try {
-    const res = await sendChat(text)
+    const largeFont = userStore.largeFont || false
+    const resp = await fetch('/api/public/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, large_font: largeFont })
+    })
+    if (!resp.ok || !resp.body) throw new Error('stream failed')
+
+    const reader = resp.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let fullReply = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      let idx
+      while ((idx = buffer.indexOf('\n\n')) >= 0) {
+        const block = buffer.slice(0, idx)
+        buffer = buffer.slice(idx + 2)
+        const dataLine = block.split('\n').find(l => l.startsWith('data: '))
+        if (!dataLine) continue
+        let payload
+        try { payload = JSON.parse(dataLine.slice(6)) } catch { continue }
+        if (payload.reply || payload.token) {
+          // 首字到达：关闭打字动画，创建真正的 AI 消息气泡
+          if (firstToken) {
+            typing.value = false
+            aiMsg = { role: 'ai', content: '', time: now(), card: null, transfer_btn: null }
+            chatStore.addMessage(aiMsg)
+            firstToken = false
+          }
+          if (payload.reply) {
+            fullReply = payload.reply
+            aiMsg.content = payload.reply
+          } else if (payload.token) {
+            fullReply += payload.token
+            aiMsg.content = fullReply
+          }
+        }
+        if (payload.transfer_btn && aiMsg) aiMsg.transfer_btn = payload.transfer_btn
+        await scrollBottom()
+      }
+    }
+
     typing.value = false
-    if (res.ok) {
-      chatStore.addMessage({
-        role: 'ai',
-        content: res.reply || '小江暂时不知道该怎么回答呢~',
-        time: now(),
-        card: res.card || null
-      })
-    } else {
-      chatStore.addMessage({ role: 'ai', content: getLocalReply(text), time: now() })
+    if (!fullReply) {
+      // 流式无内容（异常兜底）
+      if (!aiMsg) {
+        aiMsg = { role: 'ai', content: '', time: now(), card: null, transfer_btn: null }
+        chatStore.addMessage(aiMsg)
+      }
+      aiMsg.content = getLocalReply(text)
+      fullReply = aiMsg.content
+    }
+
+    // 会话结束语 → 自动推送 AI 服务评价
+    if (/谢谢|不客气|再见|拜拜|欢迎下次|还有什么可以帮|祝您|问题已解决/.test(fullReply)) {
+      setTimeout(() => {
+        if (!humanChatActive.value && !ratingVisible.value) {
+          ratingType.value = 'chat_ai'
+          ratingTitle.value = '请评价小江的本次服务'
+          ratingSubtitle.value = '您的反馈将帮助小江持续进步'
+          ratingVisible.value = true
+        }
+      }, 900)
     }
   } catch {
     typing.value = false
-    chatStore.addMessage({ role: 'ai', content: getLocalReply(text), time: now() })
+    if (!aiMsg) {
+      aiMsg = { role: 'ai', content: getLocalReply(text), time: now(), card: null, transfer_btn: null }
+      chatStore.addMessage(aiMsg)
+    } else {
+      aiMsg.content = getLocalReply(text)
+    }
   } finally {
     chatStore.loading = false
     await scrollBottom()
@@ -614,7 +725,14 @@ function formatMsg(text) {
 }
 
 function onCardClick(e, card) {
-  // placeholder
+  // 餐厅排队/预订卡片点击
+  if (card && card.footer) {
+    const footer = card.footer || ''
+    if (footer.includes('排队进度')) {
+      inputText.value = '排队进度'
+      sendMsg()
+    }
+  }
 }
 
 const emit = defineEmits(['switchTab'])
@@ -636,12 +754,40 @@ function getQuickActions(text) {
   if (t.includes('会员') || t.includes('注册') || t.includes('登录')) {
     actions.push({ label: '会员中心', tab: 'profile' })
   }
+  // 餐厅相关快捷操作
+  if (t.includes('取号') || t.includes('排队') || t.includes('等位') || t.includes('拿号')) {
+    actions.push({ label: '查排队进度', action: 'check_queue' })
+  }
+  if (t.includes('订餐') || t.includes('订位') || t.includes('预约') || t.includes('预订') || t.includes('包厢')) {
+    actions.push({ label: '查看预订', action: 'my_reservations' })
+  }
+  if (t.includes('餐厅') || t.includes('火锅') || t.includes('烧烤') || t.includes('夜宵') || t.includes('吃饭')) {
+    actions.push({ label: '热门取号', action: 'hot_queue' })
+  }
+  // 主理人/商户入口
+  if (t.includes('入驻') || t.includes('招商') || t.includes('开店') || t.includes('品牌')) {
+    actions.push({ label: '主理人中心', route: '/organizer' })
+  }
+  if (t.includes('排期') || t.includes('场地') || t.includes('预定') || t.includes('租赁')) {
+    actions.push({ label: '场地预定', route: '/organizer' })
+  }
   return actions
 }
 
 function doQuickAction(action) {
   if (action.tab) {
     emit('switchTab', action.tab)
+  } else if (action.route) {
+    window.open(action.route, '_blank')
+  } else if (action.action === 'check_queue') {
+    inputText.value = '排队进度'
+    sendMsg()
+  } else if (action.action === 'my_reservations') {
+    inputText.value = '我的预订'
+    sendMsg()
+  } else if (action.action === 'hot_queue') {
+    inputText.value = '取号 朱光玉火锅'
+    sendMsg()
   }
 }
 
@@ -658,6 +804,81 @@ onMounted(async () => {
 watch(() => chatStore.messages.length, () => {
   scrollBottom()
 })
+
+// ===== 人工客服模式 =====
+const humanChatActive = ref(false)
+const humanChatWaiting = ref(true)
+const humanChatReplied = ref(false)
+let humanChatTimer = null
+
+function getSessionId() {
+  let sid = sessionStorage.getItem('__dj_human_sid')
+  if (!sid) {
+    sid = 'human_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6)
+    sessionStorage.setItem('__dj_human_sid', sid)
+  }
+  return sid
+}
+
+async function startHumanChat(btn) {
+  humanChatActive.value = true
+  humanChatWaiting.value = true
+  chatStore.addMessage({ role: 'ai', content: '正在为您转接人工客服，请描述您的问题，客服人员会尽快回复您 💬', time: now() })
+  await scrollBottom()
+  humanChatTimer = setInterval(pollHumanReply, 5000)
+}
+
+async function pollHumanReply() {
+  try {
+    const resp = await fetch('/api/human-chat/session?session_id=' + getSessionId())
+    const data = await resp.json()
+    if (data.ok && data.data.has_agent) {
+      humanChatWaiting.value = false
+      humanChatReplied.value = true
+      const agentMsgs = data.data.messages.filter(m => m.role === 'agent')
+      if (agentMsgs.length) {
+        const last = agentMsgs[agentMsgs.length - 1]
+        const alreadyShown = chatStore.messages.value.some(m => m._humanId === last.id)
+        if (!alreadyShown) {
+          chatStore.addMessage({ role: 'ai', content: '【人工客服】' + last.content, time: now(), _humanId: last.id })
+          await scrollBottom()
+          // 人工客服回复 → 推送人工服务评价
+          setTimeout(() => {
+            if (!ratingVisible.value) {
+              ratingType.value = 'chat_human'
+              ratingTitle.value = '请评价人工客服的服务'
+              ratingSubtitle.value = '感谢您的反馈，帮助客服提升服务质量'
+              ratingVisible.value = true
+            }
+          }, 900)
+        }
+      }
+    }
+  } catch {}
+}
+
+async function sendHumanMsg() {
+  const text = inputText.value.trim()
+  if (!text) return
+  chatStore.addMessage({ role: 'user', content: text, time: now() })
+  inputText.value = ''
+  const phone = memberStore?.member?.phone || ''
+  const name = memberStore?.member?.display_name || ''
+  fetch('/api/human-chat', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session_id: getSessionId(), message: text, phone, name })
+  }).catch(() => {})
+  await scrollBottom()
+}
+
+// 重写 sendMsg 引用（统一入口）
+const _originalSendMsg = sendMsg
+function sendMsgWrapper() {
+  if (humanChatActive.value) return sendHumanMsg()
+  return _originalSendMsg()
+}
+// 模板中使用 sendMsg，这里偷偷拦截
+// (Vue setup 中函数提升不支持，改为在 sendMsg 开头判断)
 </script>
 
 <style scoped>
@@ -742,6 +963,20 @@ watch(() => chatStore.messages.length, () => {
   flex-shrink: 0;
 }
 .msg-avatar svg { width: 100%; height: 100%; display: block; }
+
+.msg-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+}
+
+.msg-nick {
+  font-size: 13px;
+  color: #B8B8B8;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
 
 .msg-bubble {
   max-width: 78%;
@@ -1126,4 +1361,28 @@ watch(() => chatStore.messages.length, () => {
 .ai-card-tag { font-size: 11px; color: #999999; background: #1A1A1A; padding: 2px 6px; border-radius: 4px; font-weight: 500; white-space: nowrap; }
 .ai-card-price { font-size: 15px; font-weight: 600; color: #999999; white-space: nowrap; }
 .ai-card-footer { font-size: 13px; color: #999; padding: 10px 14px; background: #222222; line-height: 1.4; border-top: 1px solid #2E2E2E; }
+
+/* 一键转人工按钮 */
+.transfer-btn-wrapper { text-align: center; margin-top: 10px; }
+.transfer-note { font-size: 13px; color: #999; margin-bottom: 8px; padding: 0 4px; }
+.transfer-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 14px 28px; border-radius: 14px;
+  background: linear-gradient(135deg, #E8552A, #FF7B2C);
+  color: #fff; font-size: 17px; font-weight: 700; text-decoration: none;
+  box-shadow: 0 4px 16px rgba(232,85,42,0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: none; cursor: pointer;
+}
+.transfer-btn:hover { transform: scale(1.03); box-shadow: 0 6px 24px rgba(232,85,42,0.5); }
+.transfer-btn:active { transform: scale(0.98); }
+
+/* 人工客服模式横幅 */
+.human-chat-banner {
+  display: flex; align-items: center; gap: 10px;
+  margin: 10px 0; padding: 10px 14px;
+  background: #1a2a1a; border-radius: 10px; border: 1px solid #2D7D46;
+}
+.hc-banner-icon { color: #4CAF50; flex-shrink: 0; }
+.hc-banner-text { font-size: 13px; color: #9AE6A0; line-height: 1.4; }
 </style>

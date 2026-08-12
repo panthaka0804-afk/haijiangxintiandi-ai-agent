@@ -8,38 +8,41 @@
       <div class="cpn-sheet">
         <h3>领券中心</h3>
 
-        <div
-          v-for="c in coupons"
-          :key="c.id"
-          class="cpn-card"
-          :class="{ 'cpn-card--used': c.claimed }"
-        >
-          <!-- 水印 -->
-          <div class="cpn-watermark"><SvgIcon name="tag" :size="40" color="#8B8B8B" /></div>
+        <template v-for="grp in grouped" :key="grp.key">
+          <div class="cpn-group-title">{{ grp.label }}</div>
+          <div
+            v-for="c in grp.items"
+            :key="c.id"
+            class="cpn-card"
+            :class="{ 'cpn-card--used': c.claimed }"
+          >
+            <!-- 水印 -->
+            <div class="cpn-watermark"><SvgIcon name="tag" :size="40" color="#8B8B8B" /></div>
 
-          <!-- 顶部：金额 + 标题 -->
-          <div class="cpn-top">
-            <div class="cpn-amount">
-              <small>¥</small>{{ c.amount }}
+            <!-- 顶部：金额 + 标题 -->
+            <div class="cpn-top">
+              <div class="cpn-amount">
+                <small>¥</small>{{ c.amount }}
+              </div>
+              <div class="cpn-detail">
+                <div class="cpn-name">{{ c.title }}</div>
+                <div>{{ c.desc }}</div>
+              </div>
             </div>
-            <div class="cpn-detail">
-              <div class="cpn-name">{{ c.title }}</div>
-              <div>{{ c.desc }}</div>
+
+            <!-- 底部：条件 + 按钮 -->
+            <div class="cpn-meta">
+              满{{ c.min }}元可用 | 有效期至 {{ c.expire }} | 券码：{{ c.code }}
             </div>
-          </div>
 
-          <!-- 底部：条件 + 按钮 -->
-          <div class="cpn-meta">
-            满{{ c.min }}元可用 | 有效期至 {{ c.expire }} | 券码：{{ c.code }}
+            <button
+              v-if="!c.claimed"
+              class="cpn-btn"
+              @click="claim(c)"
+            >立即领取</button>
+            <div v-else class="cpn-done">已领取 · 去收银台核销</div>
           </div>
-
-          <button
-            v-if="!c.claimed"
-            class="cpn-btn"
-            @click="claim(c)"
-          >立即领取</button>
-          <div v-else class="cpn-done">已领取 · 去收银台核销</div>
-        </div>
+        </template>
 
         <button class="cpn-close-btn" @click="$emit('close')">关闭</button>
       </div>
@@ -48,7 +51,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import SvgIcon from './SvgIcon.vue'
 
 const props = defineProps({
@@ -59,12 +62,32 @@ const props = defineProps({
 const emit = defineEmits(['close', 'claim'])
 
 const coupons = reactive([
-  { id: 1, amount: 20, min: 100, title: '餐饮通用券', desc: '海江新天地所有餐饮商户可用', expire: '2026-08-31', code: 'DJ0820', claimed: false },
-  { id: 2, amount: 50, min: 300, title: '零售满减券', desc: '服饰/美妆/数码品类可用', expire: '2026-09-15', code: 'DJ0850', claimed: false },
-  { id: 3, amount: 10, min: 50, title: '小吃饮品券', desc: 'B1美食广场通用', expire: '2026-08-31', code: 'DJ0810', claimed: false },
-  { id: 4, amount: 15, min: 0, title: '新人无门槛券', desc: '全场通用，仅限首单', expire: '2026-08-15', code: 'DJ0815', claimed: false },
-  { id: 5, amount: 2, min: 0, title: '停车券', desc: '可抵扣2小时停车费', expire: '2026-12-31', code: 'PARK02', claimed: false },
+  { id: 1, amount: 20, min: 100, title: '餐饮通用券', desc: '海江新天地所有餐饮商户可用', expire: '2026-08-31', code: 'DJ0820', category: '餐饮', claimed: false },
+  { id: 2, amount: 50, min: 300, title: '零售满减券', desc: '服饰/美妆/数码品类可用', expire: '2026-09-15', code: 'DJ0850', category: '零售', claimed: false },
+  { id: 3, amount: 10, min: 50, title: '小吃饮品券', desc: 'B1美食广场通用', expire: '2026-08-31', code: 'DJ0810', category: '餐饮', claimed: false },
+  { id: 4, amount: 15, min: 0, title: '新人无门槛券', desc: '全场通用，仅限首单', expire: '2026-08-15', code: 'DJ0815', category: '通用', claimed: false },
+  { id: 5, amount: 2, min: 0, title: '停车券', desc: '可抵扣2小时停车费', expire: '2026-12-31', code: 'PARK02', category: '停车', claimed: false },
 ])
+
+// 按品类分组展示（顺序固定，避免每次渲染乱序）
+const GROUP_ORDER = ['餐饮', '零售', '停车', '通用']
+const GROUP_LABEL = {
+  '餐饮': '餐饮券',
+  '零售': '零售券',
+  '停车': '停车券',
+  '通用': '通用 · 新人专享',
+}
+const grouped = computed(() => {
+  const map = {}
+  for (const c of coupons) {
+    ;(map[c.category] || (map[c.category] = [])).push(c)
+  }
+  return GROUP_ORDER.filter(k => map[k]).map(k => ({
+    key: k,
+    label: GROUP_LABEL[k] || k,
+    items: map[k],
+  }))
+})
 
 function claim(c) {
   c.claimed = true
@@ -108,9 +131,21 @@ function claim(c) {
   color: #F0F0F0;
 }
 
+/* 分组标题 */
+.cpn-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #C4923A;
+  letter-spacing: 0.4px;
+  padding: 4px 2px 8px;
+  margin-top: 8px;
+}
+.cpn-group-title:first-child { margin-top: 0; }
+
 /* 优惠券卡片 */
 .cpn-card {
   position: relative;
+  margin-bottom: 12px;
   background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
   color: #fff;
   border-radius: 14px;

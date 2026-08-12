@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """海江新天地系统 - 社区商业AI客服"""
 import os, sys, json, sqlite3, hashlib, secrets, re, time, io, base64, subprocess, tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, request, session, jsonify, send_from_directory
+import fcntl  # 跨进程文件锁，防止 gunicorn 多 worker 并发初始化抢 SQLite 写锁
+from flask import Flask, request, session, jsonify, send_from_directory, Response
 from openai import OpenAI
 import floor_data
+
+# 平台扩展配置层：业态/渠道/AI provider/知识库引擎 的集中配置与扩展点
+from biz_platform import CATEGORY_ALIASES as _CATEGORY_ALIASES, ZONE_CANON as _ZONE_CANON, CHANNELS, AI_PROVIDERS, KB_ENGINE
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -25,14 +29,18 @@ DB_PATH = os.path.join(HERE, 'dajudali.db')
 DS_API_KEY = os.environ.get('DS_API_KEY', '')
 import subprocess as _sp
 
-def _call_deepseek(messages, max_tokens=600):
+# AI 服务健康状态（故障降级 + /api/health 健康检查用）
+AI_HEALTH = {'status': 'up', 'fail_count': 0, 'last_fail': None, 'last_check': None}
+
+def _call_deepseek(messages, max_tokens=300):
     """用 curl 调 DeepSeek（绕过 Python SSL 问题）"""
+    global AI_HEALTH
     import tempfile
     payload = json.dumps({
         'model': 'deepseek-chat',
         'messages': messages,
         'max_tokens': max_tokens,
-        'temperature': 0.7
+        'temperature': 0.6
     }, ensure_ascii=False)
     # 用临时文件传参，避免命令行过长
     tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8')
@@ -48,13 +56,38 @@ def _call_deepseek(messages, max_tokens=600):
         ], capture_output=True, text=True, timeout=15)
         resp = json.loads(result.stdout)
         if 'choices' in resp:
+            AI_HEALTH['status'] = 'up'
+            AI_HEALTH['fail_count'] = 0
+            AI_HEALTH['last_fail'] = None
+            AI_HEALTH['last_check'] = datetime.now().isoformat()
             return True, resp['choices'][0]['message']['content']
+        AI_HEALTH['status'] = 'down'
+        AI_HEALTH['fail_count'] += 1
+        AI_HEALTH['last_fail'] = datetime.now().isoformat()
+        AI_HEALTH['last_check'] = AI_HEALTH['last_fail']
         return False, resp.get('error', {}).get('message', str(resp))
     except Exception as e:
+        AI_HEALTH['status'] = 'down'
+        AI_HEALTH['fail_count'] += 1
+        AI_HEALTH['last_fail'] = datetime.now().isoformat()
+        AI_HEALTH['last_check'] = AI_HEALTH['last_fail']
         return False, str(e)
     finally:
         try: os.unlink(tmp.name)
         except: pass
+
+
+def ai_chat(messages, max_tokens=300, capability='llm'):
+    """AI 能力统一入口（扩展点）
+    - 当前默认走 DeepSeek（capability='llm'）。
+    - 【预留扩展】后续接入 AI 数字人 / 智能推荐等进阶能力时，
+      在此按 capability 路由到对应 provider（见 biz_platform.AI_PROVIDERS），
+      无需改动 _do_chat 等上层业务代码。
+    """
+    # 未来示例：
+    # if capability == 'avatar':     return _call_digital_human(messages, ...)
+    # if capability == 'recommend':  return _call_recommend_engine(messages, ...)
+    return _call_deepseek(messages, max_tokens=max_tokens)
 
 # 用 curl wrapper 替代 OpenAI 客户端
 import httpx
@@ -73,6 +106,13 @@ QWEN_API_KEY = os.environ.get('QWEN_API_KEY', '') or DS_API_KEY
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    # 多进程容灾：WAL 模式 + 忙等待，避免 gunicorn 多 worker 并发写锁库
+    try:
+        conn.execute('PRAGMA journal_mode=WAL')
+        conn.execute('PRAGMA busy_timeout=5000')
+        conn.execute('PRAGMA synchronous=NORMAL')
+    except Exception:
+        pass
     return conn
 
 # ========== Auth ==========
@@ -120,6 +160,7 @@ SYSTEM_PROMPT = '''你是海江新天地社区商业中心的客服小江。自�
 你是海江新天地最暖心的小江~'''
 
 CHAT_HISTORY = {}
+CHAT_ROUNDS = {}  # {chat_key: round_count}  老年用户转人工: 轮次计数
 MAX_HISTORY = 20
 MAX_SESSIONS = 500
 CHAT_HISTORY_FILE = os.path.join(HERE, 'chat_history.json')
@@ -198,74 +239,35 @@ def kb_search(tenant_id, query, limit=5):
     scored.sort(key=lambda x: x[0], reverse=True)
     return [s[1] for s in scored[:limit]]
 
+def _add_kb_pending(tenant_id, question, source='chat'):
+    """未命中问题自动归集到知识库待优化列表"""
+    try:
+        q = (question or '').strip()
+        if not q or len(q) < 4:
+            return
+        conn = get_db()
+        _ensure_tables(conn)
+        # 去重：相同问题已存在则不重复归集
+        exists = conn.execute(
+            "SELECT id FROM kb_pending WHERE question=? AND status='pending'",
+            (q,)
+        ).fetchone()
+        if not exists:
+            conn.execute(
+                "INSERT INTO kb_pending (tenant_id, question, source, status) VALUES (?,?,?,?)",
+                (tenant_id, q, source, 'pending')
+            )
+            conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
 # ===== 真实商户检索（基于 shops 表，支持 区域/楼层 + 品类 精准过滤） =====
-# 品类关键词 -> shops.category 映射（覆盖用户口语化说法）
-_CATEGORY_ALIASES = {
-    '吃': ('餐饮','快餐简餐','烧烤夜宵酒馆日料','火锅串串','茶饮咖啡','湘菜江湖菜','江浙本帮徽菜','甜品烘焙'),
-    '吃的': ('餐饮','快餐简餐','烧烤夜宵酒馆日料','火锅串串','茶饮咖啡','湘菜江湖菜','江浙本帮徽菜','甜品烘焙'),
-    '美食': ('餐饮','快餐简餐','烧烤夜宵酒馆日料','火锅串串','茶饮咖啡','湘菜江湖菜','江浙本帮徽菜','甜品烘焙'),
-    '餐饮': ('餐饮','快餐简餐','烧烤夜宵酒馆日料','火锅串串','茶饮咖啡','湘菜江湖菜','江浙本帮徽菜','甜品烘焙'),
-    '喝': ('茶饮咖啡','餐饮','甜品烘焙'),
-    '咖啡': ('茶饮咖啡','餐饮'),
-    '奶茶': ('茶饮咖啡','餐饮'),
-    '火锅': ('火锅串串','餐饮'),
-    '串串': ('火锅串串','餐饮'),
-    '烧烤': ('烧烤夜宵酒馆日料','餐饮'),
-    '夜宵': ('烧烤夜宵酒馆日料','餐饮'),
-    '日料': ('烧烤夜宵酒馆日料','餐饮'),
-    '酒馆': ('烧烤夜宵酒馆日料','餐饮'),
-    '湘菜': ('湘菜江湖菜','餐饮'),
-    '本帮': ('江浙本帮徽菜','餐饮'),
-    '江浙菜': ('江浙本帮徽菜','餐饮'),
-    '徽菜': ('江浙本帮徽菜','餐饮'),
-    '甜品': ('甜品烘焙','餐饮'),
-    '烘焙': ('甜品烘焙','餐饮'),
-    '蛋糕': ('甜品烘焙','餐饮'),
-    '快餐': ('快餐简餐','餐饮'),
-    '简餐': ('快餐简餐','餐饮'),
-    '小吃': ('快餐简餐','餐饮'),
-    '亲子': ('亲子',),
-    '小孩': ('亲子',),
-    '儿童': ('亲子',),
-    '教培': ('教育培训',),
-    '培训': ('教育培训',),
-    '教育': ('教育培训',),
-    '跳舞': ('教育培训',),
-    '健身': ('休闲娱乐',),
-    '娱乐': ('休闲娱乐','娱乐'),
-    '电影': ('休闲娱乐','娱乐'),
-    '超市': ('生鲜超市','零售'),
-    '生鲜': ('生鲜超市',),
-    '便利店': ('零售便利数码银行',),
-    '银行': ('零售便利数码银行',),
-    '手机': ('零售便利数码银行',),
-    '数码': ('零售便利数码银行',),
-    '零售': ('零售',),
-    '购物': ('零售','零售便利数码银行'),
-    '宠物': ('宠物',),
-    '美容': ('康养美容',),
-    '养生': ('康养美容',),
-    '推拿': ('康养美容',),
-    '美甲': ('康养美容',),
-    '住宿': ('住宿',),
-    '酒店': ('住宿',),
-}
-# 区域/楼层关键词 -> 规范化（用于匹配 shops.zone / floor）
+# 品类关键词 -> shops.category 映射 已迁移至 biz_platform.py（顶部 import，新增业态只需改 biz_platform.py）
 # 区域字母<->数字 别名映射：A↔1、B↔2、C↔3、D↔4、E↔5、F↔6，7区独立
 # 库里 zone 命名混乱(1区/A区/A1/A3/安信财富中心A区 并存)，全部归一到标准数字区
 _LETTER_TO_NUM = {'a':'1','b':'2','c':'3','d':'4','e':'5','f':'6'}
 _NUM_TO_LETTER = {'1':'A','2':'B','3':'C','4':'D','5':'E','6':'F'}
-
-# DB 真实 zone 值 -> 标准数字区（字母区与数字区视为同一区域）
-_ZONE_CANON = {
-    '1区':'1','A区':'1','A1':'1','A3':'1','安信财富中心A区':'1',
-    'B1':'2',            # 2区/B区 实际在册只有 B1
-    '3区':'3','C区':'3',
-    '4区':'4',           # D区 -> 4区
-    'E1':'5','E区':'5',  # 5区/E区
-    '6区':'6','F1':'6','F区':'6',
-    '7区':'7',
-}
 
 def _zone_display(canon):
     """标准数字区 -> 可展示的区域名（含字母别名），如 '1' -> 'A区/1区'"""
@@ -383,6 +385,12 @@ def shop_block_build(query):
             extra += f' 营业时间：{hours}'
         lines.append(f"- {loc}｜{r['name']}｜品类：{r['category']}{extra}")
     lines.append('若用户问"某区/某楼有什么吃的/玩的"，请只列出上面属于该品类且位于该区域的商户；若上面没有符合的，如实告知该区域暂无此类商户。')
+    # 如果查询涉及餐饮，附加排队信息
+    food_keywords = ['吃','美食','餐饮','火锅','烧烤','排队','取号','订餐','订位','餐厅','夜宵','晚餐','午餐','吃什么','有啥吃','好吃的']
+    if any(w in query for w in food_keywords):
+        is_peak, mult = _is_peak_hours()
+        peak_note = f'当前为高峰时段（等位系数×{mult}），取号等候时间可能较长。' if is_peak else ''
+        lines.append(f'【餐厅排队提示】用户可通过回复"取号+餐厅名"在线取号、回复"订位+餐厅名+日期+时间+人数"预约订座。{peak_note}')
     return '\n'.join(lines)
 
 # 极速本地回复（O(1) 关键词匹配，<1ms，覆盖常见问题）
@@ -445,14 +453,205 @@ def _fast_reply(msg):
     if any(w in m for w in ('停车','停车场','车位','停车费','停车怎么收','停车收费')):
         return '海江新天地有800+智能车位~\n收费标准：\n· 前30分钟免费\n· 5元/小时，40元/天封顶\n· 会员消费满50元免费停2小时\n· 夜场18:00-次日08:00 10元/次\n\n点击下方按钮去车辆管理绑定车牌~'
 
+    # 餐厅取号/排队
+    if any(w in m for w in ('取号','排队','拿号','等位','排号','要排队','排队多久','等多久')):
+        return '您想在哪家餐厅取号排队呢？告诉我餐厅名字（如"朱光玉火锅"），小江帮您取号 📋\n\n热门餐厅：朱光玉火锅、沪小胖、刘栋梁大排档、暴走牛牛·碳火烧肉、潮汕草根活鱼火锅'
+    if any(w in m for w in ('排队进度','我的号','排到哪了','呼叫排队','查排队')):
+        return '请回复您的手机号，小江帮您查排队进度~'
+
+    # 餐厅预约订位
+    if any(w in m for w in ('订餐','订位','预约餐厅','订座','预定','包厢','订包间','预约晚餐','预约午餐')):
+        return '您想预订哪家餐厅呢？告诉我餐厅名+日期+时间+人数，如"朱光玉火锅 8月15日 晚上7点 4人"，小江帮您订位 🍽️\n\n支持预订的餐厅：朱光玉火锅、新鸳鸯、伴月楼、OX牛排、大城小野、尊柜KTV(包间)'
+
+    # 我的预订查询
+    if m in ('我的预订','预订列表','查看预订','查预订'):
+        return '请回复您的手机号，小江帮您查询预订记录~'
+
+    # 主理人/活动组织者入口
+    if any(w in m for w in ('入驻申请','品牌入驻','我要入驻','怎么入驻','开店','招商','招租')):
+        return '欢迎了解海江新天地入驻合作！\n📌 招商类目：特色餐饮 | 时尚零售 | 亲子娱乐 | 生活服务 | 教育培训 | 科技数码\n\n您可以："入驻申请 品牌名"，如回复"入驻申请 XXX品牌 手机号"即可提交，运营团队会尽快联系您~\n或点击下方按钮进入主理人中心 👇'
+    if any(w in m for w in ('活动排期','排期报备','活动报备','场地预定','场地租赁','预定场地','租场地')):
+        return '海江新天地提供多种场地：\n· 多经摊位（市集/快闪）\n· 共享教室（15-50人）\n· 会客厅/沙龙场地\n· 广告位投放\n\n回复"排期 活动名 日期 场地"即可报备，如"排期 夏日市集 8月20日 户外广场"'
+
     return None
 
+def _restaurant_chat_handle(user_input):
+    """处理餐厅取号/排队/预订对话意图，返回 {reply, card} 或 None"""
+    m = user_input.strip().lower()
+    # 取号意图: 取号 + 餐厅名
+    queue_keywords = ['取号', '排队', '拿号', '等位', '排号', '要排队']
+    reserve_keywords = ['订餐', '订位', '预约', '订座', '预定', '包厢']
+    check_keywords = ['排队进度', '我的号', '排到哪', '查排队', '排队多久', '等多久']
+    my_keywords = ['我的预订', '预订列表', '查看预订', '查预订']
+    is_queue = any(w in m for w in queue_keywords)
+    is_reserve = any(w in m for w in reserve_keywords)
+    is_check = any(w in m for w in check_keywords)
+    is_my = any(w in m for w in my_keywords)
+
+    if not (is_queue or is_reserve or is_check or is_my):
+        return None
+
+    conn = get_db()
+    _ensure_tables(conn)
+    foods = conn.execute(
+        "SELECT id,name,floor,zone,hours,phone FROM shops WHERE category='餐饮' ORDER BY name"
+    ).fetchall()
+
+    if is_check:
+        # 查排队进度 - 需要手机号
+        phone_match = re.search(r'1[3-9]\d{9}', user_input)
+        if not phone_match:
+            conn.close()
+            return {'reply': '请回复您的手机号，小江帮您查排队进度~'}
+        phone = phone_match.group(0)
+        my_queues = conn.execute(
+            "SELECT * FROM restaurant_queues WHERE customer_phone=? AND status='waiting' ORDER BY id DESC LIMIT 3",
+            (phone,)
+        ).fetchall()
+        if not my_queues:
+            conn.close()
+            return {'reply': f'手机号 {phone} 暂无进行中的排队记录~ 回复"取号+餐厅名"开始排队吧！'}
+        lines = ['您的排队进度：']
+        for q in my_queues:
+            ahead = conn.execute(
+                "SELECT COUNT(*) FROM restaurant_queues WHERE shop_id=? AND status='waiting' AND id<?",
+                (q['shop_id'], q['id'])
+            ).fetchone()
+            ahead_count = ahead[0] if ahead else 0
+            lines.append(f'【{q["shop_name"]}】{q["party_size"]}人位 · {q["queue_number"]}号 · 前面{ahead_count}桌 · 预计{q["estimated_wait"]}分钟')
+        conn.close()
+        return {'reply': '\n'.join(lines)}
+
+    # 查预订记录
+    if any(w in m for w in ('我的预订', '预订列表', '查看预订', '查预订')):
+        phone_match = re.search(r'1[3-9]\d{9}', user_input)
+        if not phone_match:
+            conn.close()
+            return {'reply': '请回复您的手机号，小江帮您查询预订记录~'}
+        phone = phone_match.group(0)
+        reservations = conn.execute(
+            "SELECT * FROM restaurant_reservations WHERE customer_phone=? ORDER BY reserve_date DESC LIMIT 10",
+            (phone,)
+        ).fetchall()
+        conn.close()
+        if not reservations:
+            return {'reply': f'手机号 {phone} 暂无预订记录~'}
+        items = []
+        for r in reservations:
+            items.append({
+                'name': r['shop_name'],
+                'desc': f'{r["reserve_date"]} {r["reserve_time"]} · {r["party_size"]}人',
+                'tag': r['status'],
+                'price': f'R{r["id"]:04d}'
+            })
+        card = {'title': '我的预订', 'items': items, 'footer': '到店时报预订编号即可'}
+        return {'reply': f'手机号 {phone} 共有 {len(reservations)} 笔预订：', 'card': card}
+
+    conn.close()
+
+    # 匹配餐厅名
+    matched_shop = None
+    for s in foods:
+        if s['name'] in user_input:
+            matched_shop = s
+            break
+    if not matched_shop:
+        # 列出可用的餐饮商户供选择
+        shop_list = [f"{s['name']}（{s['zone']} {s['floor']}楼）" for s in foods[:12]]
+        return {'reply': '请告诉小江您想在哪家餐厅取号/订位？\n\n' + '\n'.join(f'· {sl}' for sl in shop_list) + '\n\n回复"取号+餐厅名"或"订位+餐厅名+日期+时间+人数"即可~'}
+
+    shop = matched_shop
+    # 提取人数
+    pp_match = re.search(r'(\d+)人', user_input)
+    party_size = int(pp_match.group(1)) if pp_match else 2
+
+    if is_queue:
+        # 取号
+        today = datetime.now().strftime('%Y-%m-%d')
+        conn2 = get_db()
+        _ensure_tables(conn2)
+        today_count = conn2.execute(
+            "SELECT COUNT(*) FROM restaurant_queues WHERE shop_id=? AND date(created_at)=?",
+            (shop['id'], today)
+        ).fetchone()[0]
+        qnum = today_count + 1
+        est = _estimate_wait(shop['id'], party_size, conn2)
+        ahead = conn2.execute(
+            "SELECT COUNT(*) FROM restaurant_queues WHERE shop_id=? AND status='waiting'",
+            (shop['id'],)
+        ).fetchone()[0]
+        conn2.execute(
+            "INSERT INTO restaurant_queues (shop_id,shop_name,queue_number,party_size,estimated_wait) VALUES (?,?,?,?,?)",
+            (shop['id'], shop['name'], qnum, party_size, est)
+        )
+        conn2.commit()
+        _webhook_push(shop['id'], 'new_queue_chat', {'queue_number': qnum, 'party_size': party_size, 'estimated_wait': est})
+        conn2.close()
+        is_peak, _ = _is_peak_hours()
+        peak_note = '（当前为高峰时段，等候可能稍长）' if is_peak else ''
+        reply = f'已为您在【{shop["name"]}】取号成功！\n排队号：{qnum}号\n人数：{party_size}人\n前面还有：{ahead}桌\n预计等待：{est}分钟{peak_note}\n营业时间：{shop["hours"]}\n电话：{shop["phone"]}\n\n回复"排队进度"可查询当前状态~'
+        card = {
+            'title': f'{shop["name"]} · 排队号',
+            'items': [
+                {'name': f'{qnum}号', 'desc': f'{party_size}人位 · 前面{ahead}桌', 'tag': '当前叫号', 'price': f'约{est}分钟'},
+            ],
+            'footer': '回复"排队进度"查询状态 | 过号需重新取号'
+        }
+        return {'reply': reply, 'card': card}
+
+    if is_reserve:
+        # 订位 - 尝试提取日期和时间
+        date_match = re.search(r'(\d+)月(\d+)日?', user_input)
+        time_match = re.search(r'(早上|中午|下午|晚上|傍晚)?(\d+)[点:：](\d+)?', user_input) or re.search(r'(\d+)[点:：](\d+)?', user_input)
+        if not date_match or not time_match:
+            return {'reply': f'请告诉我预约【{shop["name"]}】的具体信息~\n\n格式：订位 {shop["name"]} 月日 时间 人数\n如：订位 {shop["name"]} 8月15日 晚上7点 4人'}
+        mo = date_match.group(1)
+        dy = date_match.group(2)
+        now_year = datetime.now().year
+        reserve_date = f'{now_year}-{int(mo):02d}-{int(dy):02d}'
+        # 解析时间
+        hour_str = time_match.group(2) or time_match.group(1)
+        minute_str = time_match.group(3) or '00'
+        period = time_match.group(1) if time_match.lastindex and time_match.lastindex >= 1 else ''
+        hour = int(hour_str) if hour_str and hour_str.isdigit() else 12
+        if '下午' in (period or '') and hour < 12: hour += 12
+        if '晚上' in (period or '') and hour < 18: hour += 12
+        reserve_time = f'{hour:02d}:{int(minute_str):02d}'
+        conn2 = get_db()
+        _ensure_tables(conn2)
+        conn2.execute(
+            "INSERT INTO restaurant_reservations (shop_id,shop_name,customer_phone,customer_name,party_size,reserve_date,reserve_time) VALUES (?,?,?,?,?,?,?)",
+            (shop['id'], shop['name'], '', '', party_size, reserve_date, reserve_time)
+        )
+        conn2.commit()
+        rid = conn2.execute('SELECT last_insert_rowid()').fetchone()[0]
+        _webhook_push(shop['id'], 'new_reservation_chat', {'reservation_id': rid, 'party_size': party_size, 'date': reserve_date, 'time': reserve_time})
+        conn2.close()
+        reply = f'已为您预订【{shop["name"]}】！\n日期：{mo}月{dy}日\n时间：{reserve_time}\n人数：{party_size}人\n预订编号：R{rid:04d}\n\n到店时报预订编号即可入座，如需取消或修改请提前通知~'
+        card = {
+            'title': f'{shop["name"]} · 预订确认',
+            'items': [
+                {'name': f'{mo}月{dy}日 {reserve_time}', 'desc': f'{party_size}人位', 'tag': '已确认', 'price': f'R{rid:04d}'},
+            ],
+            'footer': f'电话：{shop["phone"]} | 如需取消请提前告知'
+        }
+        return {'reply': reply, 'card': card}
+
+    return None
+
+
+_web_cache = {}
 def web_search_inject(query):
+    # 内存缓存，避免重复网络请求拖慢响应
+    key = (query or '')[:20]
+    if key in _web_cache:
+        return _web_cache[key]
+    result = ''
     try:
         import urllib.request, urllib.parse
         url = 'https://api.duckduckgo.com/?q=' + urllib.parse.quote(query) + '&format=json&no_html=1&skip_disambig=1'
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=1.5) as resp:
             data = json.loads(resp.read().decode('utf-8'))
         parts = []
         if data.get('AbstractText'):
@@ -462,10 +661,11 @@ def web_search_inject(query):
                 parts.append(t['Text'])
         text = ' '.join(parts)
         if len(text) > 20:
-            return "\n【网络搜索结果】" + text[:600]
+            result = "\n【网络搜索结果】" + text[:600]
     except:
         pass
-    return ""
+    _web_cache[key] = result
+    return result
 
 # ========== Routes - Pages ==========
 @app.route('/')
@@ -572,13 +772,23 @@ def api_session():
                     session['headimgurl'] = headimgurl
                 if not session.get('display_name'):
                     session['display_name'] = row['display_name']
+                points = row['points'] or 0
+                membership_level = row['membership_level'] or '普卡'
+            else:
+                points = 0
+                membership_level = '普卡'
+        else:
+            points = 0
+            membership_level = '普卡'
         return jsonify(ok=True, user={
             'id': uid,
             'tenant_id': session['tenant_id'],
             'role': session.get('role'),
             'display_name': session.get('display_name'),
             'phone': phone,
-            'headimgurl': headimgurl
+            'headimgurl': headimgurl,
+            'points': points,
+            'membership_level': membership_level
         })
     return jsonify(ok=False)
 
@@ -602,10 +812,83 @@ def api_public_chat():
     # 使用 session cookie 作为匿名 key
     sid = request.cookies.get('session', 'anonymous')
     # tenant 固定为 1
-    return _do_chat(1, sid, user_input)
+    large_font = data.get('large_font', False)
+    return _do_chat(1, sid, user_input, large_font=large_font)
 
-def _do_chat(tid, uid, user_input):
+@app.route('/api/public/chat/stream', methods=['POST'])
+def api_public_chat_stream():
+    """C端流式聊天 — 本地快速回复秒回，AI 回答逐字流式返回"""
+    data = request.get_json()
+    user_input = (data.get('message') or '').strip()
+    if not user_input or len(user_input) > 500:
+        return jsonify(ok=False, error='消息为空或过长')
+    sid = request.cookies.get('session', 'anonymous')
+    chat_key = '1:' + sid
+
+    def generate():
+        # 1. 本地快速回复（关键词 + 知识库高匹配）
+        local = _fast_reply(user_input)
+        if not local:
+            kb = kb_search(1, user_input, limit=3)
+            if kb:
+                qw = set((kb[0]['question'] or '').lower().split())
+                iw = set(user_input.lower().split())
+                overlap = len(qw & iw)
+                kw = (kb[0]['keywords'] or '').lower()
+                if overlap >= 1 or any(w in kw for w in iw if len(w) > 1):
+                    local = f'[{kb[0]["category"]}] {kb[0]["answer"][:500]}'
+        if local:
+            history = CHAT_HISTORY.get(chat_key, [])
+            history.append({'role':'user','content':user_input})
+            history.append({'role':'assistant','content':local})
+            CHAT_HISTORY[chat_key] = history[-MAX_HISTORY*2:]
+            yield f"data: {json.dumps({'reply': local, 'done': True}, ensure_ascii=False)}\n\n"
+            return
+
+        # 2. 流式 AI
+        try:
+            history = CHAT_HISTORY.get(chat_key, [])[-MAX_HISTORY*2:]
+            sp = SYSTEM_PROMPT + '\n当前时间: ' + datetime.now().strftime('%Y-%m-%d %H:%M')
+            messages = [{'role':'system','content':sp}]
+            for h in history:
+                messages.append(h)
+            messages.append({'role':'user','content': user_input})
+            stream = ds_client.chat.completions.create(
+                model='deepseek-chat', messages=messages, stream=True,
+                max_tokens=180, temperature=0.6
+            )
+            full = ''
+            for chunk in stream:
+                delta = ''
+                try:
+                    if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                        delta = chunk.choices[0].delta.content
+                except Exception:
+                    pass
+                if delta:
+                    full += delta
+                    yield f"data: {json.dumps({'token': delta}, ensure_ascii=False)}\n\n"
+            history.append({'role':'user','content':user_input})
+            history.append({'role':'assistant','content':full})
+            CHAT_HISTORY[chat_key] = history[-MAX_HISTORY*2:]
+            _save_chat_history()
+            yield f"data: {json.dumps({'done': True}, ensure_ascii=False)}\n\n"
+        except Exception:
+            fallback = '哎呀，小江的脑子有点转不过来...要不你重新说一遍？'
+            yield f"data: {json.dumps({'reply': fallback, 'done': True}, ensure_ascii=False)}\n\n"
+
+    return Response(generate(), mimetype='text/event-stream',
+                    headers={'Cache-Control':'no-cache','X-Accel-Buffering':'no'})
+
+def _do_chat(tid, uid, user_input, large_font=False):
     chat_key = str(tid) + ':' + str(uid)
+    ai_degraded = False  # 本次是否触发 AI 服务降级（故障时引导人工客服）
+    # 老年用户转人工: 轮次计数
+    if large_font:
+        CHAT_ROUNDS[chat_key] = CHAT_ROUNDS.get(chat_key, 0) + 1
+    else:
+        CHAT_ROUNDS.pop(chat_key, None)  # 非大字模式重置
+    round_count = CHAT_ROUNDS.get(chat_key, 0)
     keys = list(CHAT_HISTORY.keys())
     while len(keys) > MAX_SESSIONS:
         del CHAT_HISTORY[keys[0]]
@@ -817,6 +1100,20 @@ def _do_chat(tid, uid, user_input):
         except Exception:
             pass
 
+    # ===== 餐厅取号/预订意图处理（优先于极速回复，处理含餐厅名的精确请求） =====
+    rc_result = _restaurant_chat_handle(user_input)
+    if rc_result:
+        reply_text = rc_result.get('reply', '')
+        card_data = rc_result.get('card')
+        history.append({'role':'user','content':user_input})
+        history.append({'role':'assistant','content':reply_text})
+        CHAT_HISTORY[chat_key] = history[-MAX_HISTORY*2:]; _save_chat_history()
+        resp = jsonify(ok=True, reply=reply_text)
+        if card_data:
+            resp = jsonify(ok=True, reply=reply_text, card=card_data)
+        return resp
+    # ============================================================
+
     # ===== 极速本地回复（<1ms，覆盖80%常见问题，不走AI） =====
     fast_reply = _fast_reply(user_input)
     if fast_reply:
@@ -895,13 +1192,14 @@ def _do_chat(tid, uid, user_input):
         messages.append(h)
     messages.append({'role':'user','content': user_input})
     try:
-        ok, result = _call_deepseek(messages, max_tokens=600)
+        ok, result = ai_chat(messages, max_tokens=180)
         if ok:
             reply = result
         else:
             raise Exception(result)
     except Exception:
-        # DeepSeek 失败 → 情感关键词温暖回复优先
+        # DeepSeek 失败 → 降级为基础问答（情感关键词/真实商户检索/知识库兜底）
+        ai_degraded = True
         emotion_map = {
             '难受': '抱抱你呀~虽然小江不知道具体发生了什么，但想说：累了就来海江逛逛，吃点好的、看看热闹，心情会好很多的 💛 有什么小江能帮你的吗？',
             '不开心': '哎呀别不开心啦~来海江散散心呗，小江陪你聊天！想吃啥玩啥跟我说~',
@@ -934,6 +1232,9 @@ def _do_chat(tid, uid, user_input):
                 reply = '嗨！我是小江，海江新天地的客服助手~\n想找店铺、查优惠、问路、看活动，尽管问我！'
             else:
                 reply = '哎呀，小江的脑子有点转不过来...要不你重新说一遍？'
+    # 未命中问题自动归集到知识库待优化列表
+    if '转不过来' in reply or '没找到相关信息' in reply or '换个问法' in reply:
+        _add_kb_pending(tid, user_input, 'chat')
     reply = re.sub(r'\*\*|__', '', reply)
     reply = re.sub(r'#{1,6}\s*', '', reply)
     escalate_keywords = ['退款','投诉','找经理','找领导','赔偿','退一赔三','人身安全']
@@ -949,7 +1250,25 @@ def _do_chat(tid, uid, user_input):
     history.append({'role':'user','content':user_input})
     history.append({'role':'assistant','content':reply})
     CHAT_HISTORY[chat_key] = history[-MAX_HISTORY*2:]; _save_chat_history()
-    return jsonify(ok=True, reply=reply)
+    # 老年用户转人工: 超过2轮且不在已解决对话中，展示大按钮
+    transfer_btn = None
+    if large_font and round_count >= 2:
+        resolved_words = ['谢谢', '不客气', '再见', '拜拜', '知道了', '好的', '明白了', '兑换成功', '取号成功', '预订成功', '报名成功', '领取成功']
+        is_resolved = any(w in (user_input + reply) for w in resolved_words)
+        if not is_resolved and not needs_escalate:
+            transfer_btn = {
+                'label': '一键呼叫人工客服',
+                'phone': '021-8888-0001',
+                'note': '小江好像没完全帮到您，需要人工客服帮您处理吗？'
+            }
+    elif ai_degraded:
+        # AI 核心服务故障降级：主动引导转人工客服，保障基础服务可用
+        transfer_btn = {
+            'label': '转人工客服',
+            'phone': '021-8888-0001',
+            'note': 'AI 智能服务暂时繁忙，已为您切换基础问答。如未解决您的问题，可转人工客服~'
+        }
+    return jsonify(ok=True, reply=reply, transfer_btn=transfer_btn)
 
 @app.route('/api/chat/clear', methods=['POST'])
 @login_required
@@ -1210,17 +1529,41 @@ def api_admin_orders():
     page = request.args.get('page', 1, type=int)
     limit = request.args.get('limit', 20, type=int)
     status = request.args.get('status', '')
+    otype = request.args.get('type', '')
     conn = get_db()
     sql = "SELECT * FROM work_orders"
     params = []
+    where = []
     if status:
-        sql += " WHERE status=?"
+        where.append("status=?")
         params.append(status)
+    if otype:
+        where.append("type=?")
+        params.append(otype)
+    if where:
+        sql += " WHERE " + " AND ".join(where)
     count = conn.execute("SELECT COUNT(*) FROM (" + sql + ")", params).fetchone()[0]
     rows = conn.execute(sql + " ORDER BY created_at DESC LIMIT ? OFFSET ?", params + [limit, (page-1)*limit]).fetchall()
     conn.close()
     items = [dict(r) for r in rows]
     return jsonify(ok=True, items=items, total=count)
+
+@app.route('/api/admin/business-stats')
+@login_required
+def api_admin_business_stats():
+    """业务中心统计：各类型工单数量汇总"""
+    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db()
+    _ensure_tables(conn)
+    types = ['场地看场', '商务意向', '团建定制', '入驻申请', '活动排期', '场地预定', '报修', '投诉建议', '人工客服']
+    stats = {}
+    for t in types:
+        pending = conn.execute("SELECT COUNT(*) FROM work_orders WHERE type=? AND status='pending'", (t,)).fetchone()[0]
+        total = conn.execute("SELECT COUNT(*) FROM work_orders WHERE type=?", (t,)).fetchone()[0]
+        stats[t] = {'pending': pending, 'total': total}
+    conn.close()
+    return jsonify(ok=True, data=stats)
 
 @app.route('/api/admin/orders/<int:order_id>', methods=['PUT'])
 @login_required
@@ -1599,6 +1942,106 @@ def api_member_coupons():
         except:
             coupons.append({'code': '?', 'item': '兑换记录', 'time': str(r[1])[:10] if r[1] else '?'})
     return jsonify(ok=True, coupons=coupons)
+
+@app.route('/api/member/claim-coupon', methods=['POST'])
+def api_member_claim_coupon():
+    """领取优惠券（后端持久化，防重复）"""
+    phone = request.json.get('phone', '').strip()
+    offer_id = request.json.get('offer_id')
+    shop_name = request.json.get('shop_name', '')
+    label = request.json.get('label', '')
+    amount = request.json.get('amount', 0)
+    if not phone or not offer_id:
+        return jsonify(ok=False, error='参数不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    # 检查是否已领取
+    existing = conn.execute(
+        "SELECT id FROM coupon_claims WHERE user_phone=? AND offer_id=?",
+        (phone, offer_id)
+    ).fetchone()
+    if existing:
+        conn.close()
+        return jsonify(ok=False, error='您已领取过该优惠券')
+    conn.execute(
+        "INSERT INTO coupon_claims (user_phone,offer_id,shop_name,label,amount) VALUES (?,?,?,?,?)",
+        (phone, offer_id, shop_name, label, amount)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': '领取成功！'})
+
+@app.route('/api/member/my-coupons', methods=['POST'])
+def api_member_my_coupons():
+    """我的优惠券（含offers领取 + 积分兑换）"""
+    phone = request.json.get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='请输入手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    # 已领取的优惠券
+    claimed = conn.execute(
+        "SELECT * FROM coupon_claims WHERE user_phone=? ORDER BY claimed_at DESC",
+        (phone,)
+    ).fetchall()
+    # 积分兑换记录（保留原有逻辑）
+    orders = conn.execute(
+        "SELECT description, created_at FROM work_orders WHERE type='points_redeem' AND reporter_contact=? ORDER BY id DESC LIMIT 50",
+        (phone,)
+    ).fetchall()
+    conn.close()
+    coupons = []
+    claimed_ids = set()
+    for c in claimed:
+        claimed_ids.add(c['offer_id'])
+        coupons.append({
+            'offer_id': c['offer_id'], 'shop_name': c['shop_name'],
+            'label': c['label'], 'amount': c['amount'],
+            'time': str(c['claimed_at'])[:10], 'type': 'claim'
+        })
+    for r in orders:
+        try:
+            d = json.loads(r[0])
+            coupons.append({'code': d.get('code','?'), 'item': d.get('item','?'), 'time': str(r[1])[:10], 'type': 'redeem'})
+        except:
+            pass
+    return jsonify(ok=True, coupons=coupons, claimed_ids=list(claimed_ids))
+
+@app.route('/api/member/bind-phone', methods=['POST'])
+def api_member_bind_phone():
+    """微信用户绑定手机号（更新当前 session 用户的 phone 字段，不切换账号）"""
+    uid = session.get('user_id')
+    if not uid:
+        return jsonify(ok=False, error='请先登录')
+    phone = request.json.get('phone', '').strip()
+    if not phone or len(phone) < 11:
+        return jsonify(ok=False, error='请输入正确的手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    user = conn.execute('SELECT * FROM users WHERE id=?', (uid,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify(ok=False, error='用户不存在')
+    # 检查手机号是否已被其他人绑定
+    other = conn.execute("SELECT id, display_name FROM users WHERE phone=? AND id!=?", (phone, uid)).fetchone()
+    if other:
+        conn.close()
+        return jsonify(ok=False, error=f'该手机号已被账号"{other["display_name"]}"绑定，请联系客服处理')
+    conn.execute("UPDATE users SET phone=? WHERE id=?", (phone, uid))
+    conn.commit()
+    # 查询完整会员信息
+    mem = conn.execute(
+        'SELECT display_name, phone, points, membership_level, discount, wx_openid, headimgurl FROM users WHERE id=?',
+        (uid,)
+    ).fetchone()
+    conn.close()
+    session['phone'] = phone
+    return jsonify(ok=True, user={
+        'id': uid, 'display_name': mem['display_name'], 'phone': phone,
+        'points': mem['points'], 'membership_level': mem['membership_level'],
+        'discount': mem['discount'], 'wx_openid': mem['wx_openid'],
+        'headimgurl': mem['headimgurl']
+    })
 
 @app.route('/api/member/register', methods=['POST'])
 def api_member_register():
@@ -2136,18 +2579,6 @@ def migrate_db():
 
 migrate_db()
 
-if __name__ == '__main__':
-    sys.stdout.reconfigure(encoding='utf-8')
-    print('[OK] Dajudali V1.0: http://localhost:8765')
-    try:
-        from pyngrok import ngrok
-        tunnel = ngrok.connect(8765, 'http')
-        print('[Tunnel] ' + tunnel.public_url)
-    except Exception as e:
-        print('[Tunnel] ngrok unavailable: ' + str(e))
-    app.run(host='0.0.0.0', port=8765, debug=False)
-
-
 # ========== 活动报名API ==========
 
 import uuid
@@ -2224,9 +2655,12 @@ def api_activity_register():
     if not sess:
         conn.close()
         return jsonify(ok=False, error='场次不存在'), 404
-    if sess[5] + count > sess[4]:
+    # 列顺序: id, activity_id, session_date, session_time, venue, max_people, enrolled, status
+    max_people = int(sess[5] or 0)
+    enrolled = int(sess[6] or 0)
+    if enrolled + count > max_people:
         conn.close()
-        return jsonify(ok=False, error=f'名额不足，剩余{sess[4]-sess[5]}个位置'), 400
+        return jsonify(ok=False, error=f'名额不足，剩余{max_people - enrolled}个位置'), 400
 
     # 查用户
     c.execute('SELECT * FROM users WHERE username=?', (f'm{phone}',))
@@ -2240,18 +2674,20 @@ def api_activity_register():
             conn.close()
             return jsonify(ok=False, error='请先注册会员才能使用积分'), 400
         need_points = (points_price or price * 25) * count
-        if user[5] < need_points:
+        user_points = int(user[7] or 0)
+        if user_points < need_points:
             conn.close()
-            return jsonify(ok=False, error=f'积分不足，需要{need_points}分，当前{user[5]}分'), 400
+            return jsonify(ok=False, error=f'积分不足，需要{need_points}分，当前{user_points}分'), 400
         points_used = need_points
         amount = 0
     elif pay_method == 'pay':
         if amount > 0 and user:
             # 会员折扣
             discount = 0.98
-            if user[9] == '银卡': discount = 0.95
-            elif user[9] == '金卡': discount = 0.9
-            elif user[9] == '钻石卡': discount = 0.88
+            level = user[8] or '普卡'
+            if level == '银卡': discount = 0.95
+            elif level == '金卡': discount = 0.9
+            elif level == '钻石卡': discount = 0.88
             amount = round(amount * discount, 2)
 
     # 生成票号
@@ -2292,14 +2728,16 @@ def api_my_registrations():
         return jsonify(ok=False, error='请提供手机号'), 400
     conn = get_db()
     c = conn.cursor()
-    c.execute('''SELECT r.*, a.title as activity_title, s.session_date, s.session_time
+    c.execute('''SELECT r.id, r.registration_no, r.activity_id, r.session_id, r.user_phone, r.user_name,
+                        r.people_count, r.amount, r.pay_method, r.points_used, r.status, r.ticket_code,
+                        r.created_at, a.title as activity_title, s.session_date, s.session_time
                  FROM registrations r
                  LEFT JOIN activities a ON r.activity_id = a.id
                  LEFT JOIN activity_sessions s ON r.session_id = s.id
                  WHERE r.user_phone = ?
                  ORDER BY r.created_at DESC''', (phone,))
     rows = c.fetchall()
-    cols = ['id','registration_no','activity_id','session_id','user_phone','user_name','people_count','amount','pay_method','points_used','status','ticket_code','created_at','updated_at','activity_title','session_date','session_time']
+    cols = ['id','registration_no','activity_id','session_id','user_phone','user_name','people_count','amount','pay_method','points_used','status','ticket_code','created_at','activity_title','session_date','session_time']
     conn.close()
     return jsonify(ok=True, data=[dict(zip(cols, r)) for r in rows])
 
@@ -2318,27 +2756,30 @@ def api_activity_reschedule():
     if not reg:
         conn.close()
         return jsonify(ok=False, error='报名记录不存在'), 404
-    if reg[9] == 'cancelled':
+    # registrations 列顺序: ... session_id[4], people_count[11], status[16]
+    session_id = reg[4]
+    people_count = reg[11] or 1
+    if reg[16] == 'cancelled':
         conn.close()
         return jsonify(ok=False, error='已取消的订单不能改签'), 400
     # 减少旧场次人数
-    c.execute('UPDATE activity_sessions SET enrolled = enrolled - ? WHERE id=?', (reg[5], reg[3]))
+    c.execute('UPDATE activity_sessions SET enrolled = enrolled - ? WHERE id=?', (people_count, session_id))
     # 检查新场次是否满
     c.execute('SELECT * FROM activity_sessions WHERE id=?', (new_session_id,))
     ns = c.fetchone()
-    if ns and ns[5] + reg[5] > ns[4]:
+    if ns and int(ns[6] or 0) + people_count > int(ns[5] or 0):
         conn.close()
         return jsonify(ok=False, error='新场次名额不足'), 400
     # 改
     c.execute('UPDATE registrations SET session_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (new_session_id, reg_id))
-    c.execute('UPDATE activity_sessions SET enrolled = enrolled + ? WHERE id=?', (reg[5], new_session_id))
+    c.execute('UPDATE activity_sessions SET enrolled = enrolled + ? WHERE id=?', (people_count, new_session_id))
     conn.commit()
     conn.close()
-    return jsonify(ok=True)
+    return jsonify(ok=True, message='改签成功')
 
 @app.route('/api/activities/refund', methods=['POST'])
 def api_activity_refund():
-    '''退款申请'''
+    '''退款申请 — 积分支付退积分，现金支付退等值积分'''
     data = request.get_json(force=True)
     reg_id = data.get('registration_id')
     reason = data.get('reason', '')
@@ -2351,17 +2792,54 @@ def api_activity_refund():
     if not reg:
         conn.close()
         return jsonify(ok=False, error='报名记录不存在'), 404
-    if reg[9] == 'cancelled':
+    # registrations 列顺序: id, tenant_id, registration_no, activity_id, session_id, event, name, phone, user_phone, user_name, count, people_count, note, amount, pay_method, points_used, status, ticket_code
+    session_id = reg[4]
+    user_phone = reg[8]
+    people_count = reg[11] or 1
+    amount = reg[13] or 0
+    pay_method = reg[14] or 'none'
+    points_used = reg[15] or 0
+    status = reg[16]
+    if status in ('cancelled', 'refunding'):
         conn.close()
-        return jsonify(ok=False, error='已取消'), 400
-    c.execute('UPDATE registrations SET status="refunding", updated_at=CURRENT_TIMESTAMP WHERE id=?', (reg_id,))
-    c.execute('UPDATE activity_sessions SET enrolled = enrolled - ? WHERE id=?', (reg[5], reg[3]))
-    # 退积分
-    if reg[8] > 0:
-        c.execute('UPDATE users SET points = points + ? WHERE username=?', (reg[8], f'm{reg[4]}'))
+        return jsonify(ok=False, error='已退款或已取消'), 400
+    # 释放场次名额
+    c.execute('UPDATE activity_sessions SET enrolled = enrolled - ? WHERE id=?', (people_count, session_id))
+    # 退款处理
+    refund_points = 0
+    if pay_method == 'points':
+        # 积分支付 → 退积分
+        refund_points = points_used
+        c.execute('UPDATE users SET points = points + ? WHERE username=?', (refund_points, f'm{user_phone}'))
+    elif pay_method == 'pay':
+        # 现金支付 → 退等值积分 (1元=25积分)
+        refund_points = int(amount * 25)
+        c.execute('UPDATE users SET points = points + ? WHERE username=?', (refund_points, f'm{user_phone}'))
+    # 直接取消（不再 pending）
+    c.execute("UPDATE registrations SET status='cancelled', updated_at=CURRENT_TIMESTAMP WHERE id=?", (reg_id,))
     conn.commit()
     conn.close()
-    return jsonify(ok=True, message='退款申请已提交，将在1-3个工作日内处理')
+    msg = f'退款成功，已退还{refund_points}积分。' if refund_points > 0 else '退款申请已提交。'
+    return jsonify(ok=True, message=msg, refund_points=refund_points)
+
+@app.route('/api/activities/ticket/<int:reg_id>', methods=['GET'])
+def api_activity_ticket(reg_id):
+    """获取电子凭证详情（含活动/场次/票号信息）"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('''SELECT r.id, r.registration_no, r.activity_id, r.session_id, r.user_phone, r.user_name,
+                        r.people_count, r.amount, r.pay_method, r.points_used, r.status, r.ticket_code,
+                        r.created_at, a.title as activity_title, s.session_date, s.session_time, a.venue
+                 FROM registrations r
+                 JOIN activities a ON r.activity_id = a.id
+                 JOIN activity_sessions s ON r.session_id = s.id
+                 WHERE r.id=?''', (reg_id,))
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        return jsonify(ok=False, error='报名记录不存在'), 404
+    cols = ['id','registration_no','activity_id','session_id','user_phone','user_name','people_count','amount','pay_method','points_used','status','ticket_code','created_at','activity_title','session_date','session_time','venue']
+    return jsonify(ok=True, ticket=dict(zip(cols, row)))
 
 
 # ========== 后台活动管理 API ==========
@@ -2449,110 +2927,143 @@ def add_security_headers(response):
 
 
 # ========== 数据表初始化 ==========
+_init_lock = __import__('threading').Lock()
+_init_done = False
+
+# 跨进程文件锁：gunicorn 多 worker = 多进程，threading.Lock 仅防进程内并发，
+# 无法防多进程同时初始化抢 SQLite 写锁。用 fcntl.flock 保证同一时刻只有一个进程执行初始化写段。
+_INIT_LOCK_FILE = os.path.join(HERE, '.init_lock')
+_init_lock_fd = None
+
+def _acquire_init_flock():
+    """获取跨进程初始化文件锁（阻塞直到拿到）。"""
+    global _init_lock_fd
+    if _init_lock_fd is None:
+        _init_lock_fd = open(_INIT_LOCK_FILE, 'w')
+    fcntl.flock(_init_lock_fd.fileno(), fcntl.LOCK_EX)
+    return _init_lock_fd
+
+def _release_init_flock():
+    """释放跨进程初始化文件锁。"""
+    global _init_lock_fd
+    if _init_lock_fd is not None:
+        try:
+            fcntl.flock(_init_lock_fd.fileno(), fcntl.LOCK_UN)
+        except Exception:
+            pass
+
 def _ensure_tables(conn):
-    """确保 shops / offers / redeem_goods / parking_records 表存在并填充初始数据"""
-    # --- shops ---
-    conn.execute('''CREATE TABLE IF NOT EXISTS shops (
+    """确保数据表存在并填充初始数据。表结构(DDL)并发安全；初始数据写入每个进程只跑一次，避免 gunicorn 多 worker 并发竞争 SQLite 锁。"""
+    global _init_done
+    if _init_done:
+        return
+    _acquire_init_flock()
+    with _init_lock:
+        if _init_done:
+            _release_init_flock()
+            return
+        # --- shops ---
+        conn.execute('''CREATE TABLE IF NOT EXISTS shops (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, floor TEXT, zone TEXT,
         category TEXT, tags TEXT, color TEXT, hours TEXT, phone TEXT,
         description TEXT, has_coupon INTEGER DEFAULT 0,
         coupon_condition INTEGER DEFAULT 0, coupon_amount INTEGER DEFAULT 0,
         coupon_expire TEXT, features TEXT
     )''')
-    if conn.execute('SELECT COUNT(*) FROM shops').fetchone()[0] == 0:
-        shops_data = [
-            ('s001','瑞幸咖啡','1','1区','餐饮','咖啡,快取','#0051A8','10:00 - 22:00','021-5656 8888','瑞幸咖啡位于海江新天地1区 1F，主营咖啡、快取。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s002','多乐之日','1','1区','餐饮','烘焙,面包','#8B5A2B','10:00 - 22:00','021-5656 8888','多乐之日位于海江新天地1区 1F，主营烘焙、面包。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s003','麦当劳','1','1区','餐饮','快餐,汉堡','#D52B1E','10:00 - 22:00','021-5656 8888','麦当劳位于海江新天地1区 1F，主营快餐、汉堡。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s004','秀目眼镜','1','1区','零售','眼镜,验光','#4A90D9','10:00 - 22:00','021-5656 8888','秀目眼镜位于海江新天地1区 1F，主营眼镜、验光。精选好物与品牌，打造舒适惬意的购物体验。',1,200,30,'2026-12-31','线上线下同价,支持退换,会员积分'),
-            ('s005','霸王茶姬','1','1区','餐饮','茶饮,新茶饮','#6E4B3A','10:00 - 22:00','021-5656 8888','霸王茶姬位于海江新天地1区 1F，主营茶饮、新茶饮。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s006','小杨生煎','1','1区','餐饮','生煎,小吃','#C0392B','10:00 - 22:00','021-5656 8888','小杨生煎位于海江新天地1区 1F，主营生煎、小吃。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s007','新贝乐','1','1区','餐饮','本帮菜,家常菜','#E85D04','10:00 - 22:00','021-5656 8888','新贝乐位于海江新天地1区 1F，主营本帮菜、家常菜。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s008','手心兔小吐司','1','1区','餐饮','吐司,烘焙','#C9975A','10:00 - 22:00','021-5656 8888','手心兔小吐司位于海江新天地1区 1F，主营吐司、烘焙。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s009','贵华嫂','1','1区','餐饮','小吃,面点','#E85D04','10:00 - 22:00','021-5656 8888','贵华嫂位于海江新天地1区 1F，主营小吃、面点。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s010','成都你六姐','1','1区','餐饮','川菜,江湖菜','#C2185B','10:00 - 22:00','021-5656 8888','成都你六姐位于海江新天地1区 1F，主营川菜、江湖菜。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s011','晨光文具','1','1区','零售','文具,办公','#4A90D9','10:00 - 22:00','021-5656 8888','晨光文具位于海江新天地1区 1F，主营文具、办公。精选好物与品牌，打造舒适惬意的购物体验。',1,200,30,'2026-12-31','线上线下同价,支持退换,会员积分'),
-            ('s012','老盛兴汤包馆','1','1区','餐饮','汤包,小吃','#C0392B','10:00 - 22:00','021-5656 8888','老盛兴汤包馆位于海江新天地1区 1F，主营汤包、小吃。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s013','烧饼文化','1','1区','餐饮','烧饼,小吃','#E85D04','10:00 - 22:00','021-5656 8888','烧饼文化位于海江新天地1区 1F，主营烧饼、小吃。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s014','潮纪','1','1区','餐饮','潮汕,牛肉','#C2185B','10:00 - 22:00','021-5656 8888','潮纪位于海江新天地1区 1F，主营潮汕、牛肉。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s015','喜姐炸串','1','1区','餐饮','炸串,小吃','#E85D04','10:00 - 22:00','021-5656 8888','喜姐炸串位于海江新天地1区 1F，主营炸串、小吃。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s016','临榆炸鸡腿','1','1区','餐饮','炸鸡,小吃','#D52B1E','10:00 - 22:00','021-5656 8888','临榆炸鸡腿位于海江新天地1区 1F，主营炸鸡、小吃。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s017','银流咖啡','1','1区','餐饮','咖啡,轻食','#6F4E37','10:00 - 22:00','021-5656 8888','银流咖啡位于海江新天地1区 1F，主营咖啡、轻食。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s018','海江食集','1','1区','餐饮','美食广场,小吃集合','#E85D04','10:00 - 22:00','021-5656 8888','海江食集位于海江新天地1区 1F，主营美食广场、小吃集合。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s019','万酒堂','1','1区','零售','酒水,零售','#4A90D9','10:00 - 22:00','021-5656 8888','万酒堂位于海江新天地1区 1F，主营酒水、零售。精选好物与品牌，打造舒适惬意的购物体验。',1,200,30,'2026-12-31','线上线下同价,支持退换,会员积分'),
-            ('s020','诺家智慧大药房','1','1区','生活服务','药房,健康','#3E8E41','10:00 - 21:00','021-5656 8888','诺家智慧大药房位于海江新天地1区 1F，主营药房、健康。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s021','古康元','1','1区','生活服务','理疗,养生','#3E8E41','10:00 - 21:00','021-5656 8888','古康元位于海江新天地1区 1F，主营理疗、养生。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s022','美甲美睫','1','1区','生活服务','美甲,美睫','#3E8E41','10:00 - 21:00','021-5656 8888','美甲美睫位于海江新天地1区 1F，主营美甲、美睫。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s023','美肤盾','1','1区','生活服务','护肤,美容','#3E8E41','10:00 - 21:00','021-5656 8888','美肤盾位于海江新天地1区 1F，主营护肤、美容。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s024','通信钟表','1','1区','生活服务','通讯,钟表','#3E8E41','10:00 - 21:00','021-5656 8888','通信钟表位于海江新天地1区 1F，主营通讯、钟表。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s025','体彩','1','1区','生活服务','彩票,便民','#3E8E41','10:00 - 21:00','021-5656 8888','体彩位于海江新天地1区 1F，主营彩票、便民。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s026','福彩','1','1区','生活服务','彩票,便民','#3E8E41','10:00 - 21:00','021-5656 8888','福彩位于海江新天地1区 1F，主营彩票、便民。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s027','泡泡米儿童','2','1区','亲子','儿童娱乐,亲子','#E8809E','10:00 - 21:00','021-5656 8888','泡泡米儿童位于海江新天地1区 2F，主营儿童娱乐、亲子。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s028','小荧星艺校','2','1区','亲子','艺术培训,舞蹈','#E8809E','10:00 - 21:00','021-5656 8888','小荧星艺校位于海江新天地1区 2F，主营艺术培训、舞蹈。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s029','海江活动艺术中心','2','1区','娱乐','艺术中心,演出','#9B7BD4','10:00 - 22:00','021-5656 8888','海江活动艺术中心位于海江新天地1区 2F，主营艺术中心、演出。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
-            ('s030','雀王棋牌','3','1区','娱乐','棋牌,休闲','#9B7BD4','10:00 - 24:00','021-5656 8888','雀王棋牌位于海江新天地1区 3F，主营棋牌、休闲。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
-            ('s031','哇咔健身','3','1区','娱乐','健身,团课','#9B7BD4','10:00 - 22:00','021-5656 8888','哇咔健身位于海江新天地1区 3F，主营健身、团课。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
-            ('s032','锦光星耀桌球俱乐部','3','1区','娱乐','桌球,台球','#9B7BD4','10:00 - 22:00','021-5656 8888','锦光星耀桌球俱乐部位于海江新天地1区 3F，主营桌球、台球。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
-            ('s033','尊柜KTV/棋牌室','4','1区','娱乐','KTV,棋牌','#9B7BD4','18:00 - 02:00','021-5656 8888','尊柜KTV/棋牌室位于海江新天地1区 4F，主营KTV、棋牌。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
-            ('s034','徐妈串串','1','3区','餐饮','串串,川味','#E85D04','10:00 - 22:00','021-5656 8888','徐妈串串位于海江新天地3区 1F，主营串串、川味。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s035','泰士多','1','3区','餐饮','东南亚,料理','#E85D04','10:00 - 22:00','021-5656 8888','泰士多位于海江新天地3区 1F，主营东南亚、料理。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s036','刘栋梁大排档','1','3区','餐饮','大排档,夜宵','#E85D04','10:00 - 22:00','021-5656 8888','刘栋梁大排档位于海江新天地3区 1F，主营大排档、夜宵。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s037','星巴克','1','3区','餐饮','咖啡,第三空间','#00704A','10:00 - 22:00','021-5656 8888','星巴克位于海江新天地3区 1F，主营咖啡、第三空间。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s038','味千拉面','1','3区','餐饮','拉面,日式','#E60012','10:00 - 22:00','021-5656 8888','味千拉面位于海江新天地3区 1F，主营拉面、日式。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s039','小灶湘','1','3区','餐饮','湘菜,剁椒','#C2185B','10:00 - 22:00','021-5656 8888','小灶湘位于海江新天地3区 1F，主营湘菜、剁椒。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s040','朱光玉火锅','1','3区','餐饮','火锅,重庆','#C2185B','10:00 - 22:00','021-5656 8888','朱光玉火锅位于海江新天地3区 1F，主营火锅、重庆。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s041','扬春茶社','1','3区','餐饮','茶馆,茶饮','#6E4B3A','10:00 - 22:00','021-5656 8888','扬春茶社位于海江新天地3区 1F，主营茶馆、茶饮。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s042','肖记公安牛杂','1','3区','餐饮','牛杂,湖北','#E85D04','10:00 - 22:00','021-5656 8888','肖记公安牛杂位于海江新天地3区 1F，主营牛杂、湖北。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s043','大城小野','2','3区','餐饮','料理,创意菜','#C2185B','10:00 - 22:00','021-5656 8888','大城小野位于海江新天地3区 2F，主营料理、创意菜。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s044','伴月楼','2','3区','餐饮','杭帮菜,本帮','#C0392B','10:00 - 22:00','021-5656 8888','伴月楼位于海江新天地3区 2F，主营杭帮菜、本帮。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s045','星巴克','2','3区','餐饮','咖啡,第三空间','#00704A','10:00 - 22:00','021-5656 8888','星巴克位于海江新天地3区 2F，主营咖啡、第三空间。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s046','汇通棋牌','3','3区','娱乐','棋牌,休闲','#9B7BD4','10:00 - 24:00','021-5656 8888','汇通棋牌位于海江新天地3区 3F，主营棋牌、休闲。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
-            ('s047','苏宁易购','1','4区','零售','电器,数码','#E60012','10:00 - 22:00','021-5656 8888','苏宁易购位于海江新天地4区 1F，主营电器、数码。精选好物与品牌，打造舒适惬意的购物体验。',1,200,30,'2026-12-31','线上线下同价,支持退换,会员积分'),
-            ('s048','华为/迪信通','1','4区','零售','手机,数码','#4A90D9','10:00 - 22:00','021-5656 8888','华为/迪信通位于海江新天地4区 1F，主营手机、数码。精选好物与品牌，打造舒适惬意的购物体验。',1,200,30,'2026-12-31','线上线下同价,支持退换,会员积分'),
-            ('s049','足浴养生','3','4区','生活服务','足浴,养生','#3E8E41','10:00 - 21:00','021-5656 8888','足浴养生位于海江新天地4区 3F，主营足浴、养生。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s050','民谣星烧烤酒馆','1','6区','餐饮','烧烤,音乐','#E85D04','10:00 - 22:00','021-5656 8888','民谣星烧烤酒馆位于海江新天地6区 1F，主营烧烤、音乐。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s051','戴海川·美蛙','1','6区','餐饮','美蛙,川味','#C2185B','10:00 - 22:00','021-5656 8888','戴海川·美蛙位于海江新天地6区 1F，主营美蛙、川味。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s052','暴走牛牛·碳火烧肉','1','6区','餐饮','烧肉,日式','#C0392B','10:00 - 22:00','021-5656 8888','暴走牛牛·碳火烧肉位于海江新天地6区 1F，主营烧肉、日式。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s053','鱼石尚云南蒸石锅鱼','1','6区','餐饮','蒸汽石锅鱼,云南菜','#3E8E41','10:00 - 22:00','021-5656 8888','鱼石尚云南蒸石锅鱼位于海江新天地6区 1F，主营蒸汽石锅鱼、云南菜。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s054','福海面馆','1','6区','餐饮','面,快餐','#E60012','10:00 - 22:00','021-5656 8888','福海面馆位于海江新天地6区 1F，主营面、快餐。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s055','Jenga精酿啤酒馆','1','6区','餐饮','精酿,啤酒','#C9975A','10:00 - 22:00','021-5656 8888','Jenga精酿啤酒馆位于海江新天地6区 1F，主营精酿、啤酒。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s056','潮汕·草根活鱼火锅','1','6区','餐饮','火锅,潮汕','#C2185B','10:00 - 22:00','021-5656 8888','潮汕·草根活鱼火锅位于海江新天地6区 1F，主营火锅、潮汕。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s057','阿国烤局','1','6区','餐饮','烤串,夜宵','#E85D04','10:00 - 22:00','021-5656 8888','阿国烤局位于海江新天地6区 1F，主营烤串、夜宵。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s058','深夜食堂','1','6区','餐饮','夜宵,小炒','#E85D04','10:00 - 22:00','021-5656 8888','深夜食堂位于海江新天地6区 1F，主营夜宵、小炒。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s059','汽石锅鱼','1','6区','餐饮','石锅鱼,川味','#3E8E41','10:00 - 22:00','021-5656 8888','汽石锅鱼位于海江新天地6区 1F，主营石锅鱼、川味。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s060','牛肉档','1','6区','餐饮','牛肉,火锅','#C0392B','10:00 - 22:00','021-5656 8888','牛肉档位于海江新天地6区 1F，主营牛肉、火锅。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s061','合一瑜伽健身','2','6区','娱乐','瑜伽,健身','#9B7BD4','10:00 - 22:00','021-5656 8888','合一瑜伽健身位于海江新天地6区 2F，主营瑜伽、健身。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
-            ('s062','合一瑜伽普拉提','2','6区','娱乐','普拉提,健身','#9B7BD4','10:00 - 22:00','021-5656 8888','合一瑜伽普拉提位于海江新天地6区 2F，主营普拉提、健身。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
-            ('s063','L服饰','2','6区','零售','服饰,服装','#4A90D9','10:00 - 22:00','021-5656 8888','L服饰位于海江新天地6区 2F，主营服饰、服装。精选好物与品牌，打造舒适惬意的购物体验。',1,200,30,'2026-12-31','线上线下同价,支持退换,会员积分'),
-            ('s064','网鱼电竞酒店','2','6区','娱乐','电竞,酒店','#9B7BD4','10:00 - 22:00','021-5656 8888','网鱼电竞酒店位于海江新天地6区 2F，主营电竞、酒店。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
-            ('s065','屿汀美容spa','2','6区','生活服务','美容,SPA','#3E8E41','10:00 - 21:00','021-5656 8888','屿汀美容spa位于海江新天地6区 2F，主营美容、SPA。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s066','弘文书馆','2','6区','生活服务','书店,文创','#3E8E41','10:00 - 21:00','021-5656 8888','弘文书馆位于海江新天地6区 2F，主营书店、文创。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s067','康友四季','2','6区','生活服务','洗浴,汗蒸','#3E8E41','10:00 - 21:00','021-5656 8888','康友四季位于海江新天地6区 2F，主营洗浴、汗蒸。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s068','新鸳鸯','3','6区','餐饮','火锅,川味','#C2185B','10:00 - 22:00','021-5656 8888','新鸳鸯位于海江新天地6区 3F，主营火锅、川味。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s069','功夫汪宠物乐园','1','7区','亲子','宠物,亲子','#E8809E','10:00 - 21:00','021-5656 8888','功夫汪宠物乐园位于海江新天地7区 1F，主营宠物、亲子。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s070','东煜画室','1','7区','亲子','绘画,美术','#E8809E','10:00 - 21:00','021-5656 8888','东煜画室位于海江新天地7区 1F，主营绘画、美术。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s071','卡卡海洋','1','7区','亲子','亲子乐园,探索','#E8809E','10:00 - 21:00','021-5656 8888','卡卡海洋位于海江新天地7区 1F，主营亲子乐园、探索。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s072','招商银行','1','7区','生活服务','银行,金融','#4A90D9','09:00 - 17:00','021-5656 8888','招商银行位于海江新天地7区 1F，主营银行、金融。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s073','壹品培优','1','7区','亲子','培优,托管','#E8809E','10:00 - 21:00','021-5656 8888','壹品培优位于海江新天地7区 1F，主营培优、托管。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s074','舞林园','1','7区','亲子','舞蹈,培训','#E8809E','10:00 - 21:00','021-5656 8888','舞林园位于海江新天地7区 1F，主营舞蹈、培训。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s075','OX牛排','1','7区','餐饮','牛排,西餐','#C0392B','10:00 - 22:00','021-5656 8888','OX牛排位于海江新天地7区 1F，主营牛排、西餐。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s076','MANNER','1','7区','餐饮','咖啡,精品咖啡','#B8915C','10:00 - 22:00','021-5656 8888','MANNER位于海江新天地7区 1F，主营咖啡、精品咖啡。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s077','赛百味','1','7区','餐饮','三明治,轻食','#2E8B57','10:00 - 22:00','021-5656 8888','赛百味位于海江新天地7区 1F，主营三明治、轻食。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s078','海鲜餐厅','1','7区','餐饮','海鲜,粤菜','#3E8E41','10:00 - 22:00','021-5656 8888','海鲜餐厅位于海江新天地7区 1F，主营海鲜、粤菜。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s079','大墨蒲公英','2','7区','亲子','儿童绘画,美术','#E8809E','10:00 - 21:00','021-5656 8888','大墨蒲公英位于海江新天地7区 2F，主营儿童绘画、美术。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s080','菁英之伽','2','7区','娱乐','瑜伽,健身','#9B7BD4','10:00 - 22:00','021-5656 8888','菁英之伽位于海江新天地7区 2F，主营瑜伽、健身。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
-            ('s081','招商银行','2','7区','生活服务','银行,金融','#4A90D9','09:00 - 17:00','021-5656 8888','招商银行位于海江新天地7区 2F，主营银行、金融。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s082','健身房','2','7区','娱乐','健身,器械','#9B7BD4','10:00 - 22:00','021-5656 8888','健身房位于海江新天地7区 2F，主营健身、器械。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
-            ('s083','东方好艺考','2','7区','亲子','艺考,培训','#E8809E','10:00 - 21:00','021-5656 8888','东方好艺考位于海江新天地7区 2F，主营艺考、培训。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s084','POP兔','2','7区','亲子','早教,托育','#E8809E','10:00 - 21:00','021-5656 8888','POP兔位于海江新天地7区 2F，主营早教、托育。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s085','音乐教室','2','7区','亲子','音乐,培训','#E8809E','10:00 - 21:00','021-5656 8888','音乐教室位于海江新天地7区 2F，主营音乐、培训。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s086','南京银行','2','7区','生活服务','银行,金融','#4A90D9','09:00 - 17:00','021-5656 8888','南京银行位于海江新天地7区 2F，主营银行、金融。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
-            ('s087','诚之书院','2','7区','亲子','书院,国学','#E8809E','10:00 - 21:00','021-5656 8888','诚之书院位于海江新天地7区 2F，主营书院、国学。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s088','嘻戏英语','2','7区','亲子','英语,培训','#E8809E','10:00 - 21:00','021-5656 8888','嘻戏英语位于海江新天地7区 2F，主营英语、培训。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
-            ('s089','沪小胖','3','7区','餐饮','小龙虾,夜宵','#E60012','10:00 - 22:00','021-5656 8888','沪小胖位于海江新天地7区 3F，主营小龙虾、夜宵。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
-            ('s090','SFC上影影城','3','7区','娱乐','影院,电影','#E85D04','10:00 - 22:00','021-5656 8888','SFC上影影城位于海江新天地7区 3F，主营影院、电影。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
+        if conn.execute('SELECT COUNT(*) FROM shops').fetchone()[0] == 0:
+            shops_data = [
+                ('s001','瑞幸咖啡','1','1区','餐饮','咖啡,快取','#0051A8','10:00 - 22:00','021-5656 8888','瑞幸咖啡位于海江新天地1区 1F，主营咖啡、快取。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s002','多乐之日','1','1区','餐饮','烘焙,面包','#8B5A2B','10:00 - 22:00','021-5656 8888','多乐之日位于海江新天地1区 1F，主营烘焙、面包。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s003','麦当劳','1','1区','餐饮','快餐,汉堡','#D52B1E','10:00 - 22:00','021-5656 8888','麦当劳位于海江新天地1区 1F，主营快餐、汉堡。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s004','秀目眼镜','1','1区','零售','眼镜,验光','#4A90D9','10:00 - 22:00','021-5656 8888','秀目眼镜位于海江新天地1区 1F，主营眼镜、验光。精选好物与品牌，打造舒适惬意的购物体验。',1,200,30,'2026-12-31','线上线下同价,支持退换,会员积分'),
+                ('s005','霸王茶姬','1','1区','餐饮','茶饮,新茶饮','#6E4B3A','10:00 - 22:00','021-5656 8888','霸王茶姬位于海江新天地1区 1F，主营茶饮、新茶饮。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s006','小杨生煎','1','1区','餐饮','生煎,小吃','#C0392B','10:00 - 22:00','021-5656 8888','小杨生煎位于海江新天地1区 1F，主营生煎、小吃。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s007','新贝乐','1','1区','餐饮','本帮菜,家常菜','#E85D04','10:00 - 22:00','021-5656 8888','新贝乐位于海江新天地1区 1F，主营本帮菜、家常菜。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s008','手心兔小吐司','1','1区','餐饮','吐司,烘焙','#C9975A','10:00 - 22:00','021-5656 8888','手心兔小吐司位于海江新天地1区 1F，主营吐司、烘焙。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s009','贵华嫂','1','1区','餐饮','小吃,面点','#E85D04','10:00 - 22:00','021-5656 8888','贵华嫂位于海江新天地1区 1F，主营小吃、面点。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s010','成都你六姐','1','1区','餐饮','川菜,江湖菜','#C2185B','10:00 - 22:00','021-5656 8888','成都你六姐位于海江新天地1区 1F，主营川菜、江湖菜。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s011','晨光文具','1','1区','零售','文具,办公','#4A90D9','10:00 - 22:00','021-5656 8888','晨光文具位于海江新天地1区 1F，主营文具、办公。精选好物与品牌，打造舒适惬意的购物体验。',1,200,30,'2026-12-31','线上线下同价,支持退换,会员积分'),
+                ('s012','老盛兴汤包馆','1','1区','餐饮','汤包,小吃','#C0392B','10:00 - 22:00','021-5656 8888','老盛兴汤包馆位于海江新天地1区 1F，主营汤包、小吃。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s013','烧饼文化','1','1区','餐饮','烧饼,小吃','#E85D04','10:00 - 22:00','021-5656 8888','烧饼文化位于海江新天地1区 1F，主营烧饼、小吃。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s014','潮纪','1','1区','餐饮','潮汕,牛肉','#C2185B','10:00 - 22:00','021-5656 8888','潮纪位于海江新天地1区 1F，主营潮汕、牛肉。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s015','喜姐炸串','1','1区','餐饮','炸串,小吃','#E85D04','10:00 - 22:00','021-5656 8888','喜姐炸串位于海江新天地1区 1F，主营炸串、小吃。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s016','临榆炸鸡腿','1','1区','餐饮','炸鸡,小吃','#D52B1E','10:00 - 22:00','021-5656 8888','临榆炸鸡腿位于海江新天地1区 1F，主营炸鸡、小吃。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s017','银流咖啡','1','1区','餐饮','咖啡,轻食','#6F4E37','10:00 - 22:00','021-5656 8888','银流咖啡位于海江新天地1区 1F，主营咖啡、轻食。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s018','海江食集','1','1区','餐饮','美食广场,小吃集合','#E85D04','10:00 - 22:00','021-5656 8888','海江食集位于海江新天地1区 1F，主营美食广场、小吃集合。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s019','万酒堂','1','1区','零售','酒水,零售','#4A90D9','10:00 - 22:00','021-5656 8888','万酒堂位于海江新天地1区 1F，主营酒水、零售。精选好物与品牌，打造舒适惬意的购物体验。',1,200,30,'2026-12-31','线上线下同价,支持退换,会员积分'),
+                ('s020','诺家智慧大药房','1','1区','生活服务','药房,健康','#3E8E41','10:00 - 21:00','021-5656 8888','诺家智慧大药房位于海江新天地1区 1F，主营药房、健康。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s021','古康元','1','1区','生活服务','理疗,养生','#3E8E41','10:00 - 21:00','021-5656 8888','古康元位于海江新天地1区 1F，主营理疗、养生。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s022','美甲美睫','1','1区','生活服务','美甲,美睫','#3E8E41','10:00 - 21:00','021-5656 8888','美甲美睫位于海江新天地1区 1F，主营美甲、美睫。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s023','美肤盾','1','1区','生活服务','护肤,美容','#3E8E41','10:00 - 21:00','021-5656 8888','美肤盾位于海江新天地1区 1F，主营护肤、美容。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s024','通信钟表','1','1区','生活服务','通讯,钟表','#3E8E41','10:00 - 21:00','021-5656 8888','通信钟表位于海江新天地1区 1F，主营通讯、钟表。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s025','体彩','1','1区','生活服务','彩票,便民','#3E8E41','10:00 - 21:00','021-5656 8888','体彩位于海江新天地1区 1F，主营彩票、便民。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s026','福彩','1','1区','生活服务','彩票,便民','#3E8E41','10:00 - 21:00','021-5656 8888','福彩位于海江新天地1区 1F，主营彩票、便民。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s027','泡泡米儿童','2','1区','亲子','儿童娱乐,亲子','#E8809E','10:00 - 21:00','021-5656 8888','泡泡米儿童位于海江新天地1区 2F，主营儿童娱乐、亲子。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s028','小荧星艺校','2','1区','亲子','艺术培训,舞蹈','#E8809E','10:00 - 21:00','021-5656 8888','小荧星艺校位于海江新天地1区 2F，主营艺术培训、舞蹈。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s029','海江活动艺术中心','2','1区','娱乐','艺术中心,演出','#9B7BD4','10:00 - 22:00','021-5656 8888','海江活动艺术中心位于海江新天地1区 2F，主营艺术中心、演出。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
+                ('s030','雀王棋牌','3','1区','娱乐','棋牌,休闲','#9B7BD4','10:00 - 24:00','021-5656 8888','雀王棋牌位于海江新天地1区 3F，主营棋牌、休闲。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
+                ('s031','哇咔健身','3','1区','娱乐','健身,团课','#9B7BD4','10:00 - 22:00','021-5656 8888','哇咔健身位于海江新天地1区 3F，主营健身、团课。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
+                ('s032','锦光星耀桌球俱乐部','3','1区','娱乐','桌球,台球','#9B7BD4','10:00 - 22:00','021-5656 8888','锦光星耀桌球俱乐部位于海江新天地1区 3F，主营桌球、台球。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
+                ('s033','尊柜KTV/棋牌室','4','1区','娱乐','KTV,棋牌','#9B7BD4','18:00 - 02:00','021-5656 8888','尊柜KTV/棋牌室位于海江新天地1区 4F，主营KTV、棋牌。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
+                ('s034','徐妈串串','1','3区','餐饮','串串,川味','#E85D04','10:00 - 22:00','021-5656 8888','徐妈串串位于海江新天地3区 1F，主营串串、川味。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s035','泰士多','1','3区','餐饮','东南亚,料理','#E85D04','10:00 - 22:00','021-5656 8888','泰士多位于海江新天地3区 1F，主营东南亚、料理。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s036','刘栋梁大排档','1','3区','餐饮','大排档,夜宵','#E85D04','10:00 - 22:00','021-5656 8888','刘栋梁大排档位于海江新天地3区 1F，主营大排档、夜宵。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s037','星巴克','1','3区','餐饮','咖啡,第三空间','#00704A','10:00 - 22:00','021-5656 8888','星巴克位于海江新天地3区 1F，主营咖啡、第三空间。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s038','味千拉面','1','3区','餐饮','拉面,日式','#E60012','10:00 - 22:00','021-5656 8888','味千拉面位于海江新天地3区 1F，主营拉面、日式。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s039','小灶湘','1','3区','餐饮','湘菜,剁椒','#C2185B','10:00 - 22:00','021-5656 8888','小灶湘位于海江新天地3区 1F，主营湘菜、剁椒。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s040','朱光玉火锅','1','3区','餐饮','火锅,重庆','#C2185B','10:00 - 22:00','021-5656 8888','朱光玉火锅位于海江新天地3区 1F，主营火锅、重庆。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s041','扬春茶社','1','3区','餐饮','茶馆,茶饮','#6E4B3A','10:00 - 22:00','021-5656 8888','扬春茶社位于海江新天地3区 1F，主营茶馆、茶饮。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s042','肖记公安牛杂','1','3区','餐饮','牛杂,湖北','#E85D04','10:00 - 22:00','021-5656 8888','肖记公安牛杂位于海江新天地3区 1F，主营牛杂、湖北。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s043','大城小野','2','3区','餐饮','料理,创意菜','#C2185B','10:00 - 22:00','021-5656 8888','大城小野位于海江新天地3区 2F，主营料理、创意菜。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s044','伴月楼','2','3区','餐饮','杭帮菜,本帮','#C0392B','10:00 - 22:00','021-5656 8888','伴月楼位于海江新天地3区 2F，主营杭帮菜、本帮。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s045','星巴克','2','3区','餐饮','咖啡,第三空间','#00704A','10:00 - 22:00','021-5656 8888','星巴克位于海江新天地3区 2F，主营咖啡、第三空间。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s046','汇通棋牌','3','3区','娱乐','棋牌,休闲','#9B7BD4','10:00 - 24:00','021-5656 8888','汇通棋牌位于海江新天地3区 3F，主营棋牌、休闲。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
+                ('s047','苏宁易购','1','4区','零售','电器,数码','#E60012','10:00 - 22:00','021-5656 8888','苏宁易购位于海江新天地4区 1F，主营电器、数码。精选好物与品牌，打造舒适惬意的购物体验。',1,200,30,'2026-12-31','线上线下同价,支持退换,会员积分'),
+                ('s048','华为/迪信通','1','4区','零售','手机,数码','#4A90D9','10:00 - 22:00','021-5656 8888','华为/迪信通位于海江新天地4区 1F，主营手机、数码。精选好物与品牌，打造舒适惬意的购物体验。',1,200,30,'2026-12-31','线上线下同价,支持退换,会员积分'),
+                ('s049','足浴养生','3','4区','生活服务','足浴,养生','#3E8E41','10:00 - 21:00','021-5656 8888','足浴养生位于海江新天地4区 3F，主营足浴、养生。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s050','民谣星烧烤酒馆','1','6区','餐饮','烧烤,音乐','#E85D04','10:00 - 22:00','021-5656 8888','民谣星烧烤酒馆位于海江新天地6区 1F，主营烧烤、音乐。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s051','戴海川·美蛙','1','6区','餐饮','美蛙,川味','#C2185B','10:00 - 22:00','021-5656 8888','戴海川·美蛙位于海江新天地6区 1F，主营美蛙、川味。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s052','暴走牛牛·碳火烧肉','1','6区','餐饮','烧肉,日式','#C0392B','10:00 - 22:00','021-5656 8888','暴走牛牛·碳火烧肉位于海江新天地6区 1F，主营烧肉、日式。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s053','鱼石尚云南蒸石锅鱼','1','6区','餐饮','蒸汽石锅鱼,云南菜','#3E8E41','10:00 - 22:00','021-5656 8888','鱼石尚云南蒸石锅鱼位于海江新天地6区 1F，主营蒸汽石锅鱼、云南菜。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s054','福海面馆','1','6区','餐饮','面,快餐','#E60012','10:00 - 22:00','021-5656 8888','福海面馆位于海江新天地6区 1F，主营面、快餐。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s055','Jenga精酿啤酒馆','1','6区','餐饮','精酿,啤酒','#C9975A','10:00 - 22:00','021-5656 8888','Jenga精酿啤酒馆位于海江新天地6区 1F，主营精酿、啤酒。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s056','潮汕·草根活鱼火锅','1','6区','餐饮','火锅,潮汕','#C2185B','10:00 - 22:00','021-5656 8888','潮汕·草根活鱼火锅位于海江新天地6区 1F，主营火锅、潮汕。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s057','阿国烤局','1','6区','餐饮','烤串,夜宵','#E85D04','10:00 - 22:00','021-5656 8888','阿国烤局位于海江新天地6区 1F，主营烤串、夜宵。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s058','深夜食堂','1','6区','餐饮','夜宵,小炒','#E85D04','10:00 - 22:00','021-5656 8888','深夜食堂位于海江新天地6区 1F，主营夜宵、小炒。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s059','汽石锅鱼','1','6区','餐饮','石锅鱼,川味','#3E8E41','10:00 - 22:00','021-5656 8888','汽石锅鱼位于海江新天地6区 1F，主营石锅鱼、川味。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s060','牛肉档','1','6区','餐饮','牛肉,火锅','#C0392B','10:00 - 22:00','021-5656 8888','牛肉档位于海江新天地6区 1F，主营牛肉、火锅。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s061','合一瑜伽健身','2','6区','娱乐','瑜伽,健身','#9B7BD4','10:00 - 22:00','021-5656 8888','合一瑜伽健身位于海江新天地6区 2F，主营瑜伽、健身。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
+                ('s062','合一瑜伽普拉提','2','6区','娱乐','普拉提,健身','#9B7BD4','10:00 - 22:00','021-5656 8888','合一瑜伽普拉提位于海江新天地6区 2F，主营普拉提、健身。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
+                ('s063','L服饰','2','6区','零售','服饰,服装','#4A90D9','10:00 - 22:00','021-5656 8888','L服饰位于海江新天地6区 2F，主营服饰、服装。精选好物与品牌，打造舒适惬意的购物体验。',1,200,30,'2026-12-31','线上线下同价,支持退换,会员积分'),
+                ('s064','网鱼电竞酒店','2','6区','娱乐','电竞,酒店','#9B7BD4','10:00 - 22:00','021-5656 8888','网鱼电竞酒店位于海江新天地6区 2F，主营电竞、酒店。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
+                ('s065','屿汀美容spa','2','6区','生活服务','美容,SPA','#3E8E41','10:00 - 21:00','021-5656 8888','屿汀美容spa位于海江新天地6区 2F，主营美容、SPA。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s066','弘文书馆','2','6区','生活服务','书店,文创','#3E8E41','10:00 - 21:00','021-5656 8888','弘文书馆位于海江新天地6区 2F，主营书店、文创。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s067','康友四季','2','6区','生活服务','洗浴,汗蒸','#3E8E41','10:00 - 21:00','021-5656 8888','康友四季位于海江新天地6区 2F，主营洗浴、汗蒸。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s068','新鸳鸯','3','6区','餐饮','火锅,川味','#C2185B','10:00 - 22:00','021-5656 8888','新鸳鸯位于海江新天地6区 3F，主营火锅、川味。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s069','功夫汪宠物乐园','1','7区','亲子','宠物,亲子','#E8809E','10:00 - 21:00','021-5656 8888','功夫汪宠物乐园位于海江新天地7区 1F，主营宠物、亲子。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s070','东煜画室','1','7区','亲子','绘画,美术','#E8809E','10:00 - 21:00','021-5656 8888','东煜画室位于海江新天地7区 1F，主营绘画、美术。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s071','卡卡海洋','1','7区','亲子','亲子乐园,探索','#E8809E','10:00 - 21:00','021-5656 8888','卡卡海洋位于海江新天地7区 1F，主营亲子乐园、探索。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s072','招商银行','1','7区','生活服务','银行,金融','#4A90D9','09:00 - 17:00','021-5656 8888','招商银行位于海江新天地7区 1F，主营银行、金融。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s073','壹品培优','1','7区','亲子','培优,托管','#E8809E','10:00 - 21:00','021-5656 8888','壹品培优位于海江新天地7区 1F，主营培优、托管。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s074','舞林园','1','7区','亲子','舞蹈,培训','#E8809E','10:00 - 21:00','021-5656 8888','舞林园位于海江新天地7区 1F，主营舞蹈、培训。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s075','OX牛排','1','7区','餐饮','牛排,西餐','#C0392B','10:00 - 22:00','021-5656 8888','OX牛排位于海江新天地7区 1F，主营牛排、西餐。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s076','MANNER','1','7区','餐饮','咖啡,精品咖啡','#B8915C','10:00 - 22:00','021-5656 8888','MANNER位于海江新天地7区 1F，主营咖啡、精品咖啡。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s077','赛百味','1','7区','餐饮','三明治,轻食','#2E8B57','10:00 - 22:00','021-5656 8888','赛百味位于海江新天地7区 1F，主营三明治、轻食。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s078','海鲜餐厅','1','7区','餐饮','海鲜,粤菜','#3E8E41','10:00 - 22:00','021-5656 8888','海鲜餐厅位于海江新天地7区 1F，主营海鲜、粤菜。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s079','大墨蒲公英','2','7区','亲子','儿童绘画,美术','#E8809E','10:00 - 21:00','021-5656 8888','大墨蒲公英位于海江新天地7区 2F，主营儿童绘画、美术。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s080','菁英之伽','2','7区','娱乐','瑜伽,健身','#9B7BD4','10:00 - 22:00','021-5656 8888','菁英之伽位于海江新天地7区 2F，主营瑜伽、健身。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
+                ('s081','招商银行','2','7区','生活服务','银行,金融','#4A90D9','09:00 - 17:00','021-5656 8888','招商银行位于海江新天地7区 2F，主营银行、金融。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s082','健身房','2','7区','娱乐','健身,器械','#9B7BD4','10:00 - 22:00','021-5656 8888','健身房位于海江新天地7区 2F，主营健身、器械。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
+                ('s083','东方好艺考','2','7区','亲子','艺考,培训','#E8809E','10:00 - 21:00','021-5656 8888','东方好艺考位于海江新天地7区 2F，主营艺考、培训。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s084','POP兔','2','7区','亲子','早教,托育','#E8809E','10:00 - 21:00','021-5656 8888','POP兔位于海江新天地7区 2F，主营早教、托育。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s085','音乐教室','2','7区','亲子','音乐,培训','#E8809E','10:00 - 21:00','021-5656 8888','音乐教室位于海江新天地7区 2F，主营音乐、培训。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s086','南京银行','2','7区','生活服务','银行,金融','#4A90D9','09:00 - 17:00','021-5656 8888','南京银行位于海江新天地7区 2F，主营银行、金融。贴心周到的生活服务，便捷周边日常所需。',1,0,5,'2026-12-31','专业服务,可预约'),
+                ('s087','诚之书院','2','7区','亲子','书院,国学','#E8809E','10:00 - 21:00','021-5656 8888','诚之书院位于海江新天地7区 2F，主营书院、国学。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s088','嘻戏英语','2','7区','亲子','英语,培训','#E8809E','10:00 - 21:00','021-5656 8888','嘻戏英语位于海江新天地7区 2F，主营英语、培训。亲子同乐的成长空间，陪伴孩子快乐探索世界。',1,100,20,'2026-12-31','亲子友好,可免费体验'),
+                ('s089','沪小胖','3','7区','餐饮','小龙虾,夜宵','#E60012','10:00 - 22:00','021-5656 8888','沪小胖位于海江新天地7区 3F，主营小龙虾、夜宵。汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。',1,50,10,'2026-12-31','可堂食,外卖配送,支持扫码点单'),
+                ('s090','SFC上影影城','3','7区','娱乐','影院,电影','#E85D04','10:00 - 22:00','021-5656 8888','SFC上影影城位于海江新天地7区 3F，主营影院、电影。潮流娱乐聚场，释放精彩的昼夜生活。',1,0,30,'2026-12-31','可预约,适合聚会'),
         ]
-        conn.executemany('INSERT INTO shops VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', shops_data)
+            conn.executemany('INSERT INTO shops VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', shops_data)
 
     # --- offers ---
     conn.execute('''CREATE TABLE IF NOT EXISTS offers (
@@ -2624,7 +3135,516 @@ def _ensure_tables(conn):
         status TEXT DEFAULT 'parked',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
+
+    # --- restaurant_queues (餐厅排队取号) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS restaurant_queues (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        shop_id TEXT NOT NULL,
+        shop_name TEXT NOT NULL,
+        queue_number INTEGER NOT NULL,
+        customer_phone TEXT DEFAULT '',
+        customer_name TEXT DEFAULT '',
+        party_size INTEGER DEFAULT 2,
+        status TEXT DEFAULT 'waiting',
+        estimated_wait INTEGER DEFAULT 15,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- restaurant_reservations (餐厅预约订位) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS restaurant_reservations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        shop_id TEXT NOT NULL,
+        shop_name TEXT NOT NULL,
+        customer_phone TEXT NOT NULL,
+        customer_name TEXT NOT NULL,
+        party_size INTEGER DEFAULT 2,
+        reserve_date TEXT NOT NULL,
+        reserve_time TEXT NOT NULL,
+        status TEXT DEFAULT 'confirmed',
+        special_requests TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- merchant_tokens (商户看板认证) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS merchant_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        shop_id TEXT NOT NULL UNIQUE,
+        token TEXT NOT NULL UNIQUE,
+        webhook_url TEXT DEFAULT '',
+        phone_notify INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    # 为已有餐饮商户自动生成 token
+    existing = {r['shop_id'] for r in conn.execute('SELECT shop_id FROM merchant_tokens').fetchall()}
+    food_shops = conn.execute("SELECT id FROM shops WHERE category='餐饮'").fetchall()
+    for fs in food_shops:
+        if fs['id'] not in existing:
+            t = uuid.uuid4().hex[:16]
+            conn.execute("INSERT INTO merchant_tokens (shop_id,token) VALUES (?,?)", (fs['id'], t))
     conn.commit()
+
+    # --- venue_bookings (场地时段预定) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS venue_bookings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        venue_name TEXT NOT NULL,
+        venue_type TEXT NOT NULL,
+        customer_phone TEXT NOT NULL,
+        customer_name TEXT NOT NULL,
+        booking_date TEXT NOT NULL,
+        start_time TEXT NOT NULL,
+        end_time TEXT NOT NULL,
+        purpose TEXT DEFAULT '',
+        fee REAL DEFAULT 0,
+        status TEXT DEFAULT 'confirmed',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- event_schedules (活动排期报备) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS event_schedules (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organizer_phone TEXT NOT NULL,
+        organizer_name TEXT NOT NULL,
+        event_name TEXT NOT NULL,
+        event_type TEXT DEFAULT '',
+        venue TEXT DEFAULT '',
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        expected_attendance INTEGER DEFAULT 0,
+        description TEXT DEFAULT '',
+        status TEXT DEFAULT 'pending',
+        work_order_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- organizer_settlements (主理人结算) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS organizer_settlements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organizer_phone TEXT NOT NULL,
+        organizer_name TEXT NOT NULL,
+        event_name TEXT DEFAULT '',
+        revenue REAL DEFAULT 0,
+        platform_fee REAL DEFAULT 0,
+        net_payout REAL DEFAULT 0,
+        status TEXT DEFAULT 'pending',
+        settled_at TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- coupon_claims (优惠券领取记录，防重复) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS coupon_claims (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_phone TEXT NOT NULL,
+        offer_id INTEGER NOT NULL,
+        shop_name TEXT DEFAULT '',
+        label TEXT DEFAULT '',
+        amount INTEGER DEFAULT 0,
+        claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_phone, offer_id)
+    )''')
+
+    # --- group_buys (拼团活动) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS group_buys (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        shop_id TEXT DEFAULT '',
+        shop_name TEXT NOT NULL,
+        title TEXT NOT NULL,
+        coupon_label TEXT NOT NULL,
+        coupon_amount INTEGER DEFAULT 0,
+        need_count INTEGER DEFAULT 5,
+        expire_at TEXT DEFAULT '',
+        status TEXT DEFAULT 'open',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    # --- group_buy_members (拼团成员) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS group_buy_members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_id INTEGER NOT NULL,
+        user_phone TEXT NOT NULL,
+        user_name TEXT DEFAULT '',
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(group_id, user_phone)
+    )''')
+    # 预置一个火锅店 5 人拼团示例（如未存在）
+    if conn.execute('SELECT COUNT(*) FROM group_buys').fetchone()[0] == 0:
+        conn.execute(
+            "INSERT INTO group_buys (shop_id,shop_name,title,coupon_label,coupon_amount,need_count,expire_at,status) "
+            "VALUES ('s040','朱光玉火锅','朱光玉火锅 5 人拼团·满减券','满200减50 代金券',50,5,'2026-12-31','open')"
+        )
+
+    # --- human_chat_messages (人工客服聊天记录) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS human_chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        user_phone TEXT DEFAULT '',
+        user_name TEXT DEFAULT '',
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        work_order_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- feedbacks (满意度评价) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS feedbacks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_phone TEXT DEFAULT '',
+        feedback_type TEXT NOT NULL,
+        biz_type TEXT DEFAULT '',
+        order_id TEXT DEFAULT '',
+        rating INTEGER NOT NULL,
+        feedback_text TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- kb_pending (知识库待优化问题) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS kb_pending (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER DEFAULT 1,
+        question TEXT NOT NULL,
+        category TEXT DEFAULT '',
+        source TEXT DEFAULT 'chat',
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- points_log (积分/成长值流水) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS points_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_phone TEXT NOT NULL,
+        action TEXT NOT NULL,
+        points INTEGER NOT NULL,
+        remark TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- sign_in_records (签到记录，含连续天数) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS sign_in_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_phone TEXT NOT NULL,
+        sign_date TEXT NOT NULL,
+        consecutive_days INTEGER DEFAULT 1,
+        points_awarded INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_phone, sign_date)
+    )''')
+
+    # --- badges (徽章定义) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS badges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        threshold INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- user_badges (用户已获徽章) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS user_badges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_phone TEXT NOT NULL,
+        badge_code TEXT NOT NULL,
+        earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_phone, badge_code)
+    )''')
+
+    # 徽章预置（INSERT OR IGNORE 幂等，新增徽章可随时补充）
+    badges_data = [
+        ('first_sign', '初来乍到', '完成首次签到', 1),
+        ('sign_7', '坚持一周', '连续签到 7 天', 7),
+        ('sign_30', '月度常客', '累计签到 30 天', 30),
+        ('points_1000', '成长新星', '累计成长值达 1000', 1000),
+        ('points_5000', '成长达人', '累计成长值达 5000', 5000),
+        ('level_silver', '银卡会员', '升级为银卡会员', 2000),
+        ('level_gold', '金卡会员', '升级为金卡会员', 5000),
+        ('level_diamond', '钻石会员', '升级为钻石卡会员', 20000),
+        ('first_post', '首次发声', '发布第一篇邻里圈内容', 1),
+        ('post_10', '内容达人', '发布 10 篇内容', 10),
+        ('like_100', '人气之星', '获得 100 个赞', 100),
+        ('club_join', '邻里搭子', '加入兴趣社活动', 1),
+    ]
+    conn.executemany('INSERT OR IGNORE INTO badges (code,name,description,threshold) VALUES (?,?,?,?)', badges_data)
+
+    # --- community_posts (邻里圈帖子) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS community_posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_phone TEXT NOT NULL,
+        user_name TEXT DEFAULT '',
+        content TEXT NOT NULL,
+        images TEXT DEFAULT '[]',
+        topic TEXT DEFAULT '',
+        category TEXT DEFAULT '',
+        like_count INTEGER DEFAULT 0,
+        comment_count INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- community_topics (话题) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS community_topics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL UNIQUE,
+        description TEXT DEFAULT '',
+        is_official INTEGER DEFAULT 1,
+        post_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- community_comments (评论) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS community_comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        post_id INTEGER NOT NULL,
+        user_phone TEXT DEFAULT '',
+        user_name TEXT DEFAULT '',
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # --- community_likes (点赞) ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS community_likes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        post_id INTEGER NOT NULL,
+        user_phone TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(post_id, user_phone)
+    )''')
+
+    if conn.execute('SELECT COUNT(*) FROM community_topics').fetchone()[0] == 0:
+        topics = [
+            ('周末去哪遛娃', '分享亲子遛娃好去处'),
+            ('今晚吃什么', '推荐今晚的美食选择'),
+            ('探店打卡', '晒出你的探店体验'),
+            ('商场优惠', '发现商场里的划算好物'),
+            ('邻里互助', '邻里之间的互帮互助'),
+        ]
+        conn.executemany('INSERT INTO community_topics (title, description) VALUES (?,?)', topics)
+
+    # --- 兴趣社模块（活动驱动的轻组织：常驻兴趣社 + 临时活动群） ---
+    # 常驻兴趣社：按标签归类，用户选标签后自动加入
+    conn.execute('''CREATE TABLE IF NOT EXISTS interest_clubs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        tag TEXT NOT NULL,
+        cover_emoji TEXT DEFAULT '🏷️',
+        gradient TEXT DEFAULT 'linear-gradient(135deg,#FF7B2C,#E85D04)',
+        intro TEXT DEFAULT '',
+        member_count INTEGER DEFAULT 0,
+        club_order INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'open'
+    )''')
+    # 用户-兴趣社 关系
+    conn.execute('''CREATE TABLE IF NOT EXISTS user_club_members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        club_id INTEGER NOT NULL,
+        user_phone TEXT NOT NULL,
+        user_name TEXT DEFAULT '',
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(club_id, user_phone)
+    )''')
+    # 临时活动群（活动驱动，活动结束自动散）
+    conn.execute('''CREATE TABLE IF NOT EXISTS club_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        club_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        tag TEXT NOT NULL,
+        detail TEXT DEFAULT '',
+        place TEXT DEFAULT '',
+        meet_time TEXT DEFAULT '',
+        end_time TEXT DEFAULT '',
+        need_count INTEGER DEFAULT 0,
+        creator_phone TEXT DEFAULT '',
+        creator_name TEXT DEFAULT '',
+        status TEXT DEFAULT 'open',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    # 临时活动群成员（UNIQUE 防重复）
+    conn.execute('''CREATE TABLE IF NOT EXISTS club_event_members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id INTEGER NOT NULL,
+        user_phone TEXT NOT NULL,
+        user_name TEXT DEFAULT '',
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(event_id, user_phone)
+    )''')
+    # 临时活动群留言接龙（非实时）
+    conn.execute('''CREATE TABLE IF NOT EXISTS club_event_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id INTEGER NOT NULL,
+        user_phone TEXT NOT NULL,
+        user_name TEXT DEFAULT '',
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # 预置兴趣社（COUNT==0 守卫 + name UNIQUE 双重幂等，防止重启/多进程重复插入）
+    if conn.execute('SELECT COUNT(*) FROM interest_clubs').fetchone()[0] == 0:
+        clubs_data = [
+            ('周三夜跑团', '夜跑', '🌙', 'linear-gradient(135deg,#5B6CFF,#3A47C9)', '每周三晚 7 点集合，沿滨江步道约 5 公里，新手友好。', 1),
+            ('宝妈遛娃群', '遛娃', '🍼', 'linear-gradient(135deg,#FF8FB1,#E85D8A)', '周末带娃去哪玩？母婴室、亲子餐厅、室内乐园一手情报。', 2),
+            ('球友约战', '球类', '🏀', 'linear-gradient(135deg,#27AE60,#1E8449)', '篮球/羽毛球/足球约战招募，凑齐人数就开打。', 3),
+            ('周末电影搭子', '观影', '🎬', 'linear-gradient(135deg,#9B59B6,#7D3C98)', '凑人看新片，SFC 影城拼团购票更划算。', 4),
+            ('宠物社交局', '宠物', '🐾', 'linear-gradient(135deg,#E17055,#CA6F1E)', '带毛孩子认识新朋友，宠物友好商户线下聚会。', 5),
+        ]
+        for name, tag, emoji, grad, intro, order in clubs_data:
+            conn.execute(
+                "INSERT OR IGNORE INTO interest_clubs (name,tag,cover_emoji,gradient,intro,club_order,status) "
+                "VALUES (?,?,?,?,?,?,'open')",
+                (name, tag, emoji, grad, intro, order)
+            )
+        # 建立 name 唯一索引（无重复数据后才会成功），保证后续 INSERT OR IGNORE 真正按 name 幂等
+        try:
+            conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS uq_interest_clubs_name ON interest_clubs(name)')
+        except Exception:
+            pass
+
+    # 预置临时活动群（status='open'，end_time 设在未来，活动结束即散）
+    upcoming = (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%d')
+    upcoming2 = (datetime.now() + timedelta(days=4)).strftime('%Y-%m-%d')
+    upcoming3 = (datetime.now() + timedelta(days=6)).strftime('%Y-%m-%d')
+    if conn.execute('SELECT COUNT(*) FROM club_events').fetchone()[0] == 0:
+        # 取常驻社 id
+        cid = {r['tag']: r['id'] for r in conn.execute('SELECT id,tag FROM interest_clubs').fetchall()}
+        club_events_data = [
+            (cid.get('夜跑'), '周三夜跑·第 12 期', '夜跑', '沿滨江步道 5 公里慢跑，配速 6′30″，新手可走跑结合。', '海江新天地北门集合', f'{upcoming} 19:00', f'{upcoming} 21:00', 8),
+            (cid.get('遛娃'), '周末亲子·室内乐园日', '遛娃', '带娃打卡新开室内乐园，现场有亲子手工活动。', '海江新天地 1F 中庭', f'{upcoming2} 10:00', f'{upcoming2} 12:30', 15),
+            (cid.get('球类'), '周末篮球 3V3 约战', '球类', '半场 3V3，三局两胜，缺 2 人即可开打。', '海江新天地 B1 球场', f'{upcoming3} 15:00', f'{upcoming3} 17:30', 6),
+            (cid.get('观影'), '周末新片·拼团观影', '观影', '凑 4 人拼团买 SFC 影城票，每人立减 10 元。', 'SFC 上影国际影城', f'{upcoming2} 19:30', f'{upcoming2} 22:00', 4),
+            (cid.get('宠物'), '宠物友好·户外茶歇局', '宠物', '带毛孩子露天茶歇，现场有宠物洗护体验券。', '海江新天地西广场', f'{upcoming} 16:00', f'{upcoming} 18:00', 10),
+        ]
+        for club_id, title, tag, detail, place, meet, end, need in club_events_data:
+            if not club_id:
+                continue
+            conn.execute(
+                "INSERT INTO club_events (club_id,title,tag,detail,place,meet_time,end_time,need_count,status) "
+                "VALUES (?,?,?,?,?,?,?,?,'open')",
+                (club_id, title, tag, detail, place, meet, end, need)
+            )
+
+    conn.commit()
+    _init_done = True
+    _release_init_flock()
+
+
+# ========== 激励层：成长值/积分/徽章 ==========
+_LEVELS = [('普卡', 0), ('银卡', 2000), ('金卡', 5000), ('钻石卡', 20000)]
+
+def _level_rank(level):
+    """等级 -> 序号（用于比较高低）"""
+    for i, (name, _) in enumerate(_LEVELS):
+        if name == level:
+            return i
+    return 0
+
+def _auto_level(points):
+    """根据成长值返回应达到的会员等级"""
+    level = '普卡'
+    for name, threshold in _LEVELS:
+        if points >= threshold:
+            level = name
+    return level
+
+def add_points(phone, points, action, remark=''):
+    """统一加分入口：加分 + 记流水 + 自动升级等级 + 检查徽章。
+    后续内容层/互动层行为（发帖/评论/被赞）直接调用此函数即可，无需重复造轮子。"""
+    if not phone or points == 0:
+        return {'ok': False, 'error': '参数错误'}
+    conn = get_db()
+    _ensure_tables(conn)
+    user = conn.execute('SELECT id, points, membership_level FROM users WHERE phone=?', (phone,)).fetchone()
+    if not user:
+        conn.close()
+        return {'ok': False, 'error': '用户不存在，请先注册会员'}
+    old_points = user['points'] or 0
+    new_points = old_points + points
+    conn.execute('UPDATE users SET points=? WHERE phone=?', (new_points, phone))
+    conn.execute('INSERT INTO points_log (user_phone, action, points, remark) VALUES (?,?,?,?)',
+                 (phone, action, points, remark))
+    # 自动升级（只升不降）
+    old_level = user['membership_level'] or '普卡'
+    new_level = _auto_level(new_points)
+    level_up = None
+    if _level_rank(new_level) > _level_rank(old_level):
+        conn.execute('UPDATE users SET membership_level=? WHERE phone=?', (new_level, phone))
+        level_up = new_level
+    conn.commit()
+    conn.close()
+    new_badges = check_badges(phone)
+    return {'ok': True, 'points': new_points, 'added': points, 'level': new_level,
+            'level_up': level_up, 'new_badges': new_badges}
+
+def check_badges(phone):
+    """检查并自动颁发达成条件的徽章，返回本次新获得的徽章 code 列表"""
+    if not phone:
+        return []
+    conn = get_db()
+    _ensure_tables(conn)
+    user = conn.execute('SELECT points, membership_level FROM users WHERE phone=?', (phone,)).fetchone()
+    if not user:
+        conn.close()
+        return []
+    sign_count = conn.execute('SELECT COUNT(*) FROM sign_in_records WHERE user_phone=?', (phone,)).fetchone()[0]
+    max_consecutive = conn.execute('SELECT MAX(consecutive_days) FROM sign_in_records WHERE user_phone=?', (phone,)).fetchone()[0] or 0
+    post_count = conn.execute('SELECT COUNT(*) FROM community_posts WHERE user_phone=?', (phone,)).fetchone()[0]
+    total_likes = conn.execute('SELECT COALESCE(SUM(like_count),0) FROM community_posts WHERE user_phone=?', (phone,)).fetchone()[0] or 0
+    total_points = user['points'] or 0
+    level = user['membership_level'] or '普卡'
+    conditions = {
+        'first_sign': sign_count >= 1,
+        'sign_7': max_consecutive >= 7,
+        'sign_30': sign_count >= 30,
+        'points_1000': total_points >= 1000,
+        'points_5000': total_points >= 5000,
+        'level_silver': level in ('银卡', '金卡', '钻石卡'),
+        'level_gold': level in ('金卡', '钻石卡'),
+        'level_diamond': level == '钻石卡',
+        'first_post': post_count >= 1,
+        'post_10': post_count >= 10,
+        'like_100': total_likes >= 100,
+        'group_1': conn.execute('SELECT COUNT(*) FROM group_buy_members WHERE user_phone=?', (phone,)).fetchone()[0] >= 1,
+    }
+    earned = []
+    for code, ok in conditions.items():
+        if not ok:
+            continue
+        exists = conn.execute('SELECT id FROM user_badges WHERE user_phone=? AND badge_code=?', (phone, code)).fetchone()
+        if not exists:
+            conn.execute('INSERT INTO user_badges (user_phone, badge_code) VALUES (?,?)', (phone, code))
+            earned.append(code)
+    conn.commit()
+    conn.close()
+    return earned
+
+
+# ========== 餐厅排队/预订辅助函数 ==========
+def _is_peak_hours():
+    """判断当前是否为高峰时段，返回 (is_peak, multiplier)"""
+    now = datetime.now()
+    wd = now.weekday()  # 0=Mon, 6=Sun
+    h = now.hour + now.minute / 60.0
+    # 午餐高峰: 11:30-13:30 (工作日) / 11:00-14:00 (周末)
+    lunch_peak = (11.5 <= h <= 13.5) if wd < 5 else (11.0 <= h <= 14.0)
+    # 晚餐高峰: 18:00-20:30 (工作日) / 17:30-21:00 (周末)
+    dinner_peak = (18.0 <= h <= 20.5) if wd < 5 else (17.5 <= h <= 21.0)
+    # 夜巷高峰: 21:00-23:00 (周五-周日)
+    night_peak = (21.0 <= h <= 23.0) and wd >= 4
+    if lunch_peak or dinner_peak:
+        return True, 2.0
+    elif night_peak:
+        return True, 1.5
+    return False, 1.0
+
+def _estimate_wait(shop_id, party_size, conn):
+    """根据当前排队人数和高峰时段估算等候时间(分钟)"""
+    is_peak, mult = _is_peak_hours()
+    # 当前该商户排队中的组数
+    waiting = conn.execute(
+        "SELECT COUNT(*) FROM restaurant_queues WHERE shop_id=? AND status='waiting'",
+        (shop_id,)
+    ).fetchone()[0]
+    # 基础等待: 每组约8分钟，高峰翻倍
+    base = waiting * 8 * mult
+    # 人数多也适当加时
+    if party_size > 4:
+        base += 10
+    return max(5, int(base))
 
 
 # ========== API - Shops ==========
@@ -2740,11 +3760,1919 @@ def api_parking_pay():
     })
 
 
+# ========== API - 餐厅排队取号 ==========
+@app.route('/api/restaurant/queue', methods=['POST'])
+def api_restaurant_queue():
+    """取号排队"""
+    data = request.get_json()
+    shop_id = data.get('shop_id', '').strip()
+    phone = data.get('phone', '').strip()
+    name = data.get('name', '').strip()
+    party_size = int(data.get('party_size', 2))
+    if not shop_id:
+        return jsonify(ok=False, error='请选择餐厅')
+    conn = get_db()
+    _ensure_tables(conn)
+    shop = conn.execute('SELECT name FROM shops WHERE id=? AND category="餐饮"', (shop_id,)).fetchone()
+    if not shop:
+        conn.close()
+        return jsonify(ok=False, error='未找到该餐厅，请确认餐厅名称')
+    # 生成排队号 (当日该商户的第N号)
+    today = datetime.now().strftime('%Y-%m-%d')
+    today_count = conn.execute(
+        "SELECT COUNT(*) FROM restaurant_queues WHERE shop_id=? AND date(created_at)=?",
+        (shop_id, today)
+    ).fetchone()[0]
+    qnum = today_count + 1
+    est = _estimate_wait(shop_id, party_size, conn)
+    # 前面还有几组
+    ahead = conn.execute(
+        "SELECT COUNT(*) FROM restaurant_queues WHERE shop_id=? AND status='waiting'",
+        (shop_id,)
+    ).fetchone()[0]
+    conn.execute(
+        "INSERT INTO restaurant_queues (shop_id,shop_name,queue_number,customer_phone,customer_name,party_size,estimated_wait) VALUES (?,?,?,?,?,?,?)",
+        (shop_id, shop['name'], qnum, phone, name, party_size, est)
+    )
+    conn.commit()
+    _webhook_push(shop_id, 'new_queue', {'queue_number': qnum, 'party_size': party_size, 'phone': phone, 'name': name, 'estimated_wait': est})
+    conn.close()
+    return jsonify(ok=True, data={
+        'shop_id': shop_id, 'shop_name': shop['name'],
+        'queue_number': qnum, 'party_size': party_size,
+        'estimated_wait': est, 'ahead_count': ahead,
+        'peak_hours': _is_peak_hours()[0]
+    })
+
+
+@app.route('/api/restaurant/queue/<shop_id>', methods=['GET'])
+def api_restaurant_queue_status(shop_id):
+    """查询某餐厅排队状态 / 我的排队进度"""
+    phone = request.args.get('phone', '')
+    conn = get_db()
+    _ensure_tables(conn)
+    shop = conn.execute('SELECT name FROM shops WHERE id=?', (shop_id,)).fetchone()
+    if not shop:
+        conn.close()
+        return jsonify(ok=False, error='餐厅不存在')
+    # 当前排队组数
+    waiting_count = conn.execute(
+        "SELECT COUNT(*) FROM restaurant_queues WHERE shop_id=? AND status='waiting'",
+        (shop_id,)
+    ).fetchone()[0]
+    # 估算等待时间
+    est = _estimate_wait(shop_id, 2, conn)
+    # 我的排队
+    my_queue = None
+    if phone:
+        my = conn.execute(
+            "SELECT * FROM restaurant_queues WHERE shop_id=? AND customer_phone=? AND status='waiting' ORDER BY id DESC LIMIT 1",
+            (shop_id, phone)
+        ).fetchone()
+        if my:
+            ahead = conn.execute(
+                "SELECT COUNT(*) FROM restaurant_queues WHERE shop_id=? AND status='waiting' AND id<?",
+                (shop_id, my['id'])
+            ).fetchone()[0]
+            my_queue = {
+                'queue_number': my['queue_number'],
+                'party_size': my['party_size'],
+                'ahead_count': ahead,
+                'estimated_wait': my['estimated_wait'],
+                'status': my['status']
+            }
+    conn.close()
+    return jsonify(ok=True, data={
+        'shop_id': shop_id, 'shop_name': shop['name'],
+        'waiting_groups': waiting_count,
+        'estimated_wait': est,
+        'peak_hours': _is_peak_hours()[0],
+        'my_queue': my_queue
+    })
+
+
+@app.route('/api/restaurant/reserve', methods=['POST'])
+def api_restaurant_reserve():
+    """预约订位"""
+    data = request.get_json()
+    shop_id = data.get('shop_id', '').strip()
+    phone = data.get('phone', '').strip()
+    name = data.get('name', '').strip()
+    party_size = int(data.get('party_size', 2))
+    reserve_date = data.get('date', '').strip()
+    reserve_time = data.get('time', '').strip()
+    requests_text = data.get('requests', '').strip()
+    if not shop_id or not phone or not name or not reserve_date or not reserve_time:
+        return jsonify(ok=False, error='请填写完整的预约信息（餐厅/姓名/手机/日期/时间）')
+    conn = get_db()
+    _ensure_tables(conn)
+    shop = conn.execute('SELECT name FROM shops WHERE id=?', (shop_id,)).fetchone()
+    if not shop:
+        conn.close()
+        return jsonify(ok=False, error='未找到该餐厅')
+    # 检查是否已有同日期冲突预约
+    existing = conn.execute(
+        "SELECT id FROM restaurant_reservations WHERE shop_id=? AND customer_phone=? AND reserve_date=? AND status='confirmed'",
+        (shop_id, phone, reserve_date)
+    ).fetchone()
+    if existing:
+        conn.close()
+        return jsonify(ok=False, error='您已在该日期有预约，请勿重复预约')
+    conn.execute(
+        "INSERT INTO restaurant_reservations (shop_id,shop_name,customer_phone,customer_name,party_size,reserve_date,reserve_time,special_requests) VALUES (?,?,?,?,?,?,?,?)",
+        (shop_id, shop['name'], phone, name, party_size, reserve_date, reserve_time, requests_text)
+    )
+    conn.commit()
+    rid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    _webhook_push(shop_id, 'new_reservation', {'reservation_id': rid, 'phone': phone, 'name': name, 'party_size': party_size, 'date': reserve_date, 'time': reserve_time})
+    conn.close()
+    return jsonify(ok=True, data={
+        'reservation_id': rid,
+        'shop_name': shop['name'],
+        'date': reserve_date,
+        'time': reserve_time,
+        'party_size': party_size
+    })
+
+
+@app.route('/api/restaurant/reservations', methods=['GET'])
+def api_restaurant_reservations():
+    """我的预约列表"""
+    phone = request.args.get('phone', '')
+    if not phone:
+        return jsonify(ok=False, error='请提供手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute(
+        "SELECT * FROM restaurant_reservations WHERE customer_phone=? ORDER BY reserve_date DESC, reserve_time DESC LIMIT 20",
+        (phone,)
+    ).fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(r) for r in rows])
+
+
+@app.route('/api/restaurant/status/<shop_id>', methods=['GET'])
+def api_restaurant_live_status(shop_id):
+    """餐厅实时状态：排队长度、营业状态、高峰标识"""
+    conn = get_db()
+    _ensure_tables(conn)
+    shop = conn.execute('SELECT name,hours,category FROM shops WHERE id=?', (shop_id,)).fetchone()
+    if not shop:
+        conn.close()
+        return jsonify(ok=False, error='餐厅不存在')
+    waiting = conn.execute(
+        "SELECT COUNT(*) FROM restaurant_queues WHERE shop_id=? AND status='waiting'",
+        (shop_id,)
+    ).fetchone()[0]
+    is_peak, mult = _is_peak_hours()
+    est = _estimate_wait(shop_id, 2, conn)
+    # 当日已取号总数
+    today = datetime.now().strftime('%Y-%m-%d')
+    today_total = conn.execute(
+        "SELECT COUNT(*) FROM restaurant_queues WHERE shop_id=? AND date(created_at)=?",
+        (shop_id, today)
+    ).fetchone()[0]
+    conn.close()
+    return jsonify(ok=True, data={
+        'shop_id': shop_id,
+        'shop_name': shop['name'],
+        'hours': shop['hours'],
+        'waiting_groups': waiting,
+        'estimated_wait': est,
+        'today_total': today_total,
+        'peak_hours': is_peak,
+        'peak_multiplier': mult
+    })
+
+
+# ========== 商户端 API（商户看板 + 叫号 + 核销） ==========
+def _merchant_auth(shop_id, token):
+    """验证商户 token，返回 shop 信息或 None"""
+    conn = get_db()
+    _ensure_tables(conn)
+    row = conn.execute(
+        "SELECT m.*, s.name,s.phone,s.hours FROM merchant_tokens m JOIN shops s ON m.shop_id=s.id WHERE m.shop_id=? AND m.token=?",
+        (shop_id, token)
+    ).fetchone()
+    conn.close()
+    return row
+
+def _webhook_push(shop_id, event, data):
+    """向商户 webhook URL 推送事件"""
+    conn = get_db()
+    _ensure_tables(conn)
+    row = conn.execute(
+        "SELECT m.webhook_url, s.name FROM merchant_tokens m JOIN shops s ON m.shop_id=s.id WHERE m.shop_id=?",
+        (shop_id,)
+    ).fetchone()
+    conn.close()
+    if not row or not row['webhook_url']:
+        return
+    try:
+        import urllib.request
+        payload = json.dumps({
+            'event': event,
+            'shop_id': shop_id,
+            'shop_name': row['name'],
+            'data': data,
+            'time': datetime.now().isoformat()
+        }, ensure_ascii=False).encode('utf-8')
+        req = urllib.request.Request(row['webhook_url'], data=payload, headers={'Content-Type': 'application/json'}, method='POST')
+        urllib.request.urlopen(req, timeout=5)
+    except Exception:
+        pass  # webhook 失败不影响主流程
+
+@app.route('/api/merchant/dashboard', methods=['GET'])
+def api_merchant_dashboard():
+    """商户看板：当前排队列表 + 预订列表"""
+    shop_id = request.args.get('shop_id', '')
+    token = request.args.get('token', '')
+    m = _merchant_auth(shop_id, token)
+    if not m:
+        return jsonify(ok=False, error='商户认证失败，请检查 shop_id 和 token')
+    conn = get_db()
+    _ensure_tables(conn)
+    # 当前排队
+    queues = conn.execute(
+        "SELECT * FROM restaurant_queues WHERE shop_id=? AND status='waiting' ORDER BY id",
+        (shop_id,)
+    ).fetchall()
+    # 今日预约
+    today = datetime.now().strftime('%Y-%m-%d')
+    reservations = conn.execute(
+        "SELECT * FROM restaurant_reservations WHERE shop_id=? AND reserve_date>=? AND status='confirmed' ORDER BY reserve_date, reserve_time",
+        (shop_id, today)
+    ).fetchall()
+    # 今日统计
+    today_total = conn.execute(
+        "SELECT COUNT(*) as cnt FROM restaurant_queues WHERE shop_id=? AND date(created_at)=?",
+        (shop_id, today)
+    ).fetchone()['cnt']
+    conn.close()
+    return jsonify(ok=True, data={
+        'shop_name': m['name'],
+        'shop_phone': m['phone'],
+        'shop_hours': m['hours'],
+        'webhook_url': m['webhook_url'],
+        'token': m['token'],
+        'queues': [dict(q) for q in queues],
+        'reservations': [dict(r) for r in reservations],
+        'today_total': today_total,
+        'peak_hours': _is_peak_hours()[0]
+    })
+
+@app.route('/api/merchant/call', methods=['POST'])
+def api_merchant_call():
+    """商户叫号：将下一个等待中的号码标记为已叫号"""
+    data = request.get_json()
+    shop_id = data.get('shop_id', '')
+    token = data.get('token', '')
+    queue_id = data.get('queue_id')  # 可选，指定叫哪个号
+    m = _merchant_auth(shop_id, token)
+    if not m:
+        return jsonify(ok=False, error='商户认证失败')
+    conn = get_db()
+    _ensure_tables(conn)
+    if queue_id:
+        q = conn.execute("SELECT * FROM restaurant_queues WHERE id=? AND shop_id=? AND status='waiting'", (queue_id, shop_id)).fetchone()
+    else:
+        q = conn.execute("SELECT * FROM restaurant_queues WHERE shop_id=? AND status='waiting' ORDER BY id LIMIT 1", (shop_id,)).fetchone()
+    if not q:
+        conn.close()
+        return jsonify(ok=False, error='当前无等待中的排队')
+    conn.execute("UPDATE restaurant_queues SET status='called' WHERE id=?", (q['id'],))
+    conn.commit()
+    conn.close()
+    # 推送 webhook
+    _webhook_push(shop_id, 'queue_called', {'queue_id': q['id'], 'queue_number': q['queue_number'], 'party_size': q['party_size'], 'customer_name': q['customer_name'], 'customer_phone': q['customer_phone']})
+    return jsonify(ok=True, data={'queue': dict(q), 'message': f'已叫号 {q["queue_number"]} 号 · {q["party_size"]}人位'})
+
+@app.route('/api/merchant/seat', methods=['POST'])
+def api_merchant_seat():
+    """商户确认入座"""
+    data = request.get_json()
+    shop_id = data.get('shop_id', '')
+    token = data.get('token', '')
+    queue_id = data.get('queue_id')
+    m = _merchant_auth(shop_id, token)
+    if not m:
+        return jsonify(ok=False, error='商户认证失败')
+    if not queue_id:
+        return jsonify(ok=False, error='请提供 queue_id')
+    conn = get_db()
+    _ensure_tables(conn)
+    conn.execute("UPDATE restaurant_queues SET status='seated' WHERE id=? AND shop_id=?", (queue_id, shop_id))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': '已确认入座'})
+
+@app.route('/api/merchant/cancel-queue', methods=['POST'])
+def api_merchant_cancel_queue():
+    """商户取消排队（过号/客户放弃）"""
+    data = request.get_json()
+    shop_id = data.get('shop_id', '')
+    token = data.get('token', '')
+    queue_id = data.get('queue_id')
+    m = _merchant_auth(shop_id, token)
+    if not m:
+        return jsonify(ok=False, error='商户认证失败')
+    conn = get_db()
+    _ensure_tables(conn)
+    conn.execute("UPDATE restaurant_queues SET status='cancelled' WHERE id=? AND shop_id=?", (queue_id, shop_id))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': '已取消排队'})
+
+@app.route('/api/merchant/reservation/confirm', methods=['POST'])
+def api_merchant_confirm_reservation():
+    """商户确认预订到场"""
+    data = request.get_json()
+    shop_id = data.get('shop_id', '')
+    token = data.get('token', '')
+    reservation_id = data.get('reservation_id')
+    m = _merchant_auth(shop_id, token)
+    if not m:
+        return jsonify(ok=False, error='商户认证失败')
+    conn = get_db()
+    _ensure_tables(conn)
+    conn.execute("UPDATE restaurant_reservations SET status='completed' WHERE id=? AND shop_id=?", (reservation_id, shop_id))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': '已确认到场'})
+
+@app.route('/api/merchant/webhook', methods=['PUT'])
+def api_merchant_set_webhook():
+    """商户设置 webhook URL"""
+    data = request.get_json()
+    shop_id = data.get('shop_id', '')
+    token = data.get('token', '')
+    webhook_url = data.get('webhook_url', '')
+    m = _merchant_auth(shop_id, token)
+    if not m:
+        return jsonify(ok=False, error='商户认证失败')
+    conn = get_db()
+    _ensure_tables(conn)
+    conn.execute("UPDATE merchant_tokens SET webhook_url=? WHERE shop_id=?", (webhook_url, shop_id))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': 'Webhook 地址已更新'})
+
+@app.route('/api/merchant/token', methods=['GET'])
+def api_merchant_get_token():
+    """查看/重置商户 token"""
+    shop_id = request.args.get('shop_id', '')
+    token = request.args.get('token', '')
+    m = _merchant_auth(shop_id, token)
+    if not m:
+        return jsonify(ok=False, error='认证失败')
+    conn = get_db()
+    _ensure_tables(conn)
+    row = conn.execute("SELECT token,webhook_url FROM merchant_tokens WHERE shop_id=?", (shop_id,)).fetchone()
+    conn.close()
+    return jsonify(ok=True, data={'shop_id': shop_id, 'token': row['token'], 'webhook_url': row['webhook_url']})
+
+@app.route('/api/admin/merchant-tokens', methods=['GET'])
+def api_admin_merchant_tokens():
+    """管理员查看所有商户 token（生产环境需加权限）"""
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute(
+        "SELECT m.shop_id,s.name,s.category,s.zone,s.floor,m.token,m.webhook_url,m.phone_notify FROM merchant_tokens m JOIN shops s ON m.shop_id=s.id ORDER BY s.name"
+    ).fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(r) for r in rows])
+
+@app.route('/api/merchant/stream')
+def api_merchant_sse():
+    """SSE 实时推送 - 商户看板实时数据流"""
+    shop_id = request.args.get('shop_id', '')
+    token = request.args.get('token', '')
+    m = _merchant_auth(shop_id, token)
+    if not m:
+        return jsonify(ok=False, error='商户认证失败')
+    def generate():
+        import time as _time
+        last_hash = ''
+        while True:
+            conn = get_db()
+            _ensure_tables(conn)
+            queues = conn.execute(
+                "SELECT * FROM restaurant_queues WHERE shop_id=? AND status='waiting' ORDER BY id",
+                (shop_id,)
+            ).fetchall()
+            today = datetime.now().strftime('%Y-%m-%d')
+            reservations = conn.execute(
+                "SELECT * FROM restaurant_reservations WHERE shop_id=? AND reserve_date>=? AND status='confirmed' ORDER BY reserve_date, reserve_time",
+                (shop_id, today)
+            ).fetchall()
+            today_total = conn.execute(
+                "SELECT COUNT(*) FROM restaurant_queues WHERE shop_id=? AND date(created_at)=?",
+                (shop_id, today)
+            ).fetchone()[0]
+            conn.close()
+            data = {
+                'queues': [dict(q) for q in queues],
+                'reservations': [dict(r) for r in reservations],
+                'today_total': today_total,
+                'peak_hours': _is_peak_hours()[0]
+            }
+            current_hash = str(len(queues)) + str(today_total) + str([q['id'] for q in queues])
+            if current_hash != last_hash:
+                last_hash = current_hash
+                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+            _time.sleep(3)
+    return Response(generate(), mimetype='text/event-stream',
+                    headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
+
+@app.route('/api/merchant/print', methods=['POST'])
+def api_merchant_print():
+    """生成排队小票打印指令（ESC/POS 格式，base64 返回）"""
+    data = request.get_json()
+    shop_id = data.get('shop_id', '')
+    token = data.get('token', '')
+    queue_id = data.get('queue_id')
+    m = _merchant_auth(shop_id, token)
+    if not m:
+        return jsonify(ok=False, error='商户认证失败')
+    conn = get_db()
+    _ensure_tables(conn)
+    q = conn.execute("SELECT * FROM restaurant_queues WHERE id=?", (queue_id,)).fetchone()
+    conn.close()
+    if not q:
+        return jsonify(ok=False, error='排队记录不存在')
+    # 构造 ESC/POS 打印指令
+    esc = b'\x1b'
+    cmds = []
+    cmds.append(esc + b'@')  # 初始化
+    cmds.append(esc + b'a\x01')  # 居中
+    cmds.append(f'{m["name"]}\n'.encode('gbk'))
+    cmds.append(f'排队小票\n'.encode('gbk'))
+    cmds.append(b'-' * 32 + b'\n')
+    cmds.append(esc + b'a\x00')  # 左对齐
+    cmds.append(f'排队号：{q["queue_number"]}号\n'.encode('gbk'))
+    cmds.append(f'人数：{q["party_size"]}人\n'.encode('gbk'))
+    cmds.append(f'时间：{q["created_at"]}\n'.encode('gbk'))
+    cmds.append(f'前面还有：{q["estimated_wait"]//8}桌\n'.encode('gbk'))
+    cmds.append(f'预计等待：{q["estimated_wait"]}分钟\n'.encode('gbk'))
+    cmds.append(b'-' * 32 + b'\n')
+    cmds.append(esc + b'a\x01')  # 居中
+    cmds.append(f'前面排队{max(0,q["queue_number"]-1)}桌，过号重取\n'.encode('gbk'))
+    cmds.append(b'\n' * 3)
+    cmds.append(esc + b'm')  # 切纸
+    import base64
+    return jsonify(ok=True, data={
+        'queue_number': q['queue_number'],
+        'shop_name': m['name'],
+        'print_base64': base64.b64encode(b''.join(cmds)).decode('ascii')
+    })
+
+
+# ========== 主理人/活动组织者 API ==========
+@app.route('/api/organizer/apply', methods=['POST'])
+def api_organizer_apply():
+    """主理人在线提交入驻申请 → 自动生成工单对接运营"""
+    data = request.get_json()
+    phone = data.get('phone', '').strip()
+    name = data.get('name', '').strip()
+    brand = data.get('brand', '').strip()
+    biz_type = data.get('biz_type', '').strip()
+    area = data.get('area', '').strip()
+    remark = data.get('remark', '').strip()
+    if not phone or not name or not brand:
+        return jsonify(ok=False, error='请填写手机号、姓名和品牌名称')
+    conn = get_db()
+    _ensure_tables(conn)
+    title = f'入驻申请 - {brand}'
+    desc = json.dumps({
+        'phone': phone, 'name': name, 'brand': brand,
+        'biz_type': biz_type, 'area': area, 'remark': remark
+    }, ensure_ascii=False)
+    conn.execute(
+        "INSERT INTO work_orders (tenant_id, type, title, description, priority, status, reporter, reporter_contact, merchant) VALUES (?,?,?,?,?,?,?,?,?)",
+        (1, '入驻申请', title, desc, 'normal', 'pending', name, phone, brand)
+    )
+    wid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'work_order_id': wid, 'message': '入驻申请已提交，运营团队将在1-3个工作日内与您联系'})
+
+@app.route('/api/event/schedule', methods=['POST'])
+def api_event_schedule():
+    """活动排期报备 → 自动生成工单"""
+    data = request.get_json()
+    phone = data.get('phone', '').strip()
+    name = data.get('name', '').strip()
+    event_name = data.get('event_name', '').strip()
+    event_type = data.get('event_type', '')
+    venue = data.get('venue', '')
+    start_date = data.get('start_date', '')
+    end_date = data.get('end_date', '')
+    expected_attendance = int(data.get('expected_attendance', 0))
+    description = data.get('description', '')
+    if not phone or not name or not event_name or not start_date:
+        return jsonify(ok=False, error='请填写手机号、姓名、活动名称和开始日期')
+    conn = get_db()
+    _ensure_tables(conn)
+    # 检查日期冲突（同一场地已有排期）
+    conflict = conn.execute(
+        "SELECT * FROM event_schedules WHERE venue=? AND status='approved' AND ((start_date<=? AND end_date>=?) OR (start_date<=? AND end_date>=?))",
+        (venue, end_date or start_date, start_date, start_date, end_date or start_date)
+    ).fetchone()
+    if conflict and venue:
+        conn.close()
+        return jsonify(ok=False, error=f'{venue} 在 {start_date}~{end_date} 已有排期，请选择其他日期')
+    conn.execute(
+        "INSERT INTO event_schedules (organizer_phone,organizer_name,event_name,event_type,venue,start_date,end_date,expected_attendance,description) VALUES (?,?,?,?,?,?,?,?,?)",
+        (phone, name, event_name, event_type, venue, start_date, end_date, expected_attendance, description)
+    )
+    sid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    # 自动生成工单
+    title = f'活动排期报备 - {event_name}'
+    desc_content = json.dumps({
+        'phone': phone, 'name': name, 'event_name': event_name,
+        'event_type': event_type, 'venue': venue, 'start_date': start_date,
+        'end_date': end_date, 'expected_attendance': expected_attendance,
+        'description': description
+    }, ensure_ascii=False)
+    conn.execute(
+        "INSERT INTO work_orders (tenant_id, type, title, description, priority, status, reporter, reporter_contact, merchant) VALUES (?,?,?,?,?,?,?,?,?)",
+        (1, '活动排期', title, desc_content, 'normal', 'pending', name, phone, event_name)
+    )
+    wid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.execute("UPDATE event_schedules SET work_order_id=? WHERE id=?", (wid, sid))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'schedule_id': sid, 'work_order_id': wid, 'message': '排期报备已提交，运营团队将审核后与您确认'})
+
+@app.route('/api/venue/book', methods=['POST'])
+def api_venue_book():
+    """场地时段预定"""
+    data = request.get_json()
+    phone = data.get('phone', '').strip()
+    name = data.get('name', '').strip()
+    venue_name = data.get('venue_name', '').strip()
+    venue_type = data.get('venue_type', '').strip()
+    booking_date = data.get('date', '').strip()
+    start_time = data.get('start_time', '').strip()
+    end_time = data.get('end_time', '').strip()
+    purpose = data.get('purpose', '')
+    if not phone or not venue_name or not booking_date or not start_time:
+        return jsonify(ok=False, error='请填写完整信息')
+    conn = get_db()
+    _ensure_tables(conn)
+    # 检查时段冲突
+    conflict = conn.execute(
+        "SELECT * FROM venue_bookings WHERE venue_name=? AND booking_date=? AND status='confirmed' AND ((start_time<=? AND end_time>?) OR (start_time<? AND end_time>=?))",
+        (venue_name, booking_date, end_time or start_time, start_time, end_time or start_time, start_time)
+    ).fetchone()
+    if conflict:
+        conn.close()
+        return jsonify(ok=False, error=f'{venue_name} 在 {booking_date} {start_time}-{end_time} 已被预定')
+    # 计费（根据 venue_type）
+    fee_map = {'booth': 300, 'classroom': 120, 'lounge': 300, 'ad': 500}
+    fee = fee_map.get(venue_type, 200)
+    conn.execute(
+        "INSERT INTO venue_bookings (venue_name,venue_type,customer_phone,customer_name,booking_date,start_time,end_time,purpose,fee) VALUES (?,?,?,?,?,?,?,?,?)",
+        (venue_name, venue_type, phone, name, booking_date, start_time, end_time or start_time, purpose, fee)
+    )
+    bid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    # 自动生成工单
+    title = f'场地预定 - {venue_name}'
+    desc_content = json.dumps({
+        'phone': phone, 'name': name, 'venue_name': venue_name,
+        'venue_type': venue_type, 'date': booking_date,
+        'start_time': start_time, 'end_time': end_time, 'purpose': purpose, 'fee': fee
+    }, ensure_ascii=False)
+    conn.execute(
+        "INSERT INTO work_orders (tenant_id, type, title, description, priority, status, reporter, reporter_contact, merchant) VALUES (?,?,?,?,?,?,?,?,?)",
+        (1, '场地预定', title, desc_content, 'normal', 'pending', name, phone, venue_name)
+    )
+    wid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'booking_id': bid, 'work_order_id': wid, 'fee': fee, 'message': f'场地预定成功！{venue_name} {booking_date} {start_time}'})
+
+@app.route('/api/venue/bookings', methods=['GET'])
+def api_venue_bookings():
+    """查询我的场地预定"""
+    phone = request.args.get('phone', '')
+    if not phone:
+        return jsonify(ok=False, error='请提供手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    bookings = conn.execute(
+        "SELECT * FROM venue_bookings WHERE customer_phone=? ORDER BY booking_date DESC LIMIT 20",
+        (phone,)
+    ).fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(b) for b in bookings])
+
+@app.route('/api/venue/slots', methods=['GET'])
+def api_venue_slots():
+    """查询场地可用时段"""
+    date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    venue_name = request.args.get('venue', '')
+    conn = get_db()
+    _ensure_tables(conn)
+    booked = conn.execute(
+        "SELECT start_time,end_time FROM venue_bookings WHERE venue_name=? AND booking_date=? AND status='confirmed'",
+        (venue_name, date) if venue_name else ('%', date)
+    ).fetchall() if venue_name else []
+    conn.close()
+    # 默认营业时段 10:00-22:00，每小时一个 slot
+    slots = []
+    for h in range(10, 22):
+        slot = f'{h:02d}:00'
+        taken = any(b['start_time'] <= slot < b['end_time'] for b in booked)
+        slots.append({'time': slot, 'available': not taken})
+    return jsonify(ok=True, data={'date': date, 'venue': venue_name or '全部', 'slots': slots})
+
+@app.route('/api/organizer/settlement', methods=['GET'])
+def api_organizer_settlement():
+    """主理人结算查询"""
+    phone = request.args.get('phone', '')
+    if not phone:
+        return jsonify(ok=False, error='请提供手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    settlements = conn.execute(
+        "SELECT * FROM organizer_settlements WHERE organizer_phone=? ORDER BY created_at DESC LIMIT 20",
+        (phone,)
+    ).fetchall()
+    # 同时返回活动排期统计
+    events = conn.execute(
+        "SELECT * FROM event_schedules WHERE organizer_phone=? ORDER BY start_date DESC LIMIT 10",
+        (phone,)
+    ).fetchall()
+    bookings = conn.execute(
+        "SELECT * FROM venue_bookings WHERE customer_phone=? AND status='confirmed' ORDER BY booking_date DESC LIMIT 10",
+        (phone,)
+    ).fetchall()
+    conn.close()
+    return jsonify(ok=True, data={
+        'settlements': [dict(s) for s in settlements],
+        'events': [dict(e) for e in events],
+        'bookings': [dict(b) for b in bookings],
+        'total_events': len(events),
+        'total_bookings': len(bookings)
+    })
+
+@app.route('/api/organizer/applications', methods=['GET'])
+def api_organizer_my_applications():
+    """我的入驻申请/排期状态"""
+    phone = request.args.get('phone', '')
+    if not phone:
+        return jsonify(ok=False, error='请提供手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    orders = conn.execute(
+        "SELECT id,type,title,status,created_at FROM work_orders WHERE reporter_contact=? AND type IN ('入驻申请','活动排期','场地预定') ORDER BY id DESC LIMIT 20",
+        (phone,)
+    ).fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(o) for o in orders])
+
+@app.route('/api/organizer/my-schedules', methods=['GET'])
+def api_organizer_my_schedules():
+    """我的活动排期列表"""
+    phone = request.args.get('phone', '')
+    if not phone:
+        return jsonify(ok=False, error='请提供手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    schedules = conn.execute(
+        "SELECT * FROM event_schedules WHERE organizer_phone=? ORDER BY start_date DESC LIMIT 20",
+        (phone,)
+    ).fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(s) for s in schedules])
+
+@app.route('/api/admin/organizer-applications', methods=['GET'])
+def api_admin_organizer_applications():
+    """管理员查看所有入驻/排期/场地工单"""
+    conn = get_db()
+    _ensure_tables(conn)
+    orders = conn.execute(
+        "SELECT * FROM work_orders WHERE type IN ('入驻申请','活动排期','场地预定') ORDER BY id DESC LIMIT 100"
+    ).fetchall()
+    schedules = conn.execute(
+        "SELECT * FROM event_schedules ORDER BY start_date DESC LIMIT 50"
+    ).fetchall()
+    bookings = conn.execute(
+        "SELECT * FROM venue_bookings WHERE status='confirmed' ORDER BY booking_date DESC LIMIT 50"
+    ).fetchall()
+    conn.close()
+    return jsonify(ok=True, data={
+        'work_orders': [dict(o) for o in orders],
+        'schedules': [dict(s) for s in schedules],
+        'bookings': [dict(b) for b in bookings]
+    })
+
+
+# ========== 商务合作 API（场地看场 + 意向登记 + 团建定制） ==========
+@app.route('/api/biz/visit', methods=['POST'])
+def api_biz_visit():
+    """场地预约看场：校验场地可用性 → 生成工单推市场专员"""
+    data = request.get_json()
+    venue_name = data.get('venue_name', '').strip()
+    date = data.get('date', '').strip()
+    time = data.get('time', '').strip()
+    phone = data.get('phone', '').strip()
+    name = data.get('name', '').strip()
+    purpose = data.get('purpose', '').strip()
+    if not venue_name or not date or not phone or not name:
+        return jsonify(ok=False, error='请填写场地、日期、联系人和手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    # 校验场地可用性（同场地同日已确认的看场/预定冲突）
+    conflict = conn.execute(
+        "SELECT * FROM venue_bookings WHERE venue_name=? AND booking_date=? AND status='confirmed' AND (? BETWEEN start_time AND end_time OR ? BETWEEN start_time AND end_time)",
+        (venue_name, date, time, time)
+    ).fetchone()
+    if conflict:
+        conn.close()
+        return jsonify(ok=False, error=f'{venue_name} 在 {date} {time} 已有安排，请选择其他时段')
+    # 记录看场预约
+    conn.execute(
+        "INSERT INTO venue_bookings (venue_name,venue_type,customer_phone,customer_name,booking_date,start_time,end_time,purpose,fee,status) VALUES (?,?,?,?,?,?,?,?,0,'visit')",
+        (venue_name, 'visit', phone, name, date, time, time, purpose)
+    )
+    vid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    # 生成商务工单
+    title = f'场地看场预约 - {venue_name}'
+    desc = json.dumps({'venue_name': venue_name, 'date': date, 'time': time, 'phone': phone, 'name': name, 'purpose': purpose}, ensure_ascii=False)
+    conn.execute(
+        "INSERT INTO work_orders (tenant_id, type, title, description, priority, status, reporter, reporter_contact, merchant) VALUES (?,?,?,?,?,?,?,?,?)",
+        (1, '场地看场', title, desc, 'normal', 'pending', name, phone, venue_name)
+    )
+    wid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'visit_id': vid, 'work_order_id': wid, 'message': f'看场预约成功！{venue_name} {date} {time}，市场专员将尽快与您联系'})
+
+@app.route('/api/biz/intent', methods=['POST'])
+def api_biz_intent():
+    """意向登记：品牌入驻/多经合作/广告投放 → 商务工单"""
+    data = request.get_json()
+    intent_type = data.get('intent_type', '').strip()
+    name = data.get('name', '').strip()
+    phone = data.get('phone', '').strip()
+    brand = data.get('brand', '').strip()
+    area = data.get('area', '').strip()
+    remark = data.get('remark', '').strip()
+    if not intent_type or not name or not phone:
+        return jsonify(ok=False, error='请填写意向类型、联系人和手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    title = f'商务意向 - {intent_type}'
+    desc = json.dumps({'intent_type': intent_type, 'name': name, 'phone': phone, 'brand': brand, 'area': area, 'remark': remark}, ensure_ascii=False)
+    conn.execute(
+        "INSERT INTO work_orders (tenant_id, type, title, description, priority, status, reporter, reporter_contact, merchant) VALUES (?,?,?,?,?,?,?,?,?)",
+        (1, '商务意向', title, desc, 'normal', 'pending', name, phone, brand)
+    )
+    wid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'work_order_id': wid, 'message': '意向登记成功，24小时内将有专人对接'})
+
+@app.route('/api/biz/team-building', methods=['POST'])
+def api_biz_team_building():
+    """团建/活动定制：AI 初步匹配方案与报价 → 转人工深化"""
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    phone = data.get('phone', '').strip()
+    org_name = data.get('org_name', '').strip()
+    people = int(data.get('people', 0) or 0)
+    date = data.get('date', '').strip()
+    budget = int(data.get('budget', 0) or 0)
+    description = data.get('description', '').strip()
+    if not name or not phone or not description:
+        return jsonify(ok=False, error='请填写联系人、手机号和需求描述')
+    # AI 初步匹配方案与报价（基于人数/预算）
+    venue_suggest = '共享教室(中型30人)' if people <= 30 else ('会客厅(精品40人)' if people <= 40 else '中庭活动区')
+    if budget > 0:
+        est_low = int(budget * 0.7)
+        est_high = int(budget * 1.2)
+        quote = f'参考预算 ¥{est_low}~{est_high}'
+    else:
+        quote = f'参考价 ¥{people * 60}~{people * 120}（含场地+基础物料）'
+    suggestion = f'推荐场地：{venue_suggest}；{quote}。具体方案将由专员与您深化确认。'
+    conn = get_db()
+    _ensure_tables(conn)
+    title = f'团建/活动定制 - {org_name or name}'
+    desc = json.dumps({'name': name, 'phone': phone, 'org_name': org_name, 'people': people, 'date': date, 'budget': budget, 'description': description, 'suggestion': suggestion}, ensure_ascii=False)
+    conn.execute(
+        "INSERT INTO work_orders (tenant_id, type, title, description, priority, status, reporter, reporter_contact, merchant) VALUES (?,?,?,?,?,?,?,?,?)",
+        (1, '团建定制', title, desc, 'normal', 'pending', name, phone, org_name or name)
+    )
+    wid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'work_order_id': wid, 'suggestion': suggestion, 'message': '需求已提交，专员将根据初步方案与您深化对接'})
+
+
+# ========== 物业报修与投诉 API ==========
+@app.route('/api/repair', methods=['POST'])
+def api_repair():
+    """设施报修：AI 自动分类 → 生成工单分派物业工程岗"""
+    data = request.get_json()
+    location = data.get('location', '').strip()
+    description = data.get('description', '').strip()
+    image = data.get('image', '')  # 可选 base64
+    name = data.get('name', '').strip()
+    phone = data.get('phone', '').strip()
+    if not description or not name or not phone:
+        return jsonify(ok=False, error='请填写问题描述、联系人和手机号')
+    text = location + ' ' + description
+    # AI 自动分类（具体关键词优先）
+    repair_categories = {
+        '漏水': ['漏水', '渗水', '积水', '地漏', '下水道'],
+        '电梯': ['电梯', '扶梯', '升降', '卡住'],
+        '空调': ['空调', '冷气', '暖气', '通风', '制冷', '不凉', '不热'],
+        '门锁': ['门锁', '锁', '门窗', '玻璃', '卷帘', '把手'],
+        '卫生': ['卫生', '垃圾', '清洁', '异味', '厕所', '洗手间', '污渍'],
+        '水电': ['水管', '电路', '插座', '灯泡', '照明', '跳闸', '停水', '停电', '水', '电'],
+    }
+    category = '其他'
+    for cat, kws in repair_categories.items():
+        if any(k in text for k in kws):
+            category = cat
+            break
+    # 三级分级：电梯/漏水/水电 = 紧急，其余 = 一般
+    priority = 'urgent' if category in ('电梯', '漏水', '水电') else 'normal'
+    assignee_map = {'水电': '水电工程组', '空调': '暖通工程组', '漏水': '给排水工程组', '门锁': '综合维修组', '电梯': '电梯维保组', '卫生': '保洁组', '其他': '综合维修组'}
+    assignee = assignee_map.get(category, '综合维修组')
+    conn = get_db()
+    _ensure_tables(conn)
+    title = f'报修 - {category} - {location or "待定位"}'
+    desc = json.dumps({'location': location, 'description': description, 'category': category, 'assignee': assignee, 'image': image}, ensure_ascii=False)
+    conn.execute(
+        "INSERT INTO work_orders (tenant_id, type, title, description, priority, status, reporter, reporter_contact, merchant) VALUES (?,?,?,?,?,?,?,?,?)",
+        (1, '报修', title, desc, priority, 'pending', name, phone, assignee)
+    )
+    wid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'work_order_id': wid, 'category': category, 'assignee': assignee, 'message': f'报修工单已生成（{category}），已分派{assignee}，将尽快处理'})
+
+def _classify_complaint_level(content):
+    """投诉三级分级：返回 (level, level_name, deadline, requirement)"""
+    critical_kw = ['人身安全', '伤亡', '受伤', '死亡', '中毒', '触电', '火灾', '群体', '集体', '聚众', '闹事', '食物中毒', '食品安全', '生命危险', '昏迷', '重伤', '突发疾病', '踩踏', '恐吓', '暴力', '休克', '窒息']
+    urgent_kw = ['安全隐患', '安全', '消防', '危险', '电梯', '漏水', '漏电', '短路', '停电', '设施故障', '设备故障', '故障', '升级', '威胁', '纠纷', '赔偿', '燃气', '天然气', '爆炸', '隐患', '着火']
+    if any(k in content for k in critical_kw):
+        return 'critical', '重大投诉', '立即', '实时推送管理层，启动应急处理流程'
+    if any(k in content for k in urgent_kw):
+        return 'urgent', '紧急投诉', '4小时', '1小时内响应，4小时内给出处理方案'
+    return 'normal', '一般投诉', '24小时', '24小时内处理回复'
+
+@app.route('/api/complaint', methods=['POST'])
+def api_complaint():
+    """投诉建议：AI 自动分类 + 三级分级 → 生成工单分派负责人"""
+    data = request.get_json()
+    kind = data.get('kind', '投诉').strip()
+    content = data.get('content', '').strip()
+    name = data.get('name', '').strip()
+    phone = data.get('phone', '').strip()
+    if not content or not name or not phone:
+        return jsonify(ok=False, error='请填写内容、联系人和手机号')
+    # AI 分类（安全等关键类优先）
+    categories = {
+        '安全': ['安全', '消防', '危险', '隐患', '火灾'],
+        '服务态度': ['态度', '服务', '骂', '敷衍', '冷漠'],
+        '环境卫生': ['卫生', '脏', '垃圾', '异味', '清洁'],
+        '设施设备': ['设备', '设施', '坏了', '故障', '损坏'],
+        '停车': ['停车', '车位', '堵车', '收费'],
+        '噪音': ['噪音', '吵', '扰民', '喧哗'],
+    }
+    category = '其他'
+    for c, kws in categories.items():
+        if any(k in content for k in kws):
+            category = c
+            break
+    # 三级分级
+    level, level_name, deadline, requirement = _classify_complaint_level(content)
+    priority_map = {'critical': 'critical', 'urgent': 'urgent', 'normal': 'normal'}
+    priority = priority_map[level]
+    conn = get_db()
+    _ensure_tables(conn)
+    title = f'{kind} - {level_name} - {category}'
+    desc = json.dumps({'kind': kind, 'content': content, 'category': category, 'level': level, 'level_name': level_name, 'deadline': deadline, 'requirement': requirement}, ensure_ascii=False)
+    conn.execute(
+        "INSERT INTO work_orders (tenant_id, type, title, description, priority, status, reporter, reporter_contact) VALUES (?,?,?,?,?,?,?,?)",
+        (1, '投诉建议', title, desc, priority, 'pending', name, phone)
+    )
+    wid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={
+        'work_order_id': wid,
+        'category': category,
+        'level': level,
+        'level_name': level_name,
+        'deadline': deadline,
+        'requirement': requirement,
+        'message': f'已提交（{level_name}），{requirement}'
+    })
+
+@app.route('/api/property/my-orders', methods=['GET'])
+def api_property_my_orders():
+    """我的报修/投诉工单进度查询"""
+    phone = request.args.get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='请提供手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    orders = conn.execute(
+        "SELECT id, type, title, description, priority, status, created_at, updated_at FROM work_orders WHERE reporter_contact=? AND type IN ('报修','投诉建议') ORDER BY id DESC LIMIT 20",
+        (phone,)
+    ).fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(o) for o in orders])
+
+
+# ========== 人工客服对话 API ==========
+@app.route('/api/human-chat', methods=['POST'])
+def api_human_chat():
+    """用户发送消息给人工客服"""
+    data = request.get_json()
+    sid = data.get('session_id', request.cookies.get('session', 'anonymous'))
+    message = data.get('message', '').strip()
+    phone = data.get('phone', '')
+    name = data.get('name', '')
+    if not message:
+        return jsonify(ok=False, error='消息不能为空')
+    conn = get_db()
+    _ensure_tables(conn)
+    # 首次消息自动创建工单
+    existing = conn.execute(
+        "SELECT work_order_id FROM human_chat_messages WHERE session_id=? AND role='user' LIMIT 1",
+        (sid,)
+    ).fetchone()
+    wid = existing['work_order_id'] if existing else None
+    if not wid:
+        title = f'人工客服 - {name or phone or sid[:8]}'
+        conn.execute(
+            "INSERT INTO work_orders (tenant_id, type, title, description, priority, status, reporter, reporter_contact) VALUES (?,?,?,?,?,?,?,?)",
+            (1, '人工客服', title, message[:200], 'high', 'pending', name or '匿名用户', phone or sid)
+        )
+        wid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    # 保存消息
+    conn.execute(
+        "INSERT INTO human_chat_messages (session_id, user_phone, user_name, role, content, work_order_id) VALUES (?,?,?,?,?,?)",
+        (sid, phone, name, 'user', message, wid)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'work_order_id': wid, 'status': 'pending'})
+
+@app.route('/api/human-chat/session', methods=['GET'])
+def api_human_chat_session():
+    """获取人工客服对话历史"""
+    sid = request.args.get('session_id', '')
+    if not sid:
+        sid = request.cookies.get('session', 'anonymous')
+    conn = get_db()
+    _ensure_tables(conn)
+    msgs = conn.execute(
+        "SELECT * FROM human_chat_messages WHERE session_id=? ORDER BY id",
+        (sid,)
+    ).fetchall()
+    # 检查是否有 agent 回复
+    last_agent = conn.execute(
+        "SELECT * FROM human_chat_messages WHERE session_id=? AND role='agent' ORDER BY id DESC LIMIT 1",
+        (sid,)
+    ).fetchone()
+    conn.close()
+    return jsonify(ok=True, data={
+        'messages': [dict(m) for m in msgs],
+        'has_agent': bool(last_agent),
+        'last_agent_msg': dict(last_agent) if last_agent else None
+    })
+
+@app.route('/api/human-chat/reply', methods=['POST'])
+def api_human_chat_reply():
+    """客服人员回复用户（管理员或后台调用）"""
+    data = request.get_json()
+    sid = data.get('session_id', '')
+    message = data.get('message', '').strip()
+    if not sid or not message:
+        return jsonify(ok=False, error='参数不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    conn.execute(
+        "INSERT INTO human_chat_messages (session_id, role, content) VALUES (?,?,?)",
+        (sid, 'agent', message)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'status': 'replied'})
+
+@app.route('/api/admin/human-chats', methods=['GET'])
+def api_admin_human_chats():
+    """管理员查看人工客服会话列表"""
+    conn = get_db()
+    _ensure_tables(conn)
+    # 按 session 分组，取每个 session 的最新用户消息
+    sessions = conn.execute("""
+        SELECT session_id, user_phone, user_name,
+               (SELECT content FROM human_chat_messages WHERE session_id=m.session_id AND role='user' ORDER BY id DESC LIMIT 1) as last_msg,
+               (SELECT created_at FROM human_chat_messages WHERE session_id=m.session_id ORDER BY id DESC LIMIT 1) as last_time,
+               COUNT(CASE WHEN role='agent' THEN 1 END) as agent_replies
+        FROM human_chat_messages m
+        GROUP BY session_id
+        ORDER BY last_time DESC
+        LIMIT 50
+    """).fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(s) for s in sessions])
+
+
+# ========== 满意度评价 API ==========
+@app.route('/api/feedback', methods=['POST'])
+def api_feedback():
+    """提交满意度评价"""
+    data = request.get_json()
+    feedback_type = data.get('feedback_type', 'chat_ai')  # chat_ai / chat_human / business
+    rating = int(data.get('rating', 0))
+    feedback_text = data.get('feedback_text', '').strip()
+    phone = data.get('phone', '').strip()
+    biz_type = data.get('biz_type', '').strip()
+    order_id = data.get('order_id', '').strip()
+    if not rating or rating < 1 or rating > 5:
+        return jsonify(ok=False, error='请选择评分（1-5星）')
+    conn = get_db()
+    _ensure_tables(conn)
+    conn.execute(
+        "INSERT INTO feedbacks (user_phone, feedback_type, biz_type, order_id, rating, feedback_text) VALUES (?,?,?,?,?,?)",
+        (phone, feedback_type, biz_type, order_id, rating, feedback_text)
+    )
+    conn.commit()
+    conn.close()
+    # 低分反馈（≤2星）且含文字 → 归集为待优化问题（错误应答线索）
+    if rating <= 2 and feedback_text:
+        _add_kb_pending(1, feedback_text, 'feedback')
+    return jsonify(ok=True, data={'message': '感谢您的评价！'})
+
+@app.route('/api/admin/feedback', methods=['GET'])
+@login_required
+def api_admin_feedback():
+    """后台查看评价汇总"""
+    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute("SELECT * FROM feedbacks ORDER BY id DESC LIMIT 100").fetchall()
+    # 汇总
+    total = conn.execute("SELECT COUNT(*) FROM feedbacks").fetchone()[0]
+    avg = conn.execute("SELECT AVG(rating) FROM feedbacks").fetchone()[0]
+    by_type = conn.execute("SELECT feedback_type, COUNT(*) as cnt, AVG(rating) as avg_r FROM feedbacks GROUP BY feedback_type").fetchall()
+    conn.close()
+    return jsonify(ok=True, data={
+        'list': [dict(r) for r in rows],
+        'total': total,
+        'avg_rating': round(avg, 2) if avg else 0,
+        'by_type': [dict(t) for t in by_type]
+    })
+
+
+# ========== 知识库待优化 + 运营洞察 API ==========
+@app.route('/api/admin/kb-pending', methods=['GET'])
+@login_required
+def api_admin_kb_pending():
+    """知识库待优化问题列表"""
+    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db()
+    _ensure_tables(conn)
+    status = request.args.get('status', 'pending')
+    rows = conn.execute(
+        "SELECT * FROM kb_pending WHERE status=? ORDER BY id DESC LIMIT 200",
+        (status,)
+    ).fetchall()
+    total = conn.execute("SELECT COUNT(*) FROM kb_pending WHERE status='pending'").fetchone()[0]
+    conn.close()
+    return jsonify(ok=True, items=[dict(r) for r in rows], pending_total=total)
+
+@app.route('/api/admin/kb-pending/<int:pid>/import', methods=['POST'])
+@login_required
+def api_admin_kb_pending_import(pid):
+    """一键补充入库：将待优化问题写入知识库"""
+    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+        return jsonify(ok=False, error='权限不足')
+    data = request.get_json()
+    answer = data.get('answer', '').strip()
+    category = data.get('category', 'service').strip()
+    if not answer:
+        return jsonify(ok=False, error='请填写答案')
+    conn = get_db()
+    _ensure_tables(conn)
+    p = conn.execute("SELECT * FROM kb_pending WHERE id=?", (pid,)).fetchone()
+    if not p:
+        conn.close()
+        return jsonify(ok=False, error='待优化问题不存在')
+    # 写入知识库
+    conn.execute(
+        "INSERT INTO knowledge_base (tenant_id, category, question, answer, keywords) VALUES (?,?,?,?,?)",
+        (session['tenant_id'], category, p['question'], answer, p['question'])
+    )
+    # 标记已入库
+    conn.execute("UPDATE kb_pending SET status='imported' WHERE id=?", (pid,))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': '已补充入库'})
+
+@app.route('/api/admin/kb-pending/<int:pid>/dismiss', methods=['POST'])
+@login_required
+def api_admin_kb_pending_dismiss(pid):
+    """忽略待优化问题"""
+    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db()
+    _ensure_tables(conn)
+    conn.execute("UPDATE kb_pending SET status='dismissed' WHERE id=?", (pid,))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': '已忽略'})
+
+@app.route('/api/admin/insights', methods=['GET'])
+@login_required
+def api_admin_insights():
+    """运营洞察：高频投诉/建议/未命中问题汇总，形成优化建议"""
+    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db()
+    _ensure_tables(conn)
+    # 高频投诉（按分类统计）
+    complaints = conn.execute(
+        "SELECT COUNT(*) as cnt FROM work_orders WHERE type='投诉建议'"
+    ).fetchone()['cnt']
+    complaint_categories = conn.execute(
+        "SELECT title FROM work_orders WHERE type='投诉建议' ORDER BY id DESC LIMIT 200"
+    ).fetchall()
+    # 高频未命中问题（kb_pending）
+    pending = conn.execute(
+        "SELECT question, COUNT(*) as cnt FROM kb_pending WHERE status='pending' GROUP BY question ORDER BY cnt DESC LIMIT 10"
+    ).fetchall()
+    pending_total = conn.execute("SELECT COUNT(*) FROM kb_pending WHERE status='pending'").fetchone()[0]
+    # 低分评价
+    low_feedback = conn.execute(
+        "SELECT * FROM feedbacks WHERE rating <= 3 ORDER BY id DESC LIMIT 20"
+    ).fetchall()
+    conn.close()
+    # 统计投诉类别频次
+    from collections import Counter
+    cat_counter = Counter()
+    for c in complaint_categories:
+        t = c['title'] or ''
+        # 标题格式: 投诉 - 级别 - 类别
+        parts = t.split(' - ')
+        if len(parts) >= 3:
+            cat_counter[parts[2]] += 1
+        elif len(parts) == 2:
+            cat_counter[parts[1]] += 1
+    top_complaints = [{'category': k, 'count': v} for k, v in cat_counter.most_common(8)]
+    suggestions = []
+    if top_complaints:
+        top = top_complaints[0]
+        suggestions.append(f'高频投诉集中在「{top["category"]}」类（{top["count"]}次），建议优先优化该环节服务')
+    if pending_total:
+        suggestions.append(f'知识库有 {pending_total} 条未命中问题待补充，建议运营尽快整理入库以提升 AI 应答准确率')
+    if low_feedback:
+        avg_low = round(sum(f['rating'] for f in low_feedback) / len(low_feedback), 1)
+        suggestions.append(f'近期有 {len(low_feedback)} 条低分评价（均分 {avg_low}），建议复盘服务卡点')
+    return jsonify(ok=True, data={
+        'complaint_total': complaints,
+        'top_complaints': top_complaints,
+        'pending_total': pending_total,
+        'top_pending': [{'question': p['question'], 'count': p['cnt']} for p in pending],
+        'low_feedback_count': len(low_feedback),
+        'suggestions': suggestions
+    })
+
+
+# ========== 健康检查 ==========
+@app.route('/api/health')
+def api_health():
+    """健康检查：数据库 + AI 服务状态（供监控/告警/故障降级判断）"""
+    db_ok = True
+    try:
+        conn = get_db()
+        conn.execute('SELECT 1').fetchone()
+        conn.close()
+    except Exception:
+        db_ok = False
+    overall = 'ok' if (db_ok and AI_HEALTH['status'] == 'up') else 'degraded'
+    return jsonify(ok=True, data={
+        'status': overall,
+        'db': 'ok' if db_ok else 'down',
+        'ai_status': AI_HEALTH['status'],
+        'ai_fail_count': AI_HEALTH['fail_count'],
+        'ai_last_fail': AI_HEALTH['last_fail'],
+        'ai_last_check': AI_HEALTH['last_check'],
+        'time': datetime.now().isoformat(),
+    })
+
+
+# ========== 激励层 API（签到/积分流水/徽章） ==========
+@app.route('/api/community/sign-in', methods=['POST'])
+def api_community_sign_in():
+    """每日签到：连续签到奖励递增，赚成长值/积分"""
+    data = request.get_json(force=True, silent=True) or {}
+    phone = (data.get('phone') or '').strip()
+    if not phone:
+        return jsonify(ok=False, error='请提供手机号'), 400
+    today = datetime.now().strftime('%Y-%m-%d')
+    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    conn = get_db()
+    _ensure_tables(conn)
+    existing = conn.execute('SELECT id FROM sign_in_records WHERE user_phone=? AND sign_date=?', (phone, today)).fetchone()
+    if existing:
+        conn.close()
+        return jsonify(ok=False, error='今天已经签到过啦，明天再来~'), 400
+    prev = conn.execute('SELECT consecutive_days FROM sign_in_records WHERE user_phone=? AND sign_date=?', (phone, yesterday)).fetchone()
+    consecutive = (prev['consecutive_days'] + 1) if prev else 1
+    base = 5
+    bonus = 20 if consecutive % 7 == 0 else 0
+    award = base + bonus
+    conn.execute('INSERT INTO sign_in_records (user_phone, sign_date, consecutive_days, points_awarded) VALUES (?,?,?,?)',
+                 (phone, today, consecutive, award))
+    conn.commit()
+    conn.close()
+    result = add_points(phone, award, 'sign_in', ('连续签到%d天' % consecutive) + ('（7天周期奖励）' if bonus else ''))
+    return jsonify(ok=True, data={
+        'award': award, 'consecutive_days': consecutive,
+        'points': result.get('points'), 'level': result.get('level'),
+        'level_up': result.get('level_up'), 'new_badges': result.get('new_badges', []),
+    })
+
+@app.route('/api/community/sign-status', methods=['GET'])
+def api_community_sign_status():
+    """签到状态：今日是否已签到 + 连续天数"""
+    phone = (request.args.get('phone') or '').strip()
+    if not phone:
+        return jsonify(ok=False, error='请提供手机号'), 400
+    today = datetime.now().strftime('%Y-%m-%d')
+    conn = get_db()
+    _ensure_tables(conn)
+    row = conn.execute('SELECT consecutive_days, points_awarded FROM sign_in_records WHERE user_phone=? AND sign_date=?', (phone, today)).fetchone()
+    conn.close()
+    if row:
+        return jsonify(ok=True, data={'signed_today': True, 'consecutive_days': row['consecutive_days'], 'points_awarded': row['points_awarded']})
+    # 今日未签到：返回昨天的连续天数（昨天签过则连续，否则为0）
+    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    conn = get_db()
+    _ensure_tables(conn)
+    prev = conn.execute('SELECT consecutive_days FROM sign_in_records WHERE user_phone=? AND sign_date=?', (phone, yesterday)).fetchone()
+    conn.close()
+    return jsonify(ok=True, data={'signed_today': False, 'consecutive_days': (prev['consecutive_days'] if prev else 0)})
+
+@app.route('/api/community/points/log', methods=['GET'])
+def api_community_points_log():
+    """积分/成长值流水"""
+    phone = (request.args.get('phone') or '').strip()
+    if not phone:
+        return jsonify(ok=False, error='请提供手机号'), 400
+    limit = request.args.get('limit', 50, type=int)
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute('SELECT * FROM points_log WHERE user_phone=? ORDER BY id DESC LIMIT ?', (phone, limit)).fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(r) for r in rows])
+
+@app.route('/api/community/badges', methods=['GET'])
+def api_community_badges():
+    """徽章墙：全部徽章 + 我的已获状态"""
+    phone = (request.args.get('phone') or '').strip()
+    conn = get_db()
+    _ensure_tables(conn)
+    badges = conn.execute('SELECT * FROM badges ORDER BY threshold').fetchall()
+    earned = set()
+    if phone:
+        earned_rows = conn.execute('SELECT badge_code FROM user_badges WHERE user_phone=?', (phone,)).fetchall()
+        earned = set(r['badge_code'] for r in earned_rows)
+    conn.close()
+    items = []
+    for b in badges:
+        d = dict(b)
+        d['earned'] = d['code'] in earned
+        items.append(d)
+    return jsonify(ok=True, data=items)
+
+
+# ========== 邻里圈内容层 API（发帖/信息流/话题/点赞/评论） ==========
+@app.route('/api/community/post', methods=['POST'])
+def api_community_post():
+    """发布邻里圈内容：发帖 +10 成长值"""
+    data = request.get_json(force=True, silent=True) or {}
+    phone = (data.get('phone') or '').strip()
+    name = (data.get('name') or '').strip()
+    content = (data.get('content') or '').strip()
+    topic = (data.get('topic') or '').strip()
+    category = (data.get('category') or '').strip()
+    images = data.get('images') or []
+    if not phone or not content:
+        return jsonify(ok=False, error='请填写内容'), 400
+    if len(content) > 2000:
+        return jsonify(ok=False, error='内容过长，请精简到2000字以内'), 400
+    if not name:
+        name = '邻里' + phone[-4:]
+    img_json = json.dumps(images[:3], ensure_ascii=False) if images else '[]'
+    conn = get_db()
+    _ensure_tables(conn)
+    cur = conn.execute('INSERT INTO community_posts (user_phone, user_name, content, images, topic, category) VALUES (?,?,?,?,?,?)',
+                       (phone, name, content, img_json, topic, category))
+    pid = cur.lastrowid
+    if topic:
+        conn.execute('UPDATE community_topics SET post_count = post_count + 1 WHERE title=?', (topic,))
+    conn.commit()
+    conn.close()
+    result = add_points(phone, 10, 'post', '发布邻里圈内容')
+    return jsonify(ok=True, data={'post_id': pid, 'points': result.get('points'), 'new_badges': result.get('new_badges', [])})
+
+@app.route('/api/community/feed', methods=['GET'])
+def api_community_feed():
+    """邻里圈信息流（按时间倒序，可选话题筛选）"""
+    phone = (request.args.get('phone') or '').strip()
+    topic = (request.args.get('topic') or '').strip()
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 20, type=int)
+    conn = get_db()
+    _ensure_tables(conn)
+    if topic:
+        rows = conn.execute('SELECT * FROM community_posts WHERE status=? AND topic=? ORDER BY id DESC LIMIT ? OFFSET ?',
+                            ('active', topic, limit, (page-1)*limit)).fetchall()
+    else:
+        rows = conn.execute('SELECT * FROM community_posts WHERE status=? ORDER BY id DESC LIMIT ? OFFSET ?',
+                            ('active', limit, (page-1)*limit)).fetchall()
+    liked = set()
+    if phone:
+        liked_rows = conn.execute('SELECT post_id FROM community_likes WHERE user_phone=?', (phone,)).fetchall()
+        liked = set(r['post_id'] for r in liked_rows)
+    conn.close()
+    items = []
+    for r in rows:
+        d = dict(r)
+        d['liked_by_me'] = d['id'] in liked
+        try:
+            d['images'] = json.loads(d.get('images') or '[]')
+        except Exception:
+            d['images'] = []
+        items.append(d)
+    return jsonify(ok=True, data=items)
+
+@app.route('/api/community/topics', methods=['GET'])
+def api_community_topics():
+    """话题列表"""
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute('SELECT * FROM community_topics ORDER BY post_count DESC, id').fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(r) for r in rows])
+
+@app.route('/api/community/like', methods=['POST'])
+def api_community_like():
+    """点赞/取消点赞：给帖主 +1/-1 成长值"""
+    data = request.get_json(force=True, silent=True) or {}
+    post_id = data.get('post_id')
+    phone = (data.get('phone') or '').strip()
+    if not post_id or not phone:
+        return jsonify(ok=False, error='参数错误'), 400
+    conn = get_db()
+    _ensure_tables(conn)
+    post = conn.execute('SELECT * FROM community_posts WHERE id=?', (post_id,)).fetchone()
+    if not post:
+        conn.close()
+        return jsonify(ok=False, error='帖子不存在'), 404
+    existing = conn.execute('SELECT id FROM community_likes WHERE post_id=? AND user_phone=?', (post_id, phone)).fetchone()
+    if existing:
+        # 取消点赞
+        conn.execute('DELETE FROM community_likes WHERE post_id=? AND user_phone=?', (post_id, phone))
+        conn.execute('UPDATE community_posts SET like_count = MAX(0, like_count - 1) WHERE id=?', (post_id,))
+        conn.commit()
+        conn.close()
+        if post['user_phone'] != phone:
+            add_points(post['user_phone'], -1, 'unliked', '被取消点赞')
+        return jsonify(ok=True, data={'liked': False, 'like_count': max(0, post['like_count'] - 1)})
+    else:
+        # 点赞
+        conn.execute('INSERT INTO community_likes (post_id, user_phone) VALUES (?,?)', (post_id, phone))
+        conn.execute('UPDATE community_posts SET like_count = like_count + 1 WHERE id=?', (post_id,))
+        conn.commit()
+        conn.close()
+        if post['user_phone'] != phone:
+            add_points(post['user_phone'], 1, 'liked', '内容被点赞')
+        return jsonify(ok=True, data={'liked': True, 'like_count': post['like_count'] + 1})
+
+@app.route('/api/community/comment', methods=['POST'])
+def api_community_comment():
+    """评论：评论者 +2 成长值"""
+    data = request.get_json(force=True, silent=True) or {}
+    post_id = data.get('post_id')
+    phone = (data.get('phone') or '').strip()
+    name = (data.get('name') or '').strip()
+    content = (data.get('content') or '').strip()
+    if not post_id or not phone or not content:
+        return jsonify(ok=False, error='请填写评论内容'), 400
+    if len(content) > 500:
+        return jsonify(ok=False, error='评论过长'), 400
+    if not name:
+        name = '邻里' + phone[-4:]
+    conn = get_db()
+    _ensure_tables(conn)
+    post = conn.execute('SELECT id FROM community_posts WHERE id=?', (post_id,)).fetchone()
+    if not post:
+        conn.close()
+        return jsonify(ok=False, error='帖子不存在'), 404
+    conn.execute('INSERT INTO community_comments (post_id, user_phone, user_name, content) VALUES (?,?,?,?)',
+                 (post_id, phone, name, content))
+    conn.execute('UPDATE community_posts SET comment_count = comment_count + 1 WHERE id=?', (post_id,))
+    conn.commit()
+    conn.close()
+    add_points(phone, 2, 'comment', '发表评论')
+    return jsonify(ok=True, data={'message': '评论成功'})
+
+@app.route('/api/community/post/<int:post_id>', methods=['GET'])
+def api_community_post_detail(post_id):
+    """帖子详情（含评论）"""
+    phone = (request.args.get('phone') or '').strip()
+    conn = get_db()
+    _ensure_tables(conn)
+    post = conn.execute('SELECT * FROM community_posts WHERE id=?', (post_id,)).fetchone()
+    if not post:
+        conn.close()
+        return jsonify(ok=False, error='帖子不存在'), 404
+    comments = conn.execute('SELECT * FROM community_comments WHERE post_id=? ORDER BY id', (post_id,)).fetchall()
+    liked = False
+    if phone:
+        liked = conn.execute('SELECT id FROM community_likes WHERE post_id=? AND user_phone=?', (post_id, phone)).fetchone() is not None
+    conn.close()
+    d = dict(post)
+    d['liked_by_me'] = liked
+    try:
+        d['images'] = json.loads(d.get('images') or '[]')
+    except Exception:
+        d['images'] = []
+    return jsonify(ok=True, data={'post': d, 'comments': [dict(c) for c in comments]})
+
+@app.route('/api/community/my', methods=['GET'])
+def api_community_my():
+    """我的帖子"""
+    phone = (request.args.get('phone') or '').strip()
+    if not phone:
+        return jsonify(ok=False, error='请提供手机号'), 400
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute('SELECT * FROM community_posts WHERE user_phone=? ORDER BY id DESC LIMIT 50', (phone,)).fetchall()
+    conn.close()
+    items = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d['images'] = json.loads(d.get('images') or '[]')
+        except Exception:
+            d['images'] = []
+        items.append(d)
+    return jsonify(ok=True, data=items)
+
+
+# ========== 互动裂变：拼团组队 + 商户发券 ==========
+@app.route('/api/group-buy/list', methods=['GET'])
+def api_group_buy_list():
+    """拼团活动列表（仅进行中）"""
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute(
+        "SELECT id,shop_name,title,coupon_label,coupon_amount,need_count,expire_at,created_at "
+        "FROM group_buys WHERE status='open' ORDER BY id DESC"
+    ).fetchall()
+    items = []
+    for r in rows:
+        joined = conn.execute('SELECT COUNT(*) FROM group_buy_members WHERE group_id=?', (r['id'],)).fetchone()[0]
+        items.append({
+            'id': r['id'], 'shop_name': r['shop_name'], 'title': r['title'],
+            'coupon_label': r['coupon_label'], 'coupon_amount': r['coupon_amount'],
+            'need_count': r['need_count'], 'joined_count': joined,
+            'remain': max(0, r['need_count'] - joined), 'expire_at': r['expire_at'],
+        })
+    conn.close()
+    return jsonify(ok=True, data=items)
+
+
+@app.route('/api/group-buy/detail', methods=['GET'])
+def api_group_buy_detail():
+    """拼团详情 + 成员 + 是否已参团"""
+    gid = request.args.get('group_id', type=int)
+    phone = request.args.get('phone', '').strip()
+    if not gid:
+        return jsonify(ok=False, error='缺少 group_id')
+    conn = get_db()
+    _ensure_tables(conn)
+    r = conn.execute(
+        "SELECT id,shop_name,title,coupon_label,coupon_amount,need_count,expire_at,status "
+        "FROM group_buys WHERE id=?", (gid,)
+    ).fetchone()
+    if not r:
+        conn.close()
+        return jsonify(ok=False, error='拼团不存在')
+    joined = conn.execute('SELECT COUNT(*) FROM group_buy_members WHERE group_id=?', (gid,)).fetchone()[0]
+    members = conn.execute(
+        "SELECT user_name, joined_at FROM group_buy_members WHERE group_id=? ORDER BY joined_at", (gid,)
+    ).fetchall()
+    joined_by_me = False
+    if phone:
+        joined_by_me = conn.execute(
+            'SELECT id FROM group_buy_members WHERE group_id=? AND user_phone=?', (gid, phone)
+        ).fetchone() is not None
+    conn.close()
+    return jsonify(ok=True, data={
+        'id': r['id'], 'shop_name': r['shop_name'], 'title': r['title'],
+        'coupon_label': r['coupon_label'], 'coupon_amount': r['coupon_amount'],
+        'need_count': r['need_count'], 'joined_count': joined,
+        'remain': max(0, r['need_count'] - joined), 'expire_at': r['expire_at'],
+        'status': r['status'], 'joined_by_me': joined_by_me,
+        'members': [{'name': m['user_name'] or '邻居', 'time': str(m['joined_at'])[:16]} for m in members],
+    })
+
+
+@app.route('/api/group-buy/join', methods=['POST'])
+def api_group_buy_join():
+    """参团：满员自动给所有成员发券（写入 coupon_claims）+ 拼团积分奖励"""
+    try:
+        gid = int(request.json.get('group_id', 0) or 0)
+    except (TypeError, ValueError):
+        gid = 0
+    phone = request.json.get('phone', '').strip()
+    name = request.json.get('name', '').strip() or '邻居'
+    if not gid or not phone:
+        return jsonify(ok=False, error='参数不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    r = conn.execute(
+        "SELECT id,shop_name,title,coupon_label,coupon_amount,need_count,expire_at,status "
+        "FROM group_buys WHERE id=?", (gid,)
+    ).fetchone()
+    if not r:
+        conn.close()
+        return jsonify(ok=False, error='拼团不存在')
+    if r['status'] != 'open':
+        conn.close()
+        return jsonify(ok=False, error='该拼团已结束')
+    # 防重复参团
+    if conn.execute('SELECT id FROM group_buy_members WHERE group_id=? AND user_phone=?', (gid, phone)).fetchone():
+        conn.close()
+        return jsonify(ok=False, error='您已参与该拼团')
+    conn.execute(
+        "INSERT INTO group_buy_members (group_id,user_phone,user_name) VALUES (?,?,?)",
+        (gid, phone, name)
+    )
+    conn.commit()  # 先提交成员写入，避免与 add_points 的独立连接竞争 SQLite 写锁
+    # 拼团积分 +10（走统一入口，内部独立管理连接与提交）
+    add_points(phone, 10, 'group_buy', '参与拼团:' + r['title'])
+    joined = conn.execute('SELECT COUNT(*) FROM group_buy_members WHERE group_id=?', (gid,)).fetchone()[0]
+    full = joined >= r['need_count']
+    awarded = []
+    if full:
+        # 满员：给所有成员发券（写入 coupon_claims，复用 C 端领券+核销链路）
+        members = conn.execute('SELECT user_phone FROM group_buy_members WHERE group_id=?', (gid,)).fetchall()
+        # 先建一张 offer（拼团专属券），供 coupon_claims 关联
+        conn.execute(
+            "INSERT INTO offers (shop_name,label,expire,amount,category,color,status) "
+            "VALUES (?,?,?,?,'group','#E85D04','active')",
+            (r['shop_name'], '【拼团】' + r['coupon_label'], r['expire_at'], r['coupon_amount'])
+        )
+        offer_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+        for m in members:
+            try:
+                conn.execute(
+                    "INSERT OR IGNORE INTO coupon_claims (user_phone,offer_id,shop_name,label,amount) VALUES (?,?,?,?,?)",
+                    (m['user_phone'], offer_id, r['shop_name'], '【拼团】' + r['coupon_label'], r['coupon_amount'])
+                )
+            except Exception:
+                pass
+        conn.execute("UPDATE group_buys SET status='full' WHERE id=?", (gid,))
+        awarded.append({'phone': m['user_phone'] for m in members})
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={
+        'full': full, 'joined_count': joined, 'need_count': r['need_count'],
+        'coupon_label': ('【拼团】' + r['coupon_label']) if full else '',
+        'coupon_amount': r['coupon_amount'] if full else 0,
+        'message': ('拼团成功！专属券已发放到各位的「我的优惠券」' if full else '参团成功，还差 ' + str(max(0, r['need_count'] - joined)) + ' 人成团')
+    })
+
+
+@app.route('/api/group-buy/my', methods=['GET'])
+def api_group_buy_my():
+    """我的拼团（我参与的）"""
+    phone = request.args.get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='缺少 phone')
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute(
+        "SELECT g.id,g.shop_name,g.title,g.need_count,g.status,COUNT(m.id) as jc "
+        "FROM group_buy_members m JOIN group_buys g ON m.group_id=g.id "
+        "WHERE m.user_phone=? GROUP BY g.id ORDER BY g.id DESC", (phone,)
+    ).fetchall()
+    items = [{'id': r['id'], 'shop_name': r['shop_name'], 'title': r['title'],
+              'need_count': r['need_count'], 'joined_count': r['jc'], 'status': r['status']} for r in rows]
+    conn.close()
+    return jsonify(ok=True, data=items)
+
+
+@app.route('/api/merchant/issue-coupon', methods=['POST'])
+def api_merchant_issue_coupon():
+    """商户端发券：写入 offers 表（复用 C 端领券 + 核销链路）"""
+    shop_id = request.json.get('shop_id', '').strip()
+    token = request.json.get('token', '').strip()
+    label = request.json.get('label', '').strip()
+    try:
+        amount = int(request.json.get('amount', 0) or 0)
+    except (TypeError, ValueError):
+        amount = 0
+    expire = request.json.get('expire', '2026-12-31').strip()
+    category = request.json.get('category', 'food').strip()
+    if not shop_id or not token:
+        return jsonify(ok=False, error='商户认证缺失')
+    if not label:
+        return jsonify(ok=False, error='请填写券说明')
+    shop = _merchant_auth(shop_id, token)
+    if not shop:
+        return jsonify(ok=False, error='商户认证失败')
+    conn = get_db()
+    _ensure_tables(conn)
+    conn.execute(
+        "INSERT INTO offers (shop_name,label,expire,amount,category,color,status) VALUES (?,?,?,?,?,?,?)",
+        (shop['name'], label, expire, amount, category, '#FF7B2C', 'active')
+    )
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': '发券成功，会员可在优惠券专区领取'})
+
+
+# ========== 兴趣社 · 活动驱动轻组织 ==========
+@app.route('/api/interest-clubs', methods=['GET'])
+def api_interest_clubs():
+    """常驻兴趣社列表（按 club_order 排序），标记当前用户是否已加入。"""
+    phone = request.args.get('phone', '').strip()
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute(
+        "SELECT id,name,tag,cover_emoji,gradient,intro,member_count,status FROM interest_clubs "
+        "WHERE status='open' ORDER BY club_order, id"
+    ).fetchall()
+    joined_ids = set()
+    if phone:
+        joined_ids = {r['club_id'] for r in conn.execute(
+            "SELECT club_id FROM user_club_members WHERE user_phone=?", (phone,)).fetchall()}
+    items = []
+    for r in rows:
+        items.append({
+            'id': r['id'], 'name': r['name'], 'tag': r['tag'], 'cover_emoji': r['cover_emoji'],
+            'gradient': r['gradient'], 'intro': r['intro'], 'member_count': r['member_count'],
+            'joined': r['id'] in joined_ids,
+        })
+    conn.close()
+    return jsonify(ok=True, data=items)
+
+
+@app.route('/api/interest-club/join', methods=['POST'])
+def api_interest_club_join():
+    """加入/退出兴趣社（joined=true 加入，false 退出）。"""
+    phone = (request.json.get('phone') or '').strip()
+    name = (request.json.get('name') or '').strip() or '邻居'
+    club_id = int(request.json.get('club_id', 0) or 0)
+    joined = bool(request.json.get('joined', True))
+    if not phone or not club_id:
+        return jsonify(ok=False, error='参数不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    club = conn.execute("SELECT id FROM interest_clubs WHERE id=? AND status='open'", (club_id,)).fetchone()
+    if not club:
+        conn.close()
+        return jsonify(ok=False, error='兴趣社不存在')
+    exists = conn.execute("SELECT id FROM user_club_members WHERE club_id=? AND user_phone=?", (club_id, phone)).fetchone()
+    if joined:
+        if not exists:
+            conn.execute("INSERT INTO user_club_members (club_id,user_phone,user_name) VALUES (?,?,?)", (club_id, phone, name))
+            conn.execute("UPDATE interest_clubs SET member_count = member_count + 1 WHERE id=?", (club_id,))
+            add_points(phone, 5, 'join_club', '加入兴趣社#' + str(club_id))
+    else:
+        if exists:
+            conn.execute("DELETE FROM user_club_members WHERE club_id=? AND user_phone=?", (club_id, phone))
+            conn.execute("UPDATE interest_clubs SET member_count = MAX(0, member_count - 1) WHERE id=?", (club_id,))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'joined': joined})
+
+
+@app.route('/api/club-events', methods=['GET'])
+def api_club_events():
+    """临时活动群列表（进行中，end_time 未到的活动群）。可按 club_id / tag 过滤。"""
+    club_id = request.args.get('club_id', '').strip()
+    tag = request.args.get('tag', '').strip()
+    phone = request.args.get('phone', '').strip()
+    conn = get_db()
+    _ensure_tables(conn)
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    sql = ("SELECT e.id,e.club_id,e.title,e.tag,e.detail,e.place,e.meet_time,e.end_time,e.need_count,"
+           "e.status,c.name AS club_name,c.cover_emoji,c.gradient "
+           "FROM club_events e JOIN interest_clubs c ON e.club_id=c.id "
+           "WHERE e.status='open' AND e.end_time >= ?")
+    params = [now]
+    if club_id:
+        sql += " AND e.club_id=?"
+        params.append(club_id)
+    elif tag:
+        sql += " AND e.tag=?"
+        params.append(tag)
+    sql += " ORDER BY e.meet_time"
+    rows = conn.execute(sql, params).fetchall()
+    joined_event_ids = set()
+    if phone:
+        joined_event_ids = {r['event_id'] for r in conn.execute(
+            "SELECT event_id FROM club_event_members WHERE user_phone=?", (phone,)).fetchall()}
+    items = []
+    for r in rows:
+        joined = conn.execute("SELECT COUNT(*) FROM club_event_members WHERE event_id=?", (r['id'],)).fetchone()[0]
+        items.append({
+            'id': r['id'], 'club_id': r['club_id'], 'club_name': r['club_name'], 'cover_emoji': r['cover_emoji'],
+            'gradient': r['gradient'], 'title': r['title'], 'tag': r['tag'], 'detail': r['detail'],
+            'place': r['place'], 'meet_time': r['meet_time'], 'end_time': r['end_time'],
+            'need_count': r['need_count'], 'joined_count': joined, 'remain': max(0, (r['need_count'] or 0) - joined),
+            'joined': r['id'] in joined_event_ids,
+        })
+    conn.close()
+    return jsonify(ok=True, data=items)
+
+
+@app.route('/api/club-event/detail', methods=['GET'])
+def api_club_event_detail():
+    """活动群详情：成员名单 + 留言接龙 + 是否已入群。"""
+    eid = request.args.get('event_id', type=int)
+    phone = request.args.get('phone', '').strip()
+    if not eid:
+        return jsonify(ok=False, error='缺少 event_id')
+    conn = get_db()
+    _ensure_tables(conn)
+    r = conn.execute(
+        "SELECT e.id,e.club_id,e.title,e.tag,e.detail,e.place,e.meet_time,e.end_time,e.need_count,e.status,"
+        "c.name AS club_name,c.cover_emoji,c.gradient "
+        "FROM club_events e JOIN interest_clubs c ON e.club_id=c.id WHERE e.id=?",
+        (eid,)
+    ).fetchone()
+    if not r:
+        conn.close()
+        return jsonify(ok=False, error='活动群不存在')
+    members = conn.execute(
+        "SELECT user_name,joined_at FROM club_event_members WHERE event_id=? ORDER BY joined_at", (eid,)
+    ).fetchall()
+    msgs = conn.execute(
+        "SELECT user_name,content,created_at FROM club_event_messages WHERE event_id=? ORDER BY id", (eid,)
+    ).fetchall()
+    joined_by_me = False
+    if phone:
+        joined_by_me = conn.execute(
+            "SELECT id FROM club_event_members WHERE event_id=? AND user_phone=?", (eid, phone)
+        ).fetchone() is not None
+    conn.close()
+    return jsonify(ok=True, data={
+        'id': r['id'], 'club_id': r['club_id'], 'club_name': r['club_name'], 'cover_emoji': r['cover_emoji'],
+        'gradient': r['gradient'], 'title': r['title'], 'tag': r['tag'], 'detail': r['detail'],
+        'place': r['place'], 'meet_time': r['meet_time'], 'end_time': r['end_time'],
+        'need_count': r['need_count'], 'status': r['status'],
+        'joined_count': len(members), 'remain': max(0, (r['need_count'] or 0) - len(members)),
+        'joined_by_me': joined_by_me,
+        'members': [{'name': m['user_name'] or '邻居', 'time': str(m['joined_at'])[:16]} for m in members],
+        'messages': [{'name': x['user_name'] or '邻居', 'content': x['content'], 'time': str(x['created_at'])[:16]} for x in msgs],
+    })
+
+
+@app.route('/api/club-event/join', methods=['POST'])
+def api_club_event_join():
+    """入群：加入活动驱动的临时群（幂等），参与积分 +5。"""
+    phone = (request.json.get('phone') or '').strip()
+    name = (request.json.get('name') or '').strip() or '邻居'
+    eid = int(request.json.get('event_id', 0) or 0)
+    if not phone or not eid:
+        return jsonify(ok=False, error='参数不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    r = conn.execute("SELECT id,status,end_time FROM club_events WHERE id=?", (eid,)).fetchone()
+    if not r:
+        conn.close()
+        return jsonify(ok=False, error='活动群不存在')
+    if r['status'] != 'open':
+        conn.close()
+        return jsonify(ok=False, error='该活动群已结束')
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    if r['end_time'] and r['end_time'] < now:
+        conn.execute("UPDATE club_events SET status='closed' WHERE id=?", (eid,))
+        conn.commit()
+        conn.close()
+        return jsonify(ok=False, error='活动已结束，群已自动散')
+    if conn.execute("SELECT id FROM club_event_members WHERE event_id=? AND user_phone=?", (eid, phone)).fetchone():
+        conn.close()
+        return jsonify(ok=False, error='您已在该活动群')
+    conn.execute("INSERT INTO club_event_members (event_id,user_phone,user_name) VALUES (?,?,?)", (eid, phone, name))
+    conn.commit()
+    add_points(phone, 5, 'join_club_event', '加入活动群#' + str(eid))
+    joined = conn.execute("SELECT COUNT(*) FROM club_event_members WHERE event_id=?", (eid,)).fetchone()[0]
+    conn.close()
+    return jsonify(ok=True, data={
+        'joined_count': joined, 'remain': max(0, (r['need_count'] or 0) - joined),
+        'message': '入群成功！活动当天来集合点签到即可'
+    })
+
+
+@app.route('/api/club-event/message', methods=['POST'])
+def api_club_event_message():
+    """群内留言接龙（非实时），留言积分 +2。"""
+    phone = (request.json.get('phone') or '').strip()
+    name = (request.json.get('name') or '').strip() or '邻居'
+    eid = int(request.json.get('event_id', 0) or 0)
+    content = (request.json.get('content') or '').strip()
+    if not phone or not eid or not content:
+        return jsonify(ok=False, error='参数不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    r = conn.execute("SELECT id,status FROM club_events WHERE id=?", (eid,)).fetchone()
+    if not r:
+        conn.close()
+        return jsonify(ok=False, error='活动群不存在')
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    if r['status'] != 'open' or (r and conn.execute("SELECT end_time FROM club_events WHERE id=?", (eid,)).fetchone()[0] < now):
+        conn.close()
+        return jsonify(ok=False, error='活动群已结束，无法留言')
+    # 仅群成员可留言
+    if not conn.execute("SELECT id FROM club_event_members WHERE event_id=? AND user_phone=?", (eid, phone)).fetchone():
+        conn.close()
+        return jsonify(ok=False, error='请先加入该活动群再留言')
+    conn.execute("INSERT INTO club_event_messages (event_id,user_phone,user_name,content) VALUES (?,?,?,?)",
+                 (eid, phone, name, content[:300]))
+    conn.commit()
+    add_points(phone, 2, 'club_event_msg', '活动群留言#' + str(eid))
+    conn.close()
+    return jsonify(ok=True, data={'message': '留言已发送'})
+
+
+@app.route('/api/club-event/my', methods=['GET'])
+def api_club_event_my():
+    """我的活动群 + 我的兴趣社。"""
+    phone = request.args.get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='缺少 phone')
+    conn = get_db()
+    _ensure_tables(conn)
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    events = conn.execute(
+        "SELECT e.id,e.title,e.tag,e.meet_time,e.place,e.status,c.name AS club_name,c.cover_emoji "
+        "FROM club_event_members m JOIN club_events e ON m.event_id=e.id "
+        "JOIN interest_clubs c ON e.club_id=c.id WHERE m.user_phone=? AND e.end_time>=? "
+        "ORDER BY e.meet_time", (phone, now)
+    ).fetchall()
+    clubs = conn.execute(
+        "SELECT c.id,c.name,c.tag,c.cover_emoji,c.intro FROM user_club_members m "
+        "JOIN interest_clubs c ON m.club_id=c.id WHERE m.user_phone=? ORDER BY c.club_order", (phone,)
+    ).fetchall()
+    conn.close()
+    return jsonify(ok=True, data={
+        'events': [{'id': e['id'], 'title': e['title'], 'tag': e['tag'], 'club_name': e['club_name'],
+                    'cover_emoji': e['cover_emoji'], 'meet_time': e['meet_time'], 'place': e['place'],
+                    'status': e['status']} for e in events],
+        'clubs': [{'id': c['id'], 'name': c['name'], 'tag': c['tag'], 'cover_emoji': c['cover_emoji'],
+                   'intro': c['intro']} for c in clubs],
+    })
+
+
 # ========== robots.txt ==========
-@app.route('/robots.txt')
 def robots_txt():
     return app.response_class(
         'User-agent: *\nDisallow: /api/\nDisallow: /admin\nDisallow: /manage\n',
         mimetype='text/plain'
     )
+
+
+# === DIAG_ROUTE ===
+@app.route('/api/__diag')
+def _diag_route():
+    rs = [str(r) for r in app.url_map.iter_rules()]
+    return jsonify({
+        'count': len(rs),
+        'has_activities': '/api/activities' in rs,
+        'has_offers': '/api/offers' in rs,
+        'file': os.path.abspath(__file__),
+    })
+
+
+if __name__ == '__main__':
+    sys.stdout.reconfigure(encoding='utf-8')
+    print('[OK] Dajudali V1.0: http://localhost:8765')
+    try:
+        from pyngrok import ngrok
+        tunnel = ngrok.connect(8765, 'http')
+        print('[Tunnel] ' + tunnel.public_url)
+    except Exception as e:
+        print('[Tunnel] ngrok unavailable: ' + str(e))
+    app.run(host='0.0.0.0', port=8765, debug=False)
 

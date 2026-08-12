@@ -16,6 +16,15 @@
             <template v-else-if="t.key === '/admin/orders'">
               <path d="M9 12h6M9 16h6M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h5.59a2 2 0 011.41.59l4.41 4.41a2 2 0 01.59 1.41V19a2 2 0 01-2 2z"/>
             </template>
+            <template v-else-if="t.key === '/admin/human-chat'">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </template>
+            <template v-else-if="t.key === '/admin/feedback'">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </template>
+            <template v-else-if="t.key === '/admin/insights'">
+              <path d="M3 3v18h18"/><path d="M7 15l4-4 4 3 5-6"/>
+            </template>
             <template v-else-if="t.key === '/admin/kb'">
               <path d="M6 2h11a2 2 0 012 2v16a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><line x1="6" y1="6" x2="10" y2="6"/><line x1="6" y1="10" x2="12" y2="10"/><line x1="6" y1="14" x2="10" y2="14"/>
             </template>
@@ -81,6 +90,9 @@ const activeMenu = computed(() => route.path)
 const superTabs = [
   { key: '/admin/dashboard', label: '看板' },
   { key: '/admin/orders', label: '工单' },
+  { key: '/admin/human-chat', label: '人工客服' },
+  { key: '/admin/feedback', label: '评价' },
+  { key: '/admin/insights', label: '运营洞察' },
   { key: '/admin/kb', label: '知识库' },
   { key: '/admin/members', label: '会员' },
   { key: '/admin/activities', label: '活动' },

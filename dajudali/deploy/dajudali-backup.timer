@@ -1,0 +1,10 @@
+[Unit]
+Description=海江新天地 每日数据备份定时器
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

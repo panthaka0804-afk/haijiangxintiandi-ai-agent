@@ -36,10 +36,10 @@ export function logout() {
 }
 
 // ========== 聊天 ==========
-export function sendChat(message) {
+export function sendChat(message, largeFont = false) {
   return request('/api/public/chat', {
     method: 'POST',
-    body: JSON.stringify({ message })
+    body: JSON.stringify({ message, large_font: largeFont })
   })
 }
 
@@ -247,6 +247,39 @@ export function parkingEntry(data) {
 }
 export function parkingExit(data) {
   return request('/api/parking/exit', { method: 'POST', body: JSON.stringify(data) })
+}
+
+// ========== 兴趣社（活动驱动轻组织） ==========
+export function getInterestClubs(phone) {
+  return request('/api/interest-clubs' + (phone ? '?phone=' + encodeURIComponent(phone) : ''))
+}
+export function joinInterestClub(clubId, phone, name, joined) {
+  return request('/api/interest-club/join', {
+    method: 'POST',
+    body: JSON.stringify({ club_id: clubId, phone, name, joined })
+  })
+}
+export function getClubEvents(params = {}) {
+  const query = new URLSearchParams(params).toString()
+  return request('/api/club-events' + (query ? '?' + query : ''))
+}
+export function getClubEventDetail(eventId, phone) {
+  return request('/api/club-event/detail?event_id=' + eventId + (phone ? '&phone=' + encodeURIComponent(phone) : ''))
+}
+export function joinClubEvent(eventId, phone, name) {
+  return request('/api/club-event/join', {
+    method: 'POST',
+    body: JSON.stringify({ event_id: eventId, phone, name })
+  })
+}
+export function sendClubEventMessage(eventId, phone, name, content) {
+  return request('/api/club-event/message', {
+    method: 'POST',
+    body: JSON.stringify({ event_id: eventId, phone, name, content })
+  })
+}
+export function getMyClubs(phone) {
+  return request('/api/club-event/my?phone=' + encodeURIComponent(phone))
 }
 
 // 通用 HTTP 客户端（ActivityDetail 等使用）

@@ -120,10 +120,11 @@
             <span class="arli-status" :class="r.status">{{ statusMap[r.status] || r.status }}</span>
           </div>
           <div class="arli-info">{{ r.session_date }} {{ r.session_time }} · {{ r.people_count }}人</div>
-          <div class="arli-code" v-if="r.ticket_code">凭证：{{ r.ticket_code }}</div>
-          <div class="arli-actions" v-if="r.status === 'confirmed'">
-            <button class="arli-btn" @click="doReschedule(r)">改签</button>
-            <button class="arli-btn danger" @click="doRefund(r)">退款</button>
+          <div class="arli-code" v-if="r.ticket_code">{{ r.ticket_code }}</div>
+          <div class="arli-actions">
+            <button class="arli-btn" v-if="r.ticket_code" @click="viewTicket(r)">查看凭证</button>
+            <button class="arli-btn" v-if="r.status === 'confirmed'" @click="doReschedule(r)">改签</button>
+            <button class="arli-btn danger" v-if="r.status === 'confirmed'" @click="doRefund(r)">退款</button>
           </div>
         </div>
       </div>
@@ -238,24 +239,50 @@ async function loadMyRegs() {
   } catch(e) {}
 }
 
+const rescheduleSid = ref(null)
+const rescheduleTarget = ref(null)
+
 async function doRefund(r) {
-  if (!confirm('确认申请退款？')) return
+  if (!confirm('确认申请退款？退款后积分/费用将退还。')) return
   try {
-    await api.post('/api/activities/refund', { registration_id: r.id })
-    alert('退款申请已提交')
+    const resp = await api.post('/api/activities/refund', { registration_id: r.id })
+    alert(resp.message || resp.error || '退款处理完成')
     loadMyRegs()
-  } catch(e) {}
+  } catch(e) { alert('退款失败，请重试') }
 }
 
 async function doReschedule(r) {
-  // 简单改签到同活动的其他场次
-  const newSid = prompt('请输入新场次编号（查看活动详情获取场次列表）')
-  if (!newSid) return
+  // 获取该活动的所有场次
   try {
-    await api.post('/api/activities/reschedule', { registration_id: r.id, new_session_id: parseInt(newSid) })
-    alert('改签成功')
+    const resp = await api.get(`/api/activities/${r.activity_id}`)
+    if (!resp.ok || !resp.sessions) return alert('无法获取场次列表')
+    const available = resp.sessions.filter(s => s.status === 'open' && s.enrolled < s.max_people && s.id !== r.session_id)
+    if (!available.length) return alert('暂无其他可用场次')
+    // 弹出选择
+    const opts = available.map(s =>
+      `${s.id}: ${s.session_date} ${s.session_time}（剩余${s.max_people - s.enrolled}位）`
+    ).join('\n')
+    const chosen = prompt('请选择改签场次（输入编号）：\n' + opts)
+    if (!chosen) return
+    const sid = parseInt(chosen) || parseInt(chosen.split(':')[0])
+    if (!sid || !available.find(s => s.id === sid)) return alert('无效的场次编号')
+    const res = await api.post('/api/activities/reschedule', { registration_id: r.id, new_session_id: sid })
+    alert(res.message || res.error || '改签成功')
     loadMyRegs()
-  } catch(e) { alert(res?.error || '改签失败') }
+  } catch(e) { alert('改签失败') }
+}
+
+async function viewTicket(r) {
+  try {
+    const resp = await api.get(`/api/activities/ticket/${r.id}`)
+    if (resp.ok && resp.ticket) {
+      ticket.value = {
+        ...resp.ticket,
+        session: `${resp.ticket.session_date} ${resp.ticket.session_time}`,
+        venue: resp.ticket.venue
+      }
+    }
+  } catch(e) { alert('获取凭证失败') }
 }
 
 // 手机号变化时查会员

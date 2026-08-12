@@ -65,6 +65,18 @@
         </div>
       </div>
 
+      <!-- 激励中心入口 -->
+      <van-cell-group inset style="margin-top: 16px;">
+        <van-cell
+          title="激励中心"
+          label="每日签到 · 成长值 · 成就徽章"
+          value="去签到"
+          icon="gift-o"
+          is-link
+          @click="$router.push('/points')"
+        />
+      </van-cell-group>
+
       <!-- 兑换列表 -->
       <van-cell-group inset title="积分兑换" style="margin-top: 16px;">
         <van-cell

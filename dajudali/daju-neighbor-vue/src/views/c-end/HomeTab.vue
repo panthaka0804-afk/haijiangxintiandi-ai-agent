@@ -125,24 +125,57 @@
       </div>
     </div>
 
-    <div class="section-label">
-      <span class="section-en">offers</span>
-      <span class="section-cn">优惠</span>
-    </div>
-
-    <div class="daily-deal" @click="$router.push('/offers')">
-      <svg class="dd-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><path d="M78 10 l6 14 15 2 -11 10 3 15 -13 -8 -13 8 3 -15 -11 -10 15 -2 z"/><circle cx="40" cy="44" r="8"/><path d="M40 37 v14 M33 44 h14"/></svg>
-      <div class="dd-icon-box">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+    <!-- 激励中心 banner（首页直接引流，深橙红突出） -->
+    <div class="points-entry" @click="$router.push('/points')">
+      <svg class="pc-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><path d="M64 12 l3.6 7.3 8 1.2 -5.8 5.6 1.4 8 -7.2 -3.8 -7.2 3.8 1.4 -8 -5.8 -5.6 8 -1.2 z" opacity="0.5"/><circle cx="30" cy="40" r="6" opacity="0.4"/></svg>
+      <div class="pc-icon-box">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/>
+          <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>
         </svg>
       </div>
-      <div class="dd-left">
-        <div class="dd-title">每日特惠</div>
-        <div class="dd-desc">精选商户限时折扣，天天有好价</div>
+      <div class="pc-left">
+        <div class="pc-title">激励中心</div>
+        <div class="pc-desc">每日签到 · 成长值 · 成就徽章</div>
       </div>
-      <div class="dd-right">
-        <span class="dd-btn">立即查看</span>
+      <div class="pc-right">
+        <span class="pc-btn">去签到</span>
+      </div>
+    </div>
+
+    <!-- 拼团 banner（邻里拼团，深橙红突出） -->
+    <div class="points-entry gb-home-entry" @click="$router.push('/group-buy')">
+      <svg class="pc-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><circle cx="34" cy="30" r="14" opacity="0.35"/><circle cx="58" cy="30" r="10" opacity="0.30"/><circle cx="78" cy="30" r="7" opacity="0.25"/></svg>
+      <div class="pc-icon-box">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      </div>
+      <div class="pc-left">
+        <div class="pc-title">邻里拼团</div>
+        <div class="pc-desc">5 人成团 · 满员自动发券</div>
+      </div>
+      <div class="pc-right">
+        <span class="pc-btn">去拼团</span>
+      </div>
+    </div>
+
+    <!-- 兴趣社 banner（活动驱动轻组织，深橙红突出） -->
+    <div class="points-entry ic-home-entry" @click="$router.push('/interest-club')">
+      <svg class="pc-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><circle cx="30" cy="30" r="13" opacity="0.35"/><circle cx="56" cy="30" r="9" opacity="0.30"/><circle cx="78" cy="30" r="6" opacity="0.25"/></svg>
+      <div class="pc-icon-box">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/>
+        </svg>
+      </div>
+      <div class="pc-left">
+        <div class="pc-title">兴趣社</div>
+        <div class="pc-desc">周三夜跑 · 宝妈遛娃 · 球友约战</div>
+      </div>
+      <div class="pc-right">
+        <span class="pc-btn">去加群</span>
       </div>
     </div>
 
@@ -182,6 +215,84 @@
     </div>
 
     <div class="section-label">
+      <span class="section-en">community</span>
+      <span class="section-cn">邻里圈</span>
+    </div>
+    <div class="community-entry" @click="$router.push('/community')">
+      <svg class="cm-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><path d="M20 20 a10 10 0 1 1 20 0 a10 10 0 1 1 -20 0 M14 44 h32 M16 34 a16 16 0 0 1 28 0"/><circle cx="78" cy="16" r="8"/><path d="M78 24 v14 M71 31 h14"/></svg>
+      <div class="cm-icon-box">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 8a5 5 0 0 0-10 0c0 4-2.5 5-2.5 5h15S17 12 17 8z"/>
+          <path d="M13.7 21a2 2 0 0 1-3.4 0"/>
+        </svg>
+      </div>
+      <div class="cm-left">
+        <div class="cm-title">邻里圈</div>
+        <div class="cm-desc">探店晒单 · 遛娃攻略 · 签到领成长值</div>
+      </div>
+      <div class="cm-right">
+        <span class="cm-btn">去逛逛</span>
+      </div>
+    </div>
+
+    <div class="section-label">
+      <span class="section-en">offers</span>
+      <span class="section-cn">优惠</span>
+    </div>
+
+    <div class="daily-deal" @click="$router.push('/offers')">
+      <svg class="dd-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><path d="M78 10 l6 14 15 2 -11 10 3 15 -13 -8 -13 8 3 -15 -11 -10 15 -2 z"/><circle cx="40" cy="44" r="8"/><path d="M40 37 v14 M33 44 h14"/></svg>
+      <div class="dd-icon-box">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
+      </div>
+      <div class="dd-left">
+        <div class="dd-title">每日特惠</div>
+        <div class="dd-desc">精选商户限时折扣，天天有好价</div>
+      </div>
+      <div class="dd-right">
+        <span class="dd-btn">立即查看</span>
+      </div>
+    </div>
+
+    <div class="section-label">
+      <span class="section-en">business cooperation</span>
+      <span class="section-cn">商务合作</span>
+    </div>
+    <div class="bizcoop-entry" @click="go('/biz')">
+      <svg class="bce-illus" viewBox="0 0 120 100" fill="none" preserveAspectRatio="xMinYMid slice"><path d="M24 70 V30 l16 -12 16 12 v40"/><path d="M40 70 V42 h24 v28"/><path d="M72 70 V36 l16 -12 16 12 v34"/><path d="M16 74 h96"/></svg>
+      <div class="bce-icon-box">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+        </svg>
+      </div>
+      <div class="bce-left">
+        <div class="bce-title">商务合作</div>
+        <div class="bce-desc">场地看场 · 意向登记 · 团建定制</div>
+      </div>
+      <div class="bce-right">
+        <span class="bce-btn">立即咨询</span>
+      </div>
+    </div>
+
+    <div class="organizer-entry" @click="go('/organizer')">
+      <svg class="oe-illus" viewBox="0 0 120 100" fill="none" preserveAspectRatio="xMinYMid slice"><path d="M20 44 h20 v28 H20 z"/><path d="M50 44 h20 v28 H50 z"/><path d="M80 44 h20 v28 H80 z"/><path d="M16 72 h88"/><path d="M30 32 l5 -10 5 10 M50 32 l5 -10 5 10 M70 32 l5 -10 5 10"/></svg>
+      <div class="oe-icon-box">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/>
+        </svg>
+      </div>
+      <div class="oe-left">
+        <div class="oe-title">主理人入驻</div>
+        <div class="oe-desc">品牌入驻 · 活动排期 · 场地预定 · 结算查询</div>
+      </div>
+      <div class="oe-right">
+        <span class="oe-btn">立即报名</span>
+      </div>
+    </div>
+
+    <div class="section-label">
       <span class="section-en">recommended shops</span>
       <span class="section-cn">推荐商铺</span>
     </div>
@@ -194,6 +305,26 @@
           <div class="shop-meta">{{ s.floor }} · {{ s.category }}</div>
         </div>
         <svg class="shop-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+
+    <div class="section-label">
+      <span class="section-en">property service</span>
+      <span class="section-cn">物业报修与投诉</span>
+    </div>
+    <div class="property-entry" @click="go('/property')">
+      <svg class="pe-illus" viewBox="0 0 120 100" fill="none" preserveAspectRatio="xMinYMid slice"><path d="M20 70 V40 l20 -18 20 18 v30"/><path d="M36 70 V52 h16 v18"/><path d="M70 40 l10 -10 10 10"/><path d="M75 40 v20"/><path d="M14 78 h96"/></svg>
+      <div class="pe-icon-box">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+      </div>
+      <div class="pe-left">
+        <div class="pe-title">物业报修与投诉</div>
+        <div class="pe-desc">设施报修 · 投诉建议 · 进度查询</div>
+      </div>
+      <div class="pe-right">
+        <span class="pe-btn">立即报修</span>
       </div>
     </div>
   </div>
@@ -324,7 +455,8 @@ const arcDotY = computed(() => arcDot.value.y)
 onMounted(async () => {
   const urlParams = new URLSearchParams(window.location.search)
   const wxCode = urlParams.get('code')
-  if (wxCode) {
+  const wxState = urlParams.get('state')
+  if (wxCode && wxState === 'wxreg') {
     try {
       const wxRes = await http.post('/api/wx-auth', { code: wxCode })
       if (wxRes.ok && wxRes.user) {
@@ -333,11 +465,15 @@ onMounted(async () => {
         memberInfo.value = wxRes.user
         avatarUrl.value = wxRes.user.headimgurl || ''
         memberStore.setMember(buildMember(wxRes.user))
-        const cleanUrl = window.location.origin + window.location.pathname
-        window.history.replaceState({}, document.title, cleanUrl)
-        return
+      } else {
+        alert(wxRes.error || '微信授权失败，请重试或使用手机号登录')
       }
-    } catch {}
+    } catch {
+      alert('网络错误，微信授权失败，请使用手机号登录')
+    } finally {
+      const cleanUrl = window.location.origin + window.location.pathname
+      window.history.replaceState({}, document.title, cleanUrl)
+    }
   }
   try {
     const res = await http.get('/api/session')
@@ -353,8 +489,14 @@ onMounted(async () => {
             memberStore.setMember(buildMember({ ...res.user, ...minfo.member }))
           }
         } catch {}
-      } else if (res.user.display_name || res.user.headimgurl) {
-        // 仅有微信信息（无手机号）也写入，保证头像/昵称同步
+      } else {
+        // 仅有微信信息（无手机号）也加载后端会员数据
+        try {
+          const minfo2 = await http.post('/api/member/lookup', { phone: res.user.phone || '' })
+          if (minfo2.ok && minfo2.member) {
+            memberInfo.value = minfo2.member
+          }
+        } catch {}
         memberStore.setMember(buildMember(res.user))
       }
     }
@@ -367,29 +509,52 @@ async function handleLogin() {
   loading.value = true
   const p = phone.value.trim()
   try {
-    const lookup = await http.post('/api/member/lookup', { phone: p })
-    if (lookup.ok && lookup.member) {
-      const res = await http.post('/login', { username: 'm' + p, password: 'member' + p })
-      if (res.ok && res.user) {
+    // 检查是否已有微信会话
+    let wxSession = null
+    try {
+      const sess = await http.get('/api/session')
+      if (sess.ok && sess.user && sess.user.wx_openid) wxSession = sess.user
+    } catch {}
+
+    if (wxSession) {
+      // 微信已登录 → 绑定手机号到当前微信账号（不切换）
+      const bind = await http.post('/api/member/bind-phone', { phone: p })
+      if (bind.ok && bind.user) {
         loggedIn.value = true
-        memberInfo.value = lookup.member
-        displayName.value = res.user.display_name || '会员'
-        memberStore.setMember(buildMember({ phone: p, display_name: res.user.display_name, headimgurl: res.user.headimgurl, ...lookup.member }))
+        memberInfo.value = { points: bind.user.points, membership_level: bind.user.membership_level, discount: bind.user.discount }
+        displayName.value = bind.user.display_name || '会员'
+        memberStore.setMember(buildMember(bind.user))
       } else {
-        alert(res.error || '登录失败')
+        alert(bind.error || '绑定失败')
       }
     } else {
-      const reg = await http.post('/api/member/register', { phone: p, display_name: '会员' + p.slice(-4) })
-      if (reg.ok && reg.user) {
-        const res2 = await http.post('/login', { username: 'm' + p, password: 'member' + p })
-        if (res2.ok && res2.user) {
+      // 无微信会话 → 传统手机号登录
+      const lookup = await http.post('/api/member/lookup', { phone: p })
+      if (lookup.ok && lookup.member) {
+        const res = await http.post('/login', { username: 'm' + p, password: 'member' + p })
+        if (res.ok && res.user) {
           loggedIn.value = true
-          memberInfo.value = reg.user
-          displayName.value = '会员' + p.slice(-4)
-          memberStore.setMember(buildMember(reg.user))
+          memberInfo.value = lookup.member
+          displayName.value = res.user.display_name || '会员'
+          memberStore.setMember(buildMember({ phone: p, display_name: res.user.display_name, headimgurl: res.user.headimgurl, ...lookup.member }))
+        } else {
+          alert(res.error || '登录失败')
         }
       } else {
-        alert(reg.error || '注册失败')
+        const reg = await http.post('/api/member/register', { phone: p, display_name: '会员' + p.slice(-4) })
+        if (reg.ok && reg.user) {
+          const res2 = await http.post('/login', { username: 'm' + p, password: 'member' + p })
+          if (res2.ok && res2.user) {
+            loggedIn.value = true
+            memberInfo.value = reg.user
+            displayName.value = '会员' + p.slice(-4)
+            memberStore.setMember(buildMember(reg.user))
+          } else {
+            alert(res2.error || '登录失败')
+          }
+        } else {
+          alert(reg.error || '注册失败')
+        }
       }
     }
   } catch (e) {
@@ -400,6 +565,8 @@ async function handleLogin() {
 
 async function wxQuickRegister() {
   if (!agreed.value) return alert('请先同意用户协议')
+  if (!isWechat) return alert('请在微信中打开此页面使用一键注册')
+  loading.value = true
   const redirectUri = encodeURIComponent(window.location.origin + '/vue/')
   const wxAuthUrl = 'https://open.weixin.qq.com/connect/oauth2/authorize?appid=' + WX_APPID + '&redirect_uri=' + redirectUri + '&response_type=code&scope=snsapi_userinfo&state=wxreg#wechat_redirect'
   window.location.href = wxAuthUrl
@@ -622,9 +789,66 @@ function go(route) {
 .qlink-label { font-size: 12px; color: #FFFFFF; }
 
 /* ── 卡片多彩复古配色（无纹理） ── */
-.daily-deal, .biz-hero, .biz-card, .shop-card { position: relative; overflow: hidden; }
-.dd-illus, .biz-hero-illus, .biz-card-illus, .shop-illus { position: absolute; right: 0; top: 0; width: 64%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.28; stroke: #FFFFFF; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-.dd-icon-box, .dd-left, .dd-right, .biz-card-content, .shop-logo, .shop-info, .shop-arrow { position: relative; z-index: 2; }
+.daily-deal, .biz-hero, .biz-card, .shop-card, .organizer-entry, .bizcoop-entry, .property-entry, .community-entry { position: relative; overflow: hidden; }
+.dd-illus, .biz-hero-illus, .biz-card-illus, .shop-illus, .oe-illus, .bce-illus, .pe-illus, .cm-illus { position: absolute; right: 0; top: 0; width: 64%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.28; stroke: #FFFFFF; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.dd-icon-box, .dd-left, .dd-right, .biz-card-content, .shop-logo, .shop-info, .shop-arrow, .oe-icon-box, .oe-left, .oe-right, .bce-icon-box, .bce-left, .bce-right, .pe-icon-box, .pe-left, .pe-right, .cm-icon-box, .cm-left, .cm-right { position: relative; z-index: 2; }
+
+/* 激励中心 — 深橙红 · 高亮引流（原色 #FF7B2C 邻里圈，此处用 #E85D04 加深区分） */
+.points-entry { display: flex; align-items: center; gap: 12px; margin: 4px 16px 20px; padding: 14px 16px; min-height: 82px; box-sizing: border-box; background-color: #E85D04; border: 3px solid #C44A02; border-radius: 18px; box-shadow: 0 0 0 3px rgba(232,93,4,0.22), 0 6px 16px rgba(232,93,4,0.45), inset 0 1px 0 rgba(255,255,255,0.22); cursor: pointer; -webkit-tap-highlight-color: transparent; animation: pcGlow 2.6s ease-in-out infinite; }
+@keyframes pcGlow { 0%,100% { box-shadow: 0 0 0 3px rgba(232,93,4,0.18), 0 6px 16px rgba(232,93,4,0.40), inset 0 1px 0 rgba(255,255,255,0.22); } 50% { box-shadow: 0 0 0 6px rgba(232,93,4,0.10), 0 8px 22px rgba(232,93,4,0.60), inset 0 1px 0 rgba(255,255,255,0.22); } }
+.points-entry:active { opacity: 0.82; }
+.pc-illus { position: absolute; right: 0; top: 0; width: 64%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.30; fill: #FFFFFF; stroke: #FFFFFF; stroke-width: 1; }
+.pc-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 2; }
+.pc-icon-box svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
+.pc-left { flex: 1; min-width: 0; position: relative; z-index: 2; }
+.pc-title { font-size: var(--fs-body); font-weight: 700; color: #FFFFFF; margin-bottom: 2px; text-shadow: 0 -1px 1px rgba(0,0,0,0.45), 0 1px 1px rgba(255,255,255,0.25); }
+.pc-desc { font-size: var(--fs-secondary); color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 -1px 1px rgba(0,0,0,0.45), 0 1px 1px rgba(255,255,255,0.25); }
+.pc-right { flex-shrink: 0; position: relative; z-index: 2; }
+.pc-btn { display: inline-block; padding: 8px 20px; background-color: #FF7B2C; border: 3px solid #FF7B2C; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.35), inset -2px -2px 5px rgba(255,123,44,0.5); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+
+/* 邻里圈 — 品牌橙 */
+.community-entry { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; min-height: 82px; box-sizing: border-box; background-color: #FF7B2C; border: 3px solid #D95A1F; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.community-entry:active { opacity: 0.82; }
+.cm-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 2; }
+.cm-icon-box svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
+.cm-left { flex: 1; min-width: 0; position: relative; z-index: 2; }
+.cm-title { font-size: var(--fs-body); font-weight: 700; color: #FFFFFF; margin-bottom: 2px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.cm-desc { font-size: var(--fs-secondary); color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.cm-right { flex-shrink: 0; position: relative; z-index: 2; }
+.cm-btn { display: inline-block; padding: 8px 20px; background-color: #D95A1F; border: 3px solid #D95A1F; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(255,123,44,0.45); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+
+/* 物业报修与投诉 — 灰紫 */
+.property-entry { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; min-height: 82px; box-sizing: border-box; background-color: #8B8B90; border: 3px solid #6A6A6E; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.property-entry:active { opacity: 0.82; }
+.pe-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 2; }
+.pe-icon-box svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
+.pe-left { flex: 1; min-width: 0; position: relative; z-index: 2; }
+.pe-title { font-size: var(--fs-body); font-weight: 700; color: #FFFFFF; margin-bottom: 2px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.pe-desc { font-size: var(--fs-secondary); color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.pe-right { flex-shrink: 0; position: relative; z-index: 2; }
+.pe-btn { display: inline-block; padding: 8px 20px; background-color: #6A6A6E; border: 3px solid #6A6A6E; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(139,139,144,0.45); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+
+/* 商务合作 — 深灰绿 */
+.bizcoop-entry { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; min-height: 82px; box-sizing: border-box; background-color: #6B6E64; border: 3px solid #4E5049; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.bizcoop-entry:active { opacity: 0.82; }
+.bce-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 2; }
+.bce-icon-box svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
+.bce-left { flex: 1; min-width: 0; position: relative; z-index: 2; }
+.bce-title { font-size: var(--fs-body); font-weight: 700; color: #FFFFFF; margin-bottom: 2px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.bce-desc { font-size: var(--fs-secondary); color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.bce-right { flex-shrink: 0; position: relative; z-index: 2; }
+.bce-btn { display: inline-block; padding: 8px 20px; background-color: #4E5049; border: 3px solid #4E5049; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(107,110,100,0.45); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+
+/* 主理人入驻 — 品牌橙 */
+.organizer-entry { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; min-height: 82px; box-sizing: border-box; background-color: #C9823F; border: 3px solid #9A6428; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.organizer-entry:active { opacity: 0.82; }
+.oe-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 2; }
+.oe-icon-box svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
+.oe-left { flex: 1; min-width: 0; position: relative; z-index: 2; }
+.oe-title { font-size: var(--fs-body); font-weight: 700; color: #FFFFFF; margin-bottom: 2px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.oe-desc { font-size: var(--fs-secondary); color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.oe-right { flex-shrink: 0; position: relative; z-index: 2; }
+.oe-btn { display: inline-block; padding: 8px 20px; background-color: #9A6428; border: 3px solid #9A6428; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(201,130,63,0.45); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
 
 /* 每日特惠 — 金黄 */
 .daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background-color: #C4923A; border: 3px solid #9A7425; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); cursor: pointer; -webkit-tap-highlight-color: transparent; }

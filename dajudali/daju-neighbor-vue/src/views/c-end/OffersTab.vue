@@ -35,8 +35,8 @@
         <div class="c-divider"></div>
         <div class="c-right">
           <div class="c-amount"><span class="c-sign">¥</span>{{ c.amount }}</div>
-          <button class="c-btn" :class="{ claimed: c.claimed }"
-            @click="claim(c.id)">{{ c.claimed ? '已领取' : '立即领取' }}</button>
+          <button class="c-btn" :class="{ claimed: couponClaimed(c.id) }"
+            @click="claim(c.id)">{{ couponClaimed(c.id) ? '已领取' : '立即领取' }}</button>
         </div>
       </div>
       <div v-if="!filteredCoupons.length" class="empty-state">暂无优惠券</div>
@@ -49,9 +49,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getOffers } from '@/api'
+import { useMemberStore } from '@/stores/member'
 
+const memberStore = useMemberStore()
 const activeCat = ref('all')
 const loading = ref(true)
+const claimedIds = ref(new Set())
 const cats = [
   { key: 'all', label: '全部' },
   { key: 'food', label: '餐饮券' },
@@ -86,18 +89,32 @@ onMounted(async () => {
         expire: c.expire,
         amount: c.amount,
         cat: c.category,
-        claimed: false,
       }))
     } else {
-      coupons.value = FALLBACK_OFFERS.map(c => ({ ...c, claimed: false }))
+      coupons.value = FALLBACK_OFFERS.map(c => ({ ...c }))
     }
   } catch (e) {
-    console.error('Failed to load offers:', e)
-    coupons.value = FALLBACK_OFFERS.map(c => ({ ...c, claimed: false }))
-  } finally {
-    loading.value = false
+    coupons.value = FALLBACK_OFFERS.map(c => ({ ...c }))
   }
+  await loadClaimed()
+  loading.value = false
 })
+
+async function loadClaimed() {
+  const phone = memberStore.member?.phone
+  if (!phone) return
+  try {
+    const resp = await fetch('/api/member/my-coupons', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    })
+    const data = await resp.json()
+    if (data.ok && data.claimed_ids) {
+      claimedIds.value = new Set(data.claimed_ids)
+    }
+  } catch (e) {}
+}
 
 const filteredCoupons = computed(() =>
   activeCat.value === 'all' ? coupons.value : coupons.value.filter(c => c.cat === activeCat.value)
@@ -116,9 +133,25 @@ function catIcon(cat) {
 }
 
 function claim(id) {
+  const phone = memberStore.member?.phone
+  if (!phone) {
+    alert('请先登录/绑定手机号后再领取优惠券')
+    return
+  }
+  if (claimedIds.value.has(id)) return
   const c = coupons.value.find(x => x.id === id)
-  if (c && !c.claimed) c.claimed = true
+  if (!c) return
+  fetch('/api/member/claim-coupon', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, offer_id: id, shop_name: c.name, label: c.label, amount: c.amount })
+  }).then(r => r.json()).then(data => {
+    if (data.ok) claimedIds.value.add(id)
+    else alert(data.error || '领取失败')
+  }).catch(() => alert('网络错误'))
 }
+
+const couponClaimed = (id) => claimedIds.value.has(id)
 </script>
 
 <style scoped>

@@ -2,22 +2,32 @@
   <div class="orders-page">
     <div class="page-header">
       <h3>工单管理</h3>
-      <el-select v-model="statusFilter" placeholder="状态筛选" clearable @change="loadData" style="width: 150px;">
-        <el-option label="待处理" value="pending" />
-        <el-option label="处理中" value="processing" />
-        <el-option label="已完成" value="done" />
-        <el-option label="已关闭" value="closed" />
-      </el-select>
+      <div class="header-filters">
+        <el-select v-model="typeFilter" placeholder="类型筛选" clearable @change="reloadData" style="width: 150px;">
+          <el-option v-for="t in orderTypes" :key="t" :label="t" :value="t" />
+        </el-select>
+        <el-select v-model="statusFilter" placeholder="状态筛选" clearable @change="reloadData" style="width: 150px;">
+          <el-option label="待处理" value="pending" />
+          <el-option label="处理中" value="processing" />
+          <el-option label="已完成" value="done" />
+          <el-option label="已关闭" value="closed" />
+        </el-select>
+      </div>
     </div>
 
     <el-card shadow="never">
       <el-table :data="list" stripe v-loading="loading" style="width: 100%;">
         <el-table-column prop="id" label="工单号" width="80" />
         <el-table-column prop="type" label="类型" width="100" />
+        <el-table-column label="级别" width="90">
+          <template #default="{ row }">
+            <el-tag :type="priorityType(row.priority)" size="small">{{ priorityText(row.priority) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.status)">{{ row.status }}</el-tag>
+            <el-tag :type="statusType(row.status)">{{ statusTextMap[row.status] || row.status }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="160" />
@@ -57,7 +67,7 @@
           <el-descriptions-item label="类型">{{ currentOrder.type }}</el-descriptions-item>
           <el-descriptions-item label="标题">{{ currentOrder.title }}</el-descriptions-item>
           <el-descriptions-item label="状态">
-            <el-tag :type="statusType(currentOrder.status)">{{ currentOrder.status }}</el-tag>
+            <el-tag :type="statusType(currentOrder.status)">{{ statusTextMap[currentOrder.status] || currentOrder.status }}</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="创建时间" :span="2">{{ currentOrder.created_at }}</el-descriptions-item>
           <el-descriptions-item label="内容" :span="2">{{ currentOrder.content || currentOrder.description }}</el-descriptions-item>
@@ -77,8 +87,11 @@ const list = ref([])
 const total = ref(0)
 const page = ref(1)
 const statusFilter = ref('')
+const typeFilter = ref('')
 const detailVisible = ref(false)
 const currentOrder = ref(null)
+
+const orderTypes = ['场地看场', '商务意向', '团建定制', '入驻申请', '活动排期', '场地预定', '报修', '投诉建议', '人工客服', '升级工单', '预约', 'inquiry', 'venue_quotation', 'points_redeem']
 
 function statusType(status) {
   const map = {
@@ -90,11 +103,28 @@ function statusType(status) {
   return map[status] || 'info'
 }
 
+const statusTextMap = { pending: '待处理', processing: '处理中', done: '已完成', closed: '已关闭' }
+
+function priorityType(p) {
+  const map = { critical: 'danger', urgent: 'warning', normal: 'info', high: 'warning' }
+  return map[p] || 'info'
+}
+function priorityText(p) {
+  const map = { critical: '重大', urgent: '紧急', normal: '一般', high: '紧急' }
+  return map[p] || p || '一般'
+}
+
+function reloadData() {
+  page.value = 1
+  loadData()
+}
+
 async function loadData() {
   loading.value = true
   try {
     const params = { page: page.value, limit: 20 }
     if (statusFilter.value) params.status = statusFilter.value
+    if (typeFilter.value) params.type = typeFilter.value
 
     const res = await getOrders(params)
     if (res.ok) {
@@ -145,5 +175,10 @@ onMounted(loadData)
   margin: 0;
   color: #303133;
   font-size: 18px;
+}
+
+.header-filters {
+  display: flex;
+  gap: 8px;
 }
 </style>

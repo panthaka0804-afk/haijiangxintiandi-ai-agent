@@ -1,19 +1,17 @@
 [Unit]
-Description=海江新天地 小江AI Flask 后端
+Description=海江新天地 小江AI Flask 后端 (gunicorn 多 worker 容灾)
 After=network.target
 
 [Service]
-# 运行用户：按服务器实际情况调整（通常建一个专用低权限用户，如 www-data）
 User=www-data
 Group=www-data
-WorkingDirectory=/opt/haijiang/dajudali
-# 用 python3 直接跑 server.py（server.py 内部已绑定 0.0.0.0:8765）
-ExecStart=/usr/bin/python3 /opt/haijiang/dajudali/server.py
+WorkingDirectory=/opt/dajudali
+# gunicorn 多 worker：单个 worker 崩溃 master 自动拉起，其他 worker 继续服务（进程级容灾）
+# gthread worker 支持 SSE 流式响应并发；timeout 60s 防止慢请求卡死 worker
+ExecStart=/opt/dajudali/venv/bin/gunicorn --workers 3 --threads 4 --worker-class gthread --timeout 60 --graceful-timeout 30 --max-requests 2000 --max-requests-jitter 200 --bind 0.0.0.0:8765 server:app
 Restart=always
 RestartSec=5
-# 密钥由 server.py 同目录 .env 自动加载（python-dotenv），无需在此填写，也不会进仓库
-# 如需在此覆盖（优先级高于 .env），取消下行注释：
-# Environment=DS_API_KEY=xxxx
+# 密钥由 server.py 同目录 .env 自动加载（python-dotenv），无需在此填写
 Environment=PYTHONUNBUFFERED=1
 
 [Install]

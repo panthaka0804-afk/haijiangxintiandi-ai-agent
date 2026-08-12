@@ -21,7 +21,16 @@ const routes = [
   { path: '/redeem', name: 'redeem', component: () => import('@/views/c-end/RedeemPage.vue'), meta: { title: '积分商城 - 海江新天地' } },
   { path: '/redeem/:id', name: 'redeem-detail', component: () => import('@/views/c-end/RedeemDetail.vue'), meta: { title: '兑换详情 - 海江新天地' } },
   { path: '/member', name: 'member', component: () => import('@/views/c-end/MemberPortal.vue'), meta: { title: '会员中心 - 海江新天地' } },
+  { path: '/points', name: 'points', component: () => import('@/views/c-end/PointsCenter.vue'), meta: { title: '激励中心 - 海江新天地' } },
+  { path: '/community', name: 'community', component: () => import('@/views/c-end/CommunityFeed.vue'), meta: { title: '邻里圈 - 海江新天地' } },
+  { path: '/group-buy', name: 'group-buy', component: () => import('@/views/c-end/GroupBuy.vue'), meta: { title: '邻里拼团 - 海江新天地' } },
+  { path: '/interest-club', name: 'interest-club', component: () => import('@/views/c-end/InterestClub.vue'), meta: { title: '兴趣社 - 海江新天地' } },
   { path: '/merchant', name: 'merchant', component: () => import('@/views/c-end/MerchantPage.vue'), meta: { title: '招商合作 - 海江新天地' } },
+  { path: '/md', name: 'merchant-dashboard', component: () => import('@/views/c-end/MerchantDashboard.vue'), meta: { title: '商户看板 - 海江新天地' } },
+  { path: '/call-display', name: 'call-display', component: () => import('@/views/c-end/CallDisplay.vue'), meta: { title: '叫号大屏 - 海江新天地' } },
+  { path: '/organizer', name: 'organizer', component: () => import('@/views/c-end/OrganizerPortal.vue'), meta: { title: '主理人中心 - 海江新天地' } },
+  { path: '/biz', name: 'biz', component: () => import('@/views/c-end/BusinessCoop.vue'), meta: { title: '商务合作 - 海江新天地' } },
+  { path: '/property', name: 'property', component: () => import('@/views/c-end/PropertyService.vue'), meta: { title: '物业报修与投诉 - 海江新天地' } },
   // 旧独立登录页已并入首页，重定向避免黑屏
   { path: '/login', redirect: '/' },
   // 法律协议
@@ -50,13 +59,16 @@ const routes = [
       { path: 'shops', name: 'admin-shops', component: () => import('@/views/admin/ShopsAdmin.vue'), meta: { title: '商户管理' } },
       { path: 'offers', name: 'admin-offers', component: () => import('@/views/admin/OffersAdmin.vue'), meta: { title: '优惠券管理' } },
       { path: 'redeem', name: 'admin-redeem', component: () => import('@/views/admin/RedeemAdmin.vue'), meta: { title: '积分商城管理' } },
+      { path: 'human-chat', name: 'admin-human-chat', component: () => import('@/views/admin/HumanChatAdmin.vue'), meta: { title: '人工客服' } },
+      { path: 'feedback', name: 'admin-feedback', component: () => import('@/views/admin/FeedbackAdmin.vue'), meta: { title: '满意度评价' } },
+      { path: 'insights', name: 'admin-insights', component: () => import('@/views/admin/InsightsAdmin.vue'), meta: { title: '运营洞察' } },
     ],
   },
   { path: '/platform', name: 'platform', component: () => import('@/views/admin/Platform.vue'), meta: { title: '平台管理 - 海江新天地', requiresSuperAdmin: true } },
 ]
 
 const router = createRouter({
-  history: createWebHistory('/'),
+  history: createWebHistory('/vue/'),
   routes,
 })
 
