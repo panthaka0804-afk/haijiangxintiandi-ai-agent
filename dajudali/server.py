@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """海江新天地系统 - 社区商业AI客服"""
-import os, sys, json, sqlite3, hashlib, secrets, re, time, io, base64, subprocess, tempfile
+import os, sys, json, sqlite3, hashlib, secrets, re, time, io, base64, subprocess, tempfile, random
 from datetime import datetime, timedelta
 from functools import wraps
 import fcntl  # 跨进程文件锁，防止 gunicorn 多 worker 并发初始化抢 SQLite 写锁
@@ -2218,7 +2218,346 @@ def api_gift_quota():
     })
 
 
-# ========== 邻里帮悬赏墙 ==========
+# ============================ 便民生活：车主权益 / 预约 / 签到 / 会员日 ============================
+def _level_of(phone, conn=None):
+    own = conn is None
+    if own:
+        conn = get_db()
+    _ensure_tables(conn)
+    u = conn.execute('SELECT membership_level, temp_level, temp_level_expire FROM users WHERE phone=?', (phone,)).fetchone()
+    if own:
+        conn.close()
+    if not u:
+        return '普卡'
+    temp = u['temp_level'] or ''
+    exp = u['temp_level_expire'] or ''
+    if temp and exp:
+        try:
+            if datetime.strptime(exp[:10], '%Y-%m-%d') >= datetime.now():
+                return temp
+        except:
+            pass
+    return u['membership_level'] or '普卡'
+
+
+# ---------- 车主权益：月卡 / 充电包 ----------
+@app.route('/api/life/cards', methods=['POST'])
+def api_life_cards():
+    """我的车主权益（含低阶可购档位 + 高阶自动赠送状态）。"""
+    phone = (request.json or {}).get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='手机号缺失')
+    conn = get_db()
+    _ensure_tables(conn)
+    level = _level_of(phone, conn)
+    # 已持有的权益
+    owned = conn.execute(
+        "SELECT plan_type, status, end_date, auto_granted, granted_level FROM parking_monthly_cards WHERE phone=? AND status='active'",
+        (phone,)).fetchall()
+    owned_map = {r['plan_type']: dict(r) for r in owned}
+    # 低阶可购档位
+    plans = []
+    monthly_auto = _level_rank(level) >= _level_rank(AUTO_MONTHLY_LEVEL)
+    charging_auto = _level_rank(level) >= _level_rank(AUTO_CHARGING_LEVEL)
+    plans.append({
+        'plan_type': 'monthly', 'plan_name': '停车月卡', 'price': MONTHLY_CARD_PRICE,
+        'auto_granted': monthly_auto,
+        'owned': owned_map.get('monthly'),
+    })
+    plans.append({
+        'plan_type': 'charging', 'plan_name': '充电桩权益包', 'price': CHARGING_PACK_PRICE,
+        'auto_granted': charging_auto,
+        'owned': owned_map.get('charging'),
+    })
+    conn.close()
+    return jsonify(ok=True, data={'level': level, 'plans': plans, 'auto_monthly_level': AUTO_MONTHLY_LEVEL, 'auto_charging_level': AUTO_CHARGING_LEVEL})
+
+
+@app.route('/api/life/cards/subscribe', methods=['POST'])
+def api_life_cards_subscribe():
+    """付费订阅车主权益（低阶购买；高阶若未自动送也可补购）。"""
+    data = request.json or {}
+    phone = data.get('phone', '').strip()
+    plan_type = data.get('plan_type', '')
+    if not phone or plan_type not in ('monthly', 'charging'):
+        return jsonify(ok=False, error='参数不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    user = conn.execute('SELECT id, points FROM users WHERE phone=?', (phone,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify(ok=False, error='用户不存在，请先注册会员')
+    level = _level_of(phone, conn)
+    price = MONTHLY_CARD_PRICE if plan_type == 'monthly' else CHARGING_PACK_PRICE
+    plan_name = '停车月卡' if plan_type == 'monthly' else '充电桩权益包'
+    # 高阶自动赠送的，无需付费（若已赠送则提示）
+    auto = (_level_rank(level) >= _level_rank(AUTO_MONTHLY_LEVEL)) if plan_type == 'monthly' else (_level_rank(level) >= _level_rank(AUTO_CHARGING_LEVEL))
+    existing = conn.execute("SELECT id FROM parking_monthly_cards WHERE phone=? AND plan_type=? AND status='active'", (phone, plan_type)).fetchone()
+    if auto:
+        if existing:
+            conn.close()
+            return jsonify(ok=False, error='您已是%s，权益已自动生效' % AUTO_MONTHLY_LEVEL if plan_type == 'monthly' else '您已是%s，权益已自动生效' % AUTO_CHARGING_LEVEL)
+        # 自动赠送：写入 auto_granted 记录（不扣积分）
+        end = (datetime.now() + timedelta(days=30 * AUTO_GRANT_MONTHS)).strftime('%Y-%m-%d')
+        conn.execute(
+            "INSERT INTO parking_monthly_cards (phone, plan_type, plan_name, price, auto_granted, granted_level, status, start_date, end_date) VALUES (?,?,?,?,1,?, 'active',?,?)",
+            (phone, plan_type, plan_name, 0, level, datetime.now().strftime('%Y-%m-%d'), end))
+        conn.commit()
+        conn.close()
+        return jsonify(ok=True, data={'auto_granted': True, 'plan_type': plan_type, 'end_date': end, 'message': '权益已自动生效'})
+    # 付费购买：扣积分
+    if user['points'] < price:
+        conn.close()
+        return jsonify(ok=False, error='积分不足，需 %d 分' % price)
+    add_points(phone, -price, 'buy_card', '%s订阅' % plan_name, conn)
+    end = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
+    conn.execute(
+        "INSERT INTO parking_monthly_cards (phone, plan_type, plan_name, price, auto_granted, status, start_date, end_date) VALUES (?,?,?,?,0, 'active',?,?)",
+        (phone, plan_type, plan_name, price, datetime.now().strftime('%Y-%m-%d'), end))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'auto_granted': False, 'plan_type': plan_type, 'paid': price, 'end_date': end, 'message': '订阅成功'})
+
+
+# ---------- 母婴室预约 ----------
+@app.route('/api/life/nursery/slots', methods=['GET'])
+def api_life_nursery_slots():
+    return jsonify(ok=True, data={'slots': NURSERY_SLOTS})
+
+
+@app.route('/api/life/nursery/book', methods=['POST'])
+def api_life_nursery_book():
+    data = request.json or {}
+    phone = data.get('phone', '').strip()
+    name = data.get('name', '').strip()
+    date = data.get('date', '').strip()
+    slot = data.get('slot', '').strip()
+    note = data.get('note', '').strip()
+    if not phone or not date or not slot:
+        return jsonify(ok=False, error='请填写日期与时段')
+    conn = get_db()
+    _ensure_tables(conn)
+    # 同人同日同时段防重复
+    dup = conn.execute("SELECT id FROM nursery_bookings WHERE phone=? AND date=? AND slot=? AND status='booked'", (phone, date, slot)).fetchone()
+    if dup:
+        conn.close()
+        return jsonify(ok=False, error='该时段您已预约，请勿重复')
+    # 该时段总预约数防超（每时段最多4间）
+    cnt = conn.execute("SELECT COUNT(*) FROM nursery_bookings WHERE date=? AND slot=? AND status='booked'", (date, slot)).fetchone()[0]
+    if cnt >= 4:
+        conn.close()
+        return jsonify(ok=False, error='该时段母婴室已满，请换时段')
+    conn.execute("INSERT INTO nursery_bookings (phone, name, date, slot, note, status) VALUES (?,?,?,?,?, 'booked')",
+                 (phone, name, date, slot, note))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': '预约成功，凭手机尾号到场使用'})
+
+
+@app.route('/api/life/nursery/cancel', methods=['POST'])
+def api_life_nursery_cancel():
+    data = request.json or {}
+    phone = data.get('phone', '').strip()
+    bid = data.get('id')
+    if not phone or not bid:
+        return jsonify(ok=False, error='参数缺失')
+    conn = get_db()
+    _ensure_tables(conn)
+    r = conn.execute("UPDATE nursery_bookings SET status='cancelled' WHERE id=? AND phone=? AND status='booked'", (bid, phone))
+    conn.commit()
+    affected = r.rowcount
+    conn.close()
+    return jsonify(ok=affected > 0, data={'message': '已取消预约' if affected > 0 else '预约不存在或已处理'})
+
+
+@app.route('/api/life/nursery/mine', methods=['POST'])
+def api_life_nursery_mine():
+    phone = (request.json or {}).get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='手机号缺失')
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute("SELECT * FROM nursery_bookings WHERE phone=? ORDER BY date DESC, slot DESC", (phone,)).fetchall()
+    conn.close()
+    out = [{'id': r['id'], 'date': r['date'], 'slot': r['slot'], 'note': r['note'], 'status': r['status'], 'mask': r['phone'][-4:]} for r in rows]
+    return jsonify(ok=True, data=out)
+
+
+# ---------- 宠物托管预约 ----------
+@app.route('/api/life/pet/slots', methods=['GET'])
+def api_life_pet_slots():
+    return jsonify(ok=True, data={'slots': PET_SLOTS})
+
+
+@app.route('/api/life/pet/book', methods=['POST'])
+def api_life_pet_book():
+    data = request.json or {}
+    phone = data.get('phone', '').strip()
+    name = data.get('name', '').strip()
+    pet_type = data.get('pet_type', '狗').strip() or '狗'
+    pet_name = data.get('pet_name', '').strip()
+    date = data.get('date', '').strip()
+    slot = data.get('slot', '').strip()
+    note = data.get('note', '').strip()
+    if not phone or not date or not slot:
+        return jsonify(ok=False, error='请填写日期与时段')
+    conn = get_db()
+    _ensure_tables(conn)
+    dup = conn.execute("SELECT id FROM pet_boardings WHERE phone=? AND date=? AND slot=? AND status='booked'", (phone, date, slot)).fetchone()
+    if dup:
+        conn.close()
+        return jsonify(ok=False, error='该时段您已有宠物托管预约')
+    cnt = conn.execute("SELECT COUNT(*) FROM pet_boardings WHERE date=? AND slot=? AND status='booked'", (date, slot)).fetchone()[0]
+    if cnt >= 6:
+        conn.close()
+        return jsonify(ok=False, error='该时段托管位已满，请换时段')
+    conn.execute("INSERT INTO pet_boardings (phone, name, pet_type, pet_name, date, slot, note, status) VALUES (?,?,?,?,?,?,?, 'booked')",
+                 (phone, name, pet_type, pet_name, date, slot, note))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': '托管预约成功，请按时送达宠物'})
+
+
+@app.route('/api/life/pet/cancel', methods=['POST'])
+def api_life_pet_cancel():
+    data = request.json or {}
+    phone = data.get('phone', '').strip()
+    bid = data.get('id')
+    if not phone or not bid:
+        return jsonify(ok=False, error='参数缺失')
+    conn = get_db()
+    _ensure_tables(conn)
+    r = conn.execute("UPDATE pet_boardings SET status='cancelled' WHERE id=? AND phone=? AND status='booked'", (bid, phone))
+    conn.commit()
+    affected = r.rowcount
+    conn.close()
+    return jsonify(ok=affected > 0, data={'message': '已取消托管预约' if affected > 0 else '预约不存在或已处理'})
+
+
+@app.route('/api/life/pet/mine', methods=['POST'])
+def api_life_pet_mine():
+    phone = (request.json or {}).get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='手机号缺失')
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute("SELECT * FROM pet_boardings WHERE phone=? ORDER BY date DESC, slot DESC", (phone,)).fetchall()
+    conn.close()
+    out = [{'id': r['id'], 'pet_type': r['pet_type'], 'pet_name': r['pet_name'], 'date': r['date'], 'slot': r['slot'], 'note': r['note'], 'status': r['status'], 'mask': r['phone'][-4:]} for r in rows]
+    return jsonify(ok=True, data=out)
+
+
+# ---------- 每日签到抽奖 ----------
+@app.route('/api/life/checkin/status', methods=['POST'])
+def api_life_checkin_status():
+    phone = (request.json or {}).get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='手机号缺失')
+    today = datetime.now().strftime('%Y-%m-%d')
+    conn = get_db()
+    _ensure_tables(conn)
+    today_row = conn.execute("SELECT * FROM daily_checkins WHERE phone=? AND checkin_date=?", (phone, today)).fetchone()
+    # 连续天数（向前数）
+    streak = 0
+    d = datetime.now()
+    while True:
+        ds = d.strftime('%Y-%m-%d')
+        ex = conn.execute("SELECT id FROM daily_checkins WHERE phone=? AND checkin_date=?", (phone, ds)).fetchone()
+        if not ex:
+            break
+        streak += 1
+        d = d - timedelta(days=1)
+    total = conn.execute("SELECT COUNT(*) FROM daily_checkins WHERE phone=?", (phone,)).fetchone()[0]
+    conn.close()
+    return jsonify(ok=True, data={
+        'today_checked': bool(today_row),
+        'today_points': today_row['points_gained'] if today_row else 0,
+        'today_coupon': today_row['coupon_label'] if today_row else '',
+        'streak': streak,
+        'total': total,
+    })
+
+
+@app.route('/api/life/checkin', methods=['POST'])
+def api_life_checkin():
+    phone = (request.json or {}).get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='手机号缺失')
+    today = datetime.now().strftime('%Y-%m-%d')
+    conn = get_db()
+    _ensure_tables(conn)
+    existing = conn.execute("SELECT id FROM daily_checkins WHERE phone=? AND checkin_date=?", (phone, today)).fetchone()
+    if existing:
+        conn.close()
+        return jsonify(ok=False, error='今日已签到，明天再来')
+    # 随机积分
+    pts = random.randint(CHECKIN_MIN_POINTS, CHECKIN_MAX_POINTS)
+    coupon_label = ''
+    coupon_offer_id = 0
+    won = random.random() < CHECKIN_COUPON_PROB
+    if won:
+        c = random.choice(CHECKIN_COUPON_POOL)
+        coupon_label = c['label']
+        coupon_offer_id = c['offer_id']
+        # 写入 coupon_claims（负 offer_id 规避 UNIQUE 冲突；前端按 label/amount 展示）
+        conn.execute("INSERT OR IGNORE INTO coupon_claims (user_phone, offer_id, shop_name, label, amount) VALUES (?,?,?,?,?)",
+                     (phone, coupon_offer_id, c['shop_name'], c['label'], c['amount']))
+    add_points(phone, pts, 'daily_checkin', '每日签到', conn)
+    conn.execute("INSERT INTO daily_checkins (phone, checkin_date, points_gained, coupon_offer_id, coupon_label) VALUES (?,?,?,?,?)",
+                 (phone, today, pts, coupon_offer_id, coupon_label))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'points_gained': pts, 'coupon_won': won, 'coupon_label': coupon_label, 'message': '签到成功'})
+
+
+# ---------- 周三会员日发券 ----------
+@app.route('/api/life/member-day/status', methods=['POST'])
+def api_life_member_day_status():
+    phone = (request.json or {}).get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='手机号缺失')
+    now = datetime.now()
+    week_key = now.strftime('%Y-W%W')
+    conn = get_db()
+    _ensure_tables(conn)
+    row = conn.execute("SELECT * FROM member_day_awards WHERE phone=? AND week_key=?", (phone, week_key)).fetchone()
+    # 本周三是否到来（用于前端提示）
+    conn.close()
+    return jsonify(ok=True, data={
+        'week_key': week_key,
+        'claimed': bool(row),
+        'coupon_label': row['coupon_label'] if row else '',
+        'coupon_amount': row['coupon_amount'] if row else 0,
+        'coupons': MEMBER_DAY_COUPONS,
+    })
+
+
+@app.route('/api/life/member-day/claim', methods=['POST'])
+def api_life_member_day_claim():
+    phone = (request.json or {}).get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='手机号缺失')
+    now = datetime.now()
+    weekday = now.weekday()  # 0=周一 ... 2=周三
+    if weekday != 2:
+        return jsonify(ok=False, error='会员日为每周三，周三再来领取')
+    week_key = now.strftime('%Y-W%W')
+    conn = get_db()
+    _ensure_tables(conn)
+    existing = conn.execute("SELECT id FROM member_day_awards WHERE phone=? AND week_key=?", (phone, week_key)).fetchone()
+    if existing:
+        conn.close()
+        return jsonify(ok=False, error='本周会员日券已领取')
+    c = random.choice(MEMBER_DAY_COUPONS)
+    conn.execute("INSERT OR IGNORE INTO coupon_claims (user_phone, offer_id, shop_name, label, amount) VALUES (?,?,?,?,?)",
+                 (phone, c['offer_id'], c['shop_name'], c['label'], c['amount']))
+    conn.execute("INSERT INTO member_day_awards (phone, week_key, coupon_offer_id, coupon_label, coupon_amount) VALUES (?,?,?,?,?)",
+                 (phone, week_key, c['offer_id'], c['label'], c['amount']))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'coupon_label': c['label'], 'coupon_amount': c['amount'], 'shop_name': c['shop_name'], 'message': '会员日专享券已到账'})
+
+
 def _gen_help_no():
     """生成悬赏编号 HJ + 时间简短串（避免与已有撞号）。"""
     return 'HJ' + datetime.now().strftime('%y%m%d%H%M%S') + uuid.uuid4().hex[:3].upper()
@@ -4034,6 +4373,67 @@ def _ensure_tables(conn):
         cancelled_at TIMESTAMP DEFAULT NULL
     )''')
 
+    # ========== 便民生活：车主权益（停车月卡 / 充电桩权益包） ==========
+    conn.execute('''CREATE TABLE IF NOT EXISTS parking_monthly_cards (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        phone TEXT NOT NULL,
+        plan_type TEXT NOT NULL,          -- monthly(月卡) / charging(充电包)
+        plan_name TEXT NOT NULL,
+        price INTEGER NOT NULL,
+        auto_granted INTEGER DEFAULT 0,
+        granted_level TEXT DEFAULT '',
+        status TEXT DEFAULT 'active',
+        start_date TEXT DEFAULT '',
+        end_date TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    conn.execute('''CREATE TABLE IF NOT EXISTS nursery_bookings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        phone TEXT NOT NULL,
+        name TEXT DEFAULT '',
+        date TEXT NOT NULL,
+        slot TEXT NOT NULL,
+        note TEXT DEFAULT '',
+        status TEXT DEFAULT 'booked',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    conn.execute('''CREATE TABLE IF NOT EXISTS pet_boardings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        phone TEXT NOT NULL,
+        name TEXT DEFAULT '',
+        pet_type TEXT DEFAULT '狗',
+        pet_name TEXT DEFAULT '',
+        date TEXT NOT NULL,
+        slot TEXT NOT NULL,
+        note TEXT DEFAULT '',
+        status TEXT DEFAULT 'booked',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    conn.execute('''CREATE TABLE IF NOT EXISTS daily_checkins (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        phone TEXT NOT NULL,
+        checkin_date TEXT NOT NULL,
+        points_gained INTEGER DEFAULT 0,
+        coupon_offer_id INTEGER DEFAULT 0,
+        coupon_label TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(phone, checkin_date)
+    )''')
+
+    conn.execute('''CREATE TABLE IF NOT EXISTS member_day_awards (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        phone TEXT NOT NULL,
+        week_key TEXT NOT NULL,
+        coupon_offer_id INTEGER DEFAULT 0,
+        coupon_label TEXT DEFAULT '',
+        coupon_amount INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(phone, week_key)
+    )''')
+
     conn.commit()
     _init_done = True
     _release_init_flock()
@@ -4056,6 +4456,37 @@ HELP_MIN_REWARD = 10         # 单次悬赏最低赏金
 HELP_MAX_REWARD = 500        # 单次悬赏最高赏金
 HELP_SYSTEM_BONUS = 20       # 系统额外补贴（接单人完成确认后额外得，平台激励互助）
 HELP_EXPIRE_HOURS = 48       # 悬赏墙默认展示有效期（小时），超过则视为过期不可抢
+
+# ========== 便民生活：车主权益 ==========
+# 计划档位（低阶付费买 / 高阶自动送）。price 用积分示意抵扣金额。
+MONTHLY_CARD_PRICE = 300       # 停车月卡 300 积分/月
+CHARGING_PACK_PRICE = 200      # 充电桩权益包 200 积分/月（含每月免费充电额度）
+# 高阶会员自动送的等级门槛（两者都要：高阶自动送，低阶付费买）
+AUTO_MONTHLY_LEVEL = '金卡'    # 金卡及以上自动送停车月卡
+AUTO_CHARGING_LEVEL = '钻石卡' # 钻石卡自动送充电桩权益包
+# 自动赠送权益的有效期（月）
+AUTO_GRANT_MONTHS = 12
+
+# ========== 便民生活：预约时段 ==========
+NURSERY_SLOTS = ['09:00-11:00', '11:00-13:00', '13:00-15:00', '15:00-17:00', '17:00-19:00', '19:00-21:00']
+PET_SLOTS = ['09:00-12:00', '12:00-15:00', '15:00-18:00', '18:00-21:00']
+
+# ========== 便民生活：签到抽奖 ==========
+CHECKIN_MIN_POINTS = 5
+CHECKIN_MAX_POINTS = 50
+CHECKIN_COUPON_PROB = 0.15     # 抽中优惠券概率
+# 签到可能抽中的券池（用负 offer_id 写入 coupon_claims 规避 UNIQUE 冲突；前端按 label/amount 展示）
+CHECKIN_COUPON_POOL = [
+    {'offer_id': -101, 'shop_name': '瑞幸咖啡', 'label': '签到专享 9.9 元咖啡券', 'amount': 10},
+    {'offer_id': -102, 'shop_name': '霸王茶姬', 'label': '签到专享 指定饮品买一赠一', 'amount': 18},
+    {'offer_id': -103, 'shop_name': '小杨生煎', 'label': '签到专享 买单立减 8 元', 'amount': 8},
+]
+
+# ========== 便民生活：周三会员日发券 ==========
+MEMBER_DAY_COUPONS = [
+    {'offer_id': -201, 'shop_name': '星巴克', 'label': '会员日专享 中杯拿铁买一赠一', 'amount': 33},
+    {'offer_id': -202, 'shop_name': '海江烘焙坊', 'label': '会员日专享 面包 8 折券', 'amount': 12},
+]
 
 
 def effective_level(phone, conn=None):

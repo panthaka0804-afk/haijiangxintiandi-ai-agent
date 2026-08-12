@@ -346,6 +346,54 @@ export function cancelNeighborHelp(phone, helpNo) {
   })
 }
 
+// ========== 便民生活：车主权益 / 预约 / 签到 / 会员日 ==========
+export function getLifeCards(phone) {
+  return request('/api/life/cards', { method: 'POST', body: JSON.stringify({ phone }) })
+}
+export function subscribeLifeCard(phone, planType) {
+  return request('/api/life/cards/subscribe', { method: 'POST', body: JSON.stringify({ phone, plan_type: planType }) })
+}
+// 母婴室
+export function getNurserySlots() {
+  return request('/api/life/nursery/slots', { method: 'GET' })
+}
+export function bookNursery(phone, payload) {
+  return request('/api/life/nursery/book', { method: 'POST', body: JSON.stringify({ phone, ...payload }) })
+}
+export function cancelNursery(phone, id) {
+  return request('/api/life/nursery/cancel', { method: 'POST', body: JSON.stringify({ phone, id }) })
+}
+export function getMyNursery(phone) {
+  return request('/api/life/nursery/mine', { method: 'POST', body: JSON.stringify({ phone }) })
+}
+// 宠物托管
+export function getPetSlots() {
+  return request('/api/life/pet/slots', { method: 'GET' })
+}
+export function bookPet(phone, payload) {
+  return request('/api/life/pet/book', { method: 'POST', body: JSON.stringify({ phone, ...payload }) })
+}
+export function cancelPet(phone, id) {
+  return request('/api/life/pet/cancel', { method: 'POST', body: JSON.stringify({ phone, id }) })
+}
+export function getMyPet(phone) {
+  return request('/api/life/pet/mine', { method: 'POST', body: JSON.stringify({ phone }) })
+}
+// 签到抽奖
+export function getCheckinStatus(phone) {
+  return request('/api/life/checkin/status', { method: 'POST', body: JSON.stringify({ phone }) })
+}
+export function doCheckin(phone) {
+  return request('/api/life/checkin', { method: 'POST', body: JSON.stringify({ phone }) })
+}
+// 周三会员日
+export function getMemberDayStatus(phone) {
+  return request('/api/life/member-day/status', { method: 'POST', body: JSON.stringify({ phone }) })
+}
+export function claimMemberDay(phone) {
+  return request('/api/life/member-day/claim', { method: 'POST', body: JSON.stringify({ phone }) })
+}
+
 // 通用 HTTP 客户端（ActivityDetail 等使用）
 const http = {
   get: (url, opts) => {

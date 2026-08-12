@@ -196,6 +196,22 @@
       </div>
     </div>
 
+    <div class="points-entry ls-home-entry" @click="$router.push('/life')">
+      <svg class="pc-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><rect x="34" y="14" width="52" height="34" rx="6" opacity="0.28"/><path d="M30 30 h60" opacity="0.25"/></svg>
+      <div class="pc-icon-box">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12h4l3-9 4 18 3-9h4"/>
+        </svg>
+      </div>
+      <div class="pc-left">
+        <div class="pc-title">便民生活</div>
+        <div class="pc-desc">月卡充电 · 母婴室 · 宠物托管</div>
+      </div>
+      <div class="pc-right">
+        <span class="pc-btn">去办事</span>
+      </div>
+    </div>
+
     <div class="section-label">
       <span class="section-en">service</span>
       <span class="section-cn">服务</span>
@@ -665,6 +681,7 @@ const entries = [
   { label: '活动报名', route: 'activities', icon: '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>', active: false, bg: '#6B6E64', bd: '#4E5049' },
   { label: '停车缴费', route: 'parking', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/>', active: false, bg: '#D4A59A', bd: '#A67D72' },
   { label: '邻里帮', route: 'neighbor-help', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', active: false, bg: '#C4923A', bd: '#8A5E12' },
+  { label: '便民生活', route: 'life', icon: '<path d="M3 12h4l3-9 4 18 3-9h4"/>', active: false, bg: '#8B8B90', bd: '#6A6A6E' },
 ]
 
 const shops = computed(() => allShops.slice(0, 6))
@@ -685,6 +702,8 @@ function go(route) {
     else if (route === 'offers') router.push('/offers')
     else if (route === 'activities') router.push('/activities')
     else if (route === 'parking') router.push('/parking')
+    else if (route === 'neighbor-help') router.push('/neighbor-help')
+    else if (route === 'life') router.push('/life')
     else if (route.startsWith('/')) router.push(route)
   }
 }
@@ -817,6 +836,8 @@ function go(route) {
 .points-entry:active { opacity: 0.82; }
 .nh-home-entry { background-color: #C4923A; border-color: #8A5E12; box-shadow: 0 0 0 3px rgba(196,146,58,0.22), 0 6px 16px rgba(196,146,58,0.45), inset 0 1px 0 rgba(255,255,255,0.22); }
 .nh-home-entry .pc-btn { background-color: #FF7B2C; border-color: #FF7B2C; }
+.ls-home-entry { background-color: #6B6E64; border-color: #4E5049; box-shadow: 0 0 0 3px rgba(107,110,100,0.22), 0 6px 16px rgba(107,110,100,0.45), inset 0 1px 0 rgba(255,255,255,0.22); }
+.ls-home-entry .pc-btn { background-color: #FF7B2C; border-color: #FF7B2C; }
 .pc-illus { position: absolute; right: 0; top: 0; width: 64%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.30; fill: #FFFFFF; stroke: #FFFFFF; stroke-width: 1; }
 .pc-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 2; }
 .pc-icon-box svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }

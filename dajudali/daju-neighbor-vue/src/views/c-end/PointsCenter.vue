@@ -23,14 +23,32 @@
         <div class="growth-hint" v-else>已是最高等级，尊享全部权益</div>
       </div>
 
-      <!-- 签到区 -->
-      <div class="sign-card">
+      <!-- 签到抽奖区 -->
+      <div class="sign-card" :style="checkinStyle">
         <div class="sign-info">
-          <div class="sign-title">每日签到</div>
-          <div class="sign-days">已连续签到 <b>{{ consecutiveDays }}</b> 天 · 连续 7 天额外 +20</div>
+          <div class="sign-title">每日签到抽奖 🎁</div>
+          <div class="sign-days">已连续签到 <b>{{ consecutiveDays }}</b> 天 · 累计 {{ totalCheckin }} 天 · 随机 5–50 分，还有机会抽券</div>
+          <div v-if="lastCoupon" class="sign-coupon">🎉 上次抽中：{{ lastCoupon }}</div>
         </div>
         <button class="sign-btn" :class="{ signed: signedToday }" :disabled="signedToday" @click="doSign">
-          {{ signedToday ? '今日已签' : '签到 +5' }}
+          {{ signedToday ? '今日已签' : '签到抽奖' }}
+        </button>
+      </div>
+
+      <!-- 周三会员日 -->
+      <div class="memberday-card" :style="memberDayStyle">
+        <div class="md-info">
+          <div class="md-title">周三会员日 ☕🥐</div>
+          <div class="md-sub">
+            <template v-if="memberDay.claimed">本周已领：<b>{{ memberDay.coupon_label }}</b></template>
+            <template v-else-if="isWednesday">星巴克 / 烘焙特价券待领取</template>
+            <template v-else>每周三 0 点开抢，星巴克·烘焙专属券</template>
+          </div>
+          <div v-if="memberDay.claimed" class="md-got">已存入「我的券」</div>
+        </div>
+        <button class="md-btn" :class="{ got: memberDay.claimed, off: !isWednesday && !memberDay.claimed }"
+          :disabled="memberDay.claimed || !isWednesday" @click="claimMd">
+          {{ memberDay.claimed ? '已领取' : (isWednesday ? '立即领取' : '周三再来') }}
         </button>
       </div>
 
@@ -67,7 +85,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useMemberStore } from '@/stores/member'
-import { showToast } from 'vant'
+import { showToast, showSuccessToast, showFailToast } from 'vant'
+import { getCheckinStatus, doCheckin, getMemberDayStatus, claimMemberDay } from '@/api'
 
 const memberStore = useMemberStore()
 
@@ -76,8 +95,16 @@ const points = ref(0)
 const level = ref('普卡')
 const signedToday = ref(false)
 const consecutiveDays = ref(0)
+const totalCheckin = ref(0)
+const lastCoupon = ref('')
 const badges = ref([])
 const logs = ref([])
+
+// 多彩卡片配色（对齐首页）
+const checkinStyle = { background: 'linear-gradient(135deg,#C4923A,#A8761F)', borderColor: '#7E5413' }
+const memberDayStyle = { background: 'linear-gradient(135deg,#9B4A3E,#7A342B)', borderColor: '#5C241D' }
+const isWednesday = computed(() => new Date().getDay() === 3)
+const memberDay = ref({ claimed: false, coupon_label: '' })
 
 const theme = computed(() => memberStore.levelTheme(level.value))
 const earnedCount = computed(() => badges.value.filter(b => b.earned).length)
@@ -101,10 +128,12 @@ const progress = computed(() => {
 async function load() {
   if (!phone.value) return
   try {
-    const [statusRes, badgeRes, logRes] = await Promise.all([
+    const [statusRes, badgeRes, logRes, checkinRes, mdRes] = await Promise.all([
       fetch(`/api/community/sign-status?phone=${phone.value}`).then(r => r.json()),
       fetch(`/api/community/badges?phone=${phone.value}`).then(r => r.json()),
       fetch(`/api/community/points/log?phone=${phone.value}`).then(r => r.json()),
+      getCheckinStatus(phone.value),
+      getMemberDayStatus(phone.value),
     ])
     if (statusRes.ok) {
       signedToday.value = statusRes.data.signed_today
@@ -112,6 +141,14 @@ async function load() {
     }
     if (badgeRes.ok) badges.value = badgeRes.data
     if (logRes.ok) logs.value = logRes.data
+    if (checkinRes.ok) {
+      const d = checkinRes.data
+      signedToday.value = d.today_checked
+      consecutiveDays.value = d.streak
+      totalCheckin.value = d.total
+      lastCoupon.value = d.today_coupon || ''
+    }
+    if (mdRes.ok) memberDay.value = { claimed: mdRes.data.claimed, coupon_label: mdRes.data.coupon_label }
   } catch (e) {
     console.error(e)
   }
@@ -120,26 +157,36 @@ async function load() {
 async function doSign() {
   if (signedToday.value) return
   try {
-    const res = await fetch('/api/community/sign-in', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: phone.value }),
-    }).then(r => r.json())
+    const res = await doCheckin(phone.value)
     if (res.ok) {
       const d = res.data
-      points.value = d.points
-      level.value = d.level || level.value
+      points.value = (points.value || 0) + (d.points_gained || 0)
       signedToday.value = true
-      consecutiveDays.value = d.consecutive_days
-      showToast(`签到成功 +${d.award} 成长值`)
-      if (d.level_up) showToast(`恭喜升级为${d.level_up}！`)
-      if (d.new_badges && d.new_badges.length) showToast(`获得新徽章！`)
+      consecutiveDays.value = (consecutiveDays.value || 0) + 1
+      totalCheckin.value = (totalCheckin.value || 0) + 1
+      lastCoupon.value = d.coupon_won ? d.coupon_label : ''
+      showSuccessToast(d.coupon_won ? (`签到 +${d.points_gained}分，抽中：${d.coupon_label}`) : (`签到 +${d.points_gained}分`))
       load()
     } else {
-      showToast(res.error || '签到失败')
+      showFailToast(res.error || '签到失败')
     }
   } catch (e) {
-    showToast('网络错误')
+    showFailToast('网络错误')
+  }
+}
+
+async function claimMd() {
+  if (memberDay.value.claimed || !isWednesday.value) return
+  try {
+    const res = await claimMemberDay(phone.value)
+    if (res.ok) {
+      memberDay.value = { claimed: true, coupon_label: res.data.coupon_label }
+      showSuccessToast('会员日专享券已到账：' + res.data.coupon_label)
+    } else {
+      showFailToast(res.error || '领取失败')
+    }
+  } catch (e) {
+    showFailToast('网络错误')
   }
 }
 
@@ -175,6 +222,16 @@ onMounted(() => {
 .sign-days b { color: #FF7B2C; }
 .sign-btn { padding: 12px 22px; border-radius: 22px; border: none; background: linear-gradient(135deg, #FF7B2C, #E85D04); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
 .sign-btn.signed { background: #2e2e2e; color: #888; cursor: default; }
+.sign-coupon { font-size: 12px; color: #FFF3D6; margin-top: 6px; }
+
+.memberday-card { margin: 0 16px 16px; padding: 16px; border: 3px solid #5C241D; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,.20), 0 3px 10px rgba(0,0,0,.35); }
+.md-title { font-size: 16px; color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.md-sub { font-size: 12px; color: rgba(255,255,255,.92); margin-top: 4px; }
+.md-sub b { color: #FFF3D6; }
+.md-got { font-size: 11px; color: #FFF3D6; margin-top: 4px; }
+.md-btn { padding: 12px 20px; border-radius: 22px; border: none; background: #fff; color: #7A342B; font-size: 14px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+.md-btn.got { background: rgba(255,255,255,.25); color: #fff; cursor: default; }
+.md-btn.off { background: rgba(255,255,255,.18); color: rgba(255,255,255,.8); }
 
 .badge-section { margin: 0 16px 16px; }
 .section-title { font-size: 16px; color: #fff; font-weight: 600; margin-bottom: 12px; }
