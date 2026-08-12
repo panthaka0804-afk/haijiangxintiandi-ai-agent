@@ -161,6 +161,18 @@ async function join(g) {
 .gb-btn { width: 100%; height: 44px; border: 1px solid #8A5E12; border-radius: 12px; background: #9A7425; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
 .gb-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(196,146,58,.35); }
 .gb-btn.joined { background: rgba(0,0,0,0.30); border-color: rgba(255,255,255,0.30); color: rgba(255,255,255,0.8); box-shadow: inset 3px 3px 7px rgba(0,0,0,.5), inset -2px -2px 5px rgba(255,255,255,.08); }
+/* 按钮跟随卡片色系（可点态） */
+.gb-c-0 .gb-btn { background: #8A5E12; border-color: #6E4A0E; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
+.gb-c-1 .gb-btn { background: #A87C48; border-color: #87613A; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(201,149,108,.45); }
+.gb-c-2 .gb-btn { background: #5C241D; border-color: #451B16; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(155,74,62,.45); }
+.gb-c-3 .gb-btn { background: #54545A; border-color: #3F3F44; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(139,139,144,.45); }
+.gb-c-4 .gb-btn { background: #3C3E36; border-color: #2C2E28; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(107,110,100,.45); }
+/* 按钮跟随卡片色系（已参团态 · 同色系压暗） */
+.gb-c-0 .gb-btn.joined { background: #6E4A0E; border-color: rgba(255,255,255,.30); }
+.gb-c-1 .gb-btn.joined { background: #87613A; border-color: rgba(255,255,255,.30); }
+.gb-c-2 .gb-btn.joined { background: #451B16; border-color: rgba(255,255,255,.30); }
+.gb-c-3 .gb-btn.joined { background: #3F3F44; border-color: rgba(255,255,255,.30); }
+.gb-c-4 .gb-btn.joined { background: #2C2E28; border-color: rgba(255,255,255,.30); }
 .gb-expire { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 8px; text-align: center; }
 .gb-tip { font-size: 12px; color: rgba(255,255,255,0.45); margin: 16px; line-height: 1.6; text-align: center; }
 .gb-loading, .gb-empty { text-align: center; color: rgba(255,255,255,0.5); padding: 30px 0; font-size: 14px; }
