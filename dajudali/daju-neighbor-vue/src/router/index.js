@@ -25,6 +25,7 @@ const routes = [
   { path: '/community', name: 'community', component: () => import('@/views/c-end/CommunityFeed.vue'), meta: { title: '邻里圈 - 海江新天地' } },
   { path: '/group-buy', name: 'group-buy', component: () => import('@/views/c-end/GroupBuy.vue'), meta: { title: '邻里拼团 - 海江新天地' } },
   { path: '/interest-club', name: 'interest-club', component: () => import('@/views/c-end/InterestClub.vue'), meta: { title: '兴趣社 - 海江新天地' } },
+  { path: '/neighbor-help', name: 'neighbor-help', component: () => import('@/views/c-end/NeighborHelp.vue'), meta: { title: '邻里帮 - 海江新天地' } },
   { path: '/merchant', name: 'merchant', component: () => import('@/views/c-end/MerchantPage.vue'), meta: { title: '招商合作 - 海江新天地' } },
   { path: '/md', name: 'merchant-dashboard', component: () => import('@/views/c-end/MerchantDashboard.vue'), meta: { title: '商户看板 - 海江新天地' } },
   { path: '/call-display', name: 'call-display', component: () => import('@/views/c-end/CallDisplay.vue'), meta: { title: '叫号大屏 - 海江新天地' } },

@@ -179,6 +179,23 @@
       </div>
     </div>
 
+    <!-- 邻里帮 banner（悬赏墙，金黄突出） -->
+    <div class="points-entry nh-home-entry" @click="$router.push('/neighbor-help')">
+      <svg class="pc-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><circle cx="32" cy="30" r="12" opacity="0.35"/><path d="M52 22 h40 a6 6 0 0 1 6 6 v6 a6 6 0 0 1 -6 6 H58 l-10 8 v-8 h-4 a6 6 0 0 1 -6 -6 V28 a6 6 0 0 1 6 -6 z" opacity="0.30"/></svg>
+      <div class="pc-icon-box">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      </div>
+      <div class="pc-left">
+        <div class="pc-title">邻里帮</div>
+        <div class="pc-desc">发个小忙 · 邻居抢单赚积分</div>
+      </div>
+      <div class="pc-right">
+        <span class="pc-btn">去帮忙</span>
+      </div>
+    </div>
+
     <div class="section-label">
       <span class="section-en">service</span>
       <span class="section-cn">服务</span>
@@ -647,6 +664,7 @@ const entries = [
   { label: '优惠促销', route: 'offers', icon: '<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/><line x1="12" y1="11" x2="12" y2="21"/><polyline points="4 7 12 11 20 7"/>', active: false, bg: '#C9956C', bd: '#A87C48' },
   { label: '活动报名', route: 'activities', icon: '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>', active: false, bg: '#6B6E64', bd: '#4E5049' },
   { label: '停车缴费', route: 'parking', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/>', active: false, bg: '#D4A59A', bd: '#A67D72' },
+  { label: '邻里帮', route: 'neighbor-help', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', active: false, bg: '#C4923A', bd: '#8A5E12' },
 ]
 
 const shops = computed(() => allShops.slice(0, 6))
@@ -797,6 +815,8 @@ function go(route) {
 .points-entry { display: flex; align-items: center; gap: 12px; margin: 4px 16px 20px; padding: 14px 16px; min-height: 82px; box-sizing: border-box; background-color: #E85D04; border: 3px solid #C44A02; border-radius: 18px; box-shadow: 0 0 0 3px rgba(232,93,4,0.22), 0 6px 16px rgba(232,93,4,0.45), inset 0 1px 0 rgba(255,255,255,0.22); cursor: pointer; -webkit-tap-highlight-color: transparent; animation: pcGlow 2.6s ease-in-out infinite; }
 @keyframes pcGlow { 0%,100% { box-shadow: 0 0 0 3px rgba(232,93,4,0.18), 0 6px 16px rgba(232,93,4,0.40), inset 0 1px 0 rgba(255,255,255,0.22); } 50% { box-shadow: 0 0 0 6px rgba(232,93,4,0.10), 0 8px 22px rgba(232,93,4,0.60), inset 0 1px 0 rgba(255,255,255,0.22); } }
 .points-entry:active { opacity: 0.82; }
+.nh-home-entry { background-color: #C4923A; border-color: #8A5E12; box-shadow: 0 0 0 3px rgba(196,146,58,0.22), 0 6px 16px rgba(196,146,58,0.45), inset 0 1px 0 rgba(255,255,255,0.22); }
+.nh-home-entry .pc-btn { background-color: #FF7B2C; border-color: #FF7B2C; }
 .pc-illus { position: absolute; right: 0; top: 0; width: 64%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.30; fill: #FFFFFF; stroke: #FFFFFF; stroke-width: 1; }
 .pc-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 2; }
 .pc-icon-box svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }

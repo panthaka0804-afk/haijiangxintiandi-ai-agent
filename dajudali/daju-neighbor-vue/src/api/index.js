@@ -311,6 +311,41 @@ export function recordConsumption(phone, amount, source = '邻里消费') {
   })
 }
 
+// ========== 邻里帮悬赏墙 ==========
+export function listNeighborHelp(scope = 'wall', phone = '') {
+  return request('/api/neighbor-help/list?scope=' + encodeURIComponent(scope) + (phone ? '&phone=' + encodeURIComponent(phone) : ''))
+}
+export function publishNeighborHelp(payload) {
+  return request('/api/neighbor-help/publish', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+export function acceptNeighborHelp(phone, helpNo) {
+  return request('/api/neighbor-help/accept', {
+    method: 'POST',
+    body: JSON.stringify({ phone, help_no: helpNo })
+  })
+}
+export function completeNeighborHelp(phone, helpNo) {
+  return request('/api/neighbor-help/complete', {
+    method: 'POST',
+    body: JSON.stringify({ phone, help_no: helpNo })
+  })
+}
+export function confirmNeighborHelp(phone, helpNo) {
+  return request('/api/neighbor-help/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ phone, help_no: helpNo })
+  })
+}
+export function cancelNeighborHelp(phone, helpNo) {
+  return request('/api/neighbor-help/cancel', {
+    method: 'POST',
+    body: JSON.stringify({ phone, help_no: helpNo })
+  })
+}
+
 // 通用 HTTP 客户端（ActivityDetail 等使用）
 const http = {
   get: (url, opts) => {

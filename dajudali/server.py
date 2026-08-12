@@ -2218,6 +2218,203 @@ def api_gift_quota():
     })
 
 
+# ========== 邻里帮悬赏墙 ==========
+def _gen_help_no():
+    """生成悬赏编号 HJ + 时间简短串（避免与已有撞号）。"""
+    return 'HJ' + datetime.now().strftime('%y%m%d%H%M%S') + uuid.uuid4().hex[:3].upper()
+
+
+def _help_public_view(row):
+    """把 neighbor_helps 行转成前端卡片所需的安全视图（含发/接单人昵称脱敏）。"""
+    d = dict(row)
+    # 手机号脱敏展示：保留后4位
+    def mask(p):
+        return ('***' + p[-4:]) if p and len(p) >= 4 else (p or '')
+    d['publisher_mask'] = mask(d.get('publisher_phone'))
+    d['acceptor_mask'] = mask(d.get('acceptor_phone')) if d.get('acceptor_phone') else ''
+    return d
+
+
+@app.route('/api/neighbor-help/list', methods=['GET'])
+def api_neighbor_help_list():
+    """悬赏墙：本街区所有可抢的悬赏（open / accepted 都展示，completed 后隐藏）。"""
+    try:
+        scope = (request.args.get('scope') or 'wall').strip()  # wall=广场 / published=我发的 / accepted=我接的
+        phone = (request.args.get('phone') or '').strip()
+        conn = get_db()
+        _ensure_tables(conn)
+        if scope == 'published' and phone:
+            rows = conn.execute(
+                "SELECT * FROM neighbor_helps WHERE publisher_phone=? ORDER BY id DESC LIMIT 50", (phone,)).fetchall()
+        elif scope == 'accepted' and phone:
+            rows = conn.execute(
+                "SELECT * FROM neighbor_helps WHERE acceptor_phone=? ORDER BY id DESC LIMIT 50", (phone,)).fetchall()
+        else:
+            # 广场：未取消、未确认完成的都展示（open / accepted / completed）
+            rows = conn.execute(
+                "SELECT * FROM neighbor_helps WHERE status NOT IN ('cancelled') ORDER BY id DESC LIMIT 80").fetchall()
+        conn.close()
+        return jsonify(ok=True, data=[_help_public_view(r) for r in rows])
+    except Exception as e:
+        return jsonify(ok=False, error='加载失败：' + str(e))
+
+
+@app.route('/api/neighbor-help/publish', methods=['POST'])
+def api_neighbor_help_publish():
+    """发单：预付冻结赏金（从发单人积分扣除），生成悬赏。"""
+    data = request.json or {}
+    phone = (data.get('phone') or '').strip()
+    title = (data.get('title') or '').strip()
+    category = (data.get('category') or '其他').strip()
+    reward = int(data.get('reward') or 0)
+    detail = (data.get('detail') or '').strip()
+    location = (data.get('location') or '').strip()
+    expire_at = (data.get('expire_at') or '').strip()
+    if not phone or not title:
+        return jsonify(ok=False, error='手机号和求助标题必填')
+    if category not in HELP_CATEGORIES:
+        category = '其他'
+    if reward < HELP_MIN_REWARD or reward > HELP_MAX_REWARD:
+        return jsonify(ok=False, error=f'赏金需在 {HELP_MIN_REWARD}~{HELP_MAX_REWARD} 积分之间')
+    conn = get_db()
+    _ensure_tables(conn)
+    u = conn.execute('SELECT display_name, points FROM users WHERE phone=?', (phone,)).fetchone()
+    if not u:
+        conn.close()
+        return jsonify(ok=False, error='会员不存在，请先注册')
+    if (u['points'] or 0) < reward:
+        conn.close()
+        return jsonify(ok=False, error=f'积分不足，需 {reward} 分（当前 {u["points"] or 0} 分）')
+    name = (u['display_name'] or '邻居').strip() or '邻居'
+    help_no = _gen_help_no()
+    conn.execute(
+        '''INSERT INTO neighbor_helps
+           (help_no, publisher_phone, publisher_name, category, title, detail, location, expire_at, reward, status)
+           VALUES (?,?,?,?,?,?,?,?,?, 'open')''',
+        (help_no, phone, name, category, title, detail, location, expire_at, reward))
+    # 预付：冻结赏金（直接从积分扣除，确认完成后再给接单人；取消则退还）
+    add_points(phone, -reward, 'neighbor_help_pay', f'发布悬赏#{help_no}预付赏金{reward}', conn)
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, help_no=help_no, message=f'已发布，预付 {reward} 积分已冻结')
+
+
+@app.route('/api/neighbor-help/accept', methods=['POST'])
+def api_neighbor_help_accept():
+    """抢单：附近会员接单，状态 open->accepted。"""
+    data = request.json or {}
+    phone = (data.get('phone') or '').strip()
+    help_no = (data.get('help_no') or '').strip()
+    if not phone or not help_no:
+        return jsonify(ok=False, error='信息不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    h = conn.execute('SELECT * FROM neighbor_helps WHERE help_no=?', (help_no,)).fetchone()
+    if not h:
+        conn.close()
+        return jsonify(ok=False, error='悬赏不存在')
+    if h['status'] != 'open':
+        conn.close()
+        return jsonify(ok=False, error='该悬赏已被接单或不可抢')
+    if h['publisher_phone'] == phone:
+        conn.close()
+        return jsonify(ok=False, error='不能抢自己发布的悬赏')
+    u = conn.execute('SELECT display_name FROM users WHERE phone=?', (phone,)).fetchone()
+    name = (u['display_name'] if u else '邻居') or '邻居'
+    conn.execute(
+        "UPDATE neighbor_helps SET status='accepted', acceptor_phone=?, acceptor_name=? WHERE help_no=?",
+        (phone, name, help_no))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, message='接单成功，请尽快联系邻居完成')
+
+
+@app.route('/api/neighbor-help/complete', methods=['POST'])
+def api_neighbor_help_complete():
+    """接单人标记完成：accepted->completed（待发单人确认）。"""
+    data = request.json or {}
+    phone = (data.get('phone') or '').strip()
+    help_no = (data.get('help_no') or '').strip()
+    if not phone or not help_no:
+        return jsonify(ok=False, error='信息不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    h = conn.execute('SELECT * FROM neighbor_helps WHERE help_no=?', (help_no,)).fetchone()
+    if not h:
+        conn.close()
+        return jsonify(ok=False, error='悬赏不存在')
+    if h['status'] != 'accepted':
+        conn.close()
+        return jsonify(ok=False, error='当前状态不可标记完成')
+    if h['acceptor_phone'] != phone:
+        conn.close()
+        return jsonify(ok=False, error='只有接单人可以标记完成')
+    conn.execute("UPDATE neighbor_helps SET status='completed', completed_at=CURRENT_TIMESTAMP WHERE help_no=?", (help_no,))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, message='已标记为完成，等待发单人确认')
+
+
+@app.route('/api/neighbor-help/confirm', methods=['POST'])
+def api_neighbor_help_confirm():
+    """发单人确认完成：completed->confirmed，结算赏金 + 系统加成给接单人。"""
+    data = request.json or {}
+    phone = (data.get('phone') or '').strip()
+    help_no = (data.get('help_no') or '').strip()
+    if not phone or not help_no:
+        return jsonify(ok=False, error='信息不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    h = conn.execute('SELECT * FROM neighbor_helps WHERE help_no=?', (help_no,)).fetchone()
+    if not h:
+        conn.close()
+        return jsonify(ok=False, error='悬赏不存在')
+    if h['status'] != 'completed':
+        conn.close()
+        return jsonify(ok=False, error='只有被标记完成的悬赏才能确认')
+    if h['publisher_phone'] != phone:
+        conn.close()
+        return jsonify(ok=False, error='只有发单人可以确认')
+    reward = h['reward'] or 0
+    acceptor = h['acceptor_phone']
+    # 结算：接单人得预付赏金（发单时已冻结扣除） + 系统额外加成
+    total = reward + HELP_SYSTEM_BONUS
+    add_points(acceptor, total, 'neighbor_help_done', f'完成悬赏#{help_no}得赏金{reward}+平台补贴{HELP_SYSTEM_BONUS}', conn)
+    conn.execute("UPDATE neighbor_helps SET status='confirmed', confirmed_at=CURRENT_TIMESTAMP WHERE help_no=?", (help_no,))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, message=f'已确认，接单人获得 {total} 积分（含平台补贴 {HELP_SYSTEM_BONUS}）',
+                   awarded=total)
+
+
+@app.route('/api/neighbor-help/cancel', methods=['POST'])
+def api_neighbor_help_cancel():
+    """发单人取消未接单的悬赏：open->cancelled，退回预付赏金。"""
+    data = request.json or {}
+    phone = (data.get('phone') or '').strip()
+    help_no = (data.get('help_no') or '').strip()
+    if not phone or not help_no:
+        return jsonify(ok=False, error='信息不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    h = conn.execute('SELECT * FROM neighbor_helps WHERE help_no=?', (help_no,)).fetchone()
+    if not h:
+        conn.close()
+        return jsonify(ok=False, error='悬赏不存在')
+    if h['status'] != 'open':
+        conn.close()
+        return jsonify(ok=False, error='悬赏已被接单，无法取消')
+    if h['publisher_phone'] != phone:
+        conn.close()
+        return jsonify(ok=False, error='只有发单人可以取消')
+    reward = h['reward'] or 0
+    add_points(phone, reward, 'neighbor_help_refund', f'取消悬赏#{help_no}退回预付{reward}', conn)
+    conn.execute("UPDATE neighbor_helps SET status='cancelled', cancelled_at=CURRENT_TIMESTAMP WHERE help_no=?", (help_no,))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, message=f'已取消，退回 {reward} 积分')
+
+
 @app.route('/api/gift/send', methods=['POST'])
 def api_gift_send():
     """高阶会员赠出一张折扣权券（朋友凭码核销后临时升级）。"""
@@ -3816,6 +4013,26 @@ def _ensure_tables(conn):
         awarded_first_order INTEGER DEFAULT 0, -- 本条是否已触发引荐首单奖励
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
+    # 邻里帮悬赏墙（谁家要搬箱子/代取快递/临时照看，发小忙，附近会员抢单赚积分）
+    conn.execute('''CREATE TABLE IF NOT EXISTS neighbor_helps (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        help_no TEXT UNIQUE NOT NULL,        -- HJ + 时间戳简短号
+        publisher_phone TEXT NOT NULL,       -- 发单人（冻结赏金者）
+        publisher_name TEXT DEFAULT '',
+        category TEXT DEFAULT '其他',        -- 搬家/代取/照看/问路/其他
+        title TEXT NOT NULL,
+        detail TEXT DEFAULT '',
+        location TEXT DEFAULT '',            -- 楼栋/区域描述
+        expire_at TEXT DEFAULT '',           -- 期望完成时间
+        reward INTEGER NOT NULL,             -- 赏金积分（发单人预付，完成时结算给接单人）
+        status TEXT DEFAULT 'open',          -- open / accepted / completed / confirmed / cancelled
+        acceptor_phone TEXT DEFAULT '',      -- 接单人
+        acceptor_name TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP DEFAULT NULL,
+        confirmed_at TIMESTAMP DEFAULT NULL,
+        cancelled_at TIMESTAMP DEFAULT NULL
+    )''')
 
     conn.commit()
     _init_done = True
@@ -3832,6 +4049,13 @@ GIFT_BASE_POINTS = 20        # 赠出折扣权，赠卡人得（社交勋章感�
 REFER_BASE_POINTS = 50       # 朋友注册，双方各得
 REFER_FIRST_ORDER_POINTS = 150  # 朋友首单，双方各得
 GIFT_CARD_VALID_DAYS = 30    # 折扣权券有效期
+
+# ===== 邻里帮悬赏墙 =====
+HELP_CATEGORIES = ['搬家', '代取快递', '临时照看', '问路带路', '其他']
+HELP_MIN_REWARD = 10         # 单次悬赏最低赏金
+HELP_MAX_REWARD = 500        # 单次悬赏最高赏金
+HELP_SYSTEM_BONUS = 20       # 系统额外补贴（接单人完成确认后额外得，平台激励互助）
+HELP_EXPIRE_HOURS = 48       # 悬赏墙默认展示有效期（小时），超过则视为过期不可抢
 
 
 def effective_level(phone, conn=None):
