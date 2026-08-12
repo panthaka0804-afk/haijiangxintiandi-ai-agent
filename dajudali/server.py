@@ -5558,7 +5558,7 @@ def api_club_event_join():
         return jsonify(ok=False, error='参数不完整')
     conn = get_db()
     _ensure_tables(conn)
-    r = conn.execute("SELECT id,status,end_time FROM club_events WHERE id=?", (eid,)).fetchone()
+    r = conn.execute("SELECT id,status,end_time,need_count FROM club_events WHERE id=?", (eid,)).fetchone()
     if not r:
         conn.close()
         return jsonify(ok=False, error='活动群不存在')
