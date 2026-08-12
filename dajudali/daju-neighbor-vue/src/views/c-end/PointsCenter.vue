@@ -206,7 +206,7 @@ onMounted(() => {
 .points-empty { padding: 40px 24px; text-align: center; color: #999; }
 .empty-title { font-size: 18px; color: #eee; margin-bottom: 8px; }
 .empty-hint { font-size: 14px; }
-.points-empty .van-button { background: #C4923A; border-color: #9A7425; }
+.points-empty .van-button { background: #9A7425; border-color: #9A7425; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); }
 
 /* 成长值卡片 — 银灰多彩卡（渐变实色底 + 深边框 + 内高光） */
 .growth-card { margin: 16px; padding: 18px 16px; background: linear-gradient(135deg, #9CA1A8 0%, #7A7E84 100%); border: 3px solid #6A6E74; border-radius: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px rgba(0,0,0,0.35); }
@@ -223,8 +223,8 @@ onMounted(() => {
 .sign-title { font-size: 16px; color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
 .sign-days { font-size: 12px; color: rgba(255,255,255,0.92); margin-top: 4px; }
 .sign-days b { color: #FFF3D6; }
-.sign-btn { padding: 12px 22px; border-radius: 22px; border: none; background: #fff; color: #A8761F; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
-.sign-btn.signed { background: rgba(0,0,0,0.30); color: rgba(255,255,255,0.85); cursor: default; box-shadow: none; }
+.sign-btn { padding: 12px 22px; border-radius: 20px; border: 3px solid #9A7425; background-color: #9A7425; color: #FFFFFF; font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+.sign-btn.signed { background: rgba(0,0,0,0.30); border-color: rgba(0,0,0,0.30); color: rgba(255,255,255,0.85); cursor: default; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.08); }
 .sign-coupon { font-size: 12px; color: #FFF3D6; margin-top: 6px; }
 
 /* 周三会员日卡 — 深红棕多彩卡 */
@@ -233,9 +233,9 @@ onMounted(() => {
 .md-sub { font-size: 12px; color: rgba(255,255,255,0.92); margin-top: 4px; }
 .md-sub b { color: #FFF3D6; }
 .md-got { font-size: 11px; color: #FFF3D6; margin-top: 4px; }
-.md-btn { padding: 12px 20px; border-radius: 22px; border: none; background: #fff; color: #7A342B; font-size: 14px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
-.md-btn.got { background: rgba(255,255,255,0.25); color: #fff; cursor: default; }
-.md-btn.off { background: rgba(255,255,255,0.18); color: rgba(255,255,255,0.8); }
+.md-btn { padding: 12px 20px; border-radius: 20px; border: 3px solid #9A7425; background-color: #9A7425; color: #FFFFFF; font-size: 14px; font-weight: 600; cursor: pointer; flex-shrink: 0; white-space: nowrap; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+.md-btn.got { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.25); color: #fff; cursor: default; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.4), inset -2px -2px 5px rgba(255,255,255,0.15); }
+.md-btn.off { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.18); color: rgba(255,255,255,0.8); box-shadow: inset 3px 3px 7px rgba(0,0,0,0.4), inset -2px -2px 5px rgba(255,255,255,0.10); }
 
 /* 徽章墙 — 玻璃容器 + 多彩徽章 */
 .badge-section { margin: 0 16px 16px; }
