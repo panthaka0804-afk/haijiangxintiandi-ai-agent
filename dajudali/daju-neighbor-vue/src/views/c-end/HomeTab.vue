@@ -143,59 +143,6 @@
       </div>
     </div>
 
-    <!-- 拼团 banner（邻里拼团，深橙红突出） -->
-    <div class="points-entry gb-home-entry" @click="$router.push('/group-buy')">
-      <svg class="pc-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><circle cx="34" cy="30" r="14" opacity="0.35"/><circle cx="58" cy="30" r="10" opacity="0.30"/><circle cx="78" cy="30" r="7" opacity="0.25"/></svg>
-      <div class="pc-icon-box">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-      </div>
-      <div class="pc-left">
-        <div class="pc-title">邻里拼团</div>
-        <div class="pc-desc">5 人成团 · 满员自动发券</div>
-      </div>
-      <div class="pc-right">
-        <span class="pc-btn">去拼团</span>
-      </div>
-    </div>
-
-    <!-- 兴趣社 banner（活动驱动轻组织，深橙红突出） -->
-    <div class="points-entry ic-home-entry" @click="$router.push('/interest-club')">
-      <svg class="pc-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><circle cx="30" cy="30" r="13" opacity="0.35"/><circle cx="56" cy="30" r="9" opacity="0.30"/><circle cx="78" cy="30" r="6" opacity="0.25"/></svg>
-      <div class="pc-icon-box">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/>
-        </svg>
-      </div>
-      <div class="pc-left">
-        <div class="pc-title">兴趣社</div>
-        <div class="pc-desc">周三夜跑 · 宝妈遛娃 · 球友约战</div>
-      </div>
-      <div class="pc-right">
-        <span class="pc-btn">去加群</span>
-      </div>
-    </div>
-
-    <!-- 邻里帮 banner（悬赏墙，金黄突出） -->
-    <div class="points-entry nh-home-entry" @click="$router.push('/neighbor-help')">
-      <svg class="pc-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><circle cx="32" cy="30" r="12" opacity="0.35"/><path d="M52 22 h40 a6 6 0 0 1 6 6 v6 a6 6 0 0 1 -6 6 H58 l-10 8 v-8 h-4 a6 6 0 0 1 -6 -6 V28 a6 6 0 0 1 6 -6 z" opacity="0.30"/></svg>
-      <div class="pc-icon-box">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-      </div>
-      <div class="pc-left">
-        <div class="pc-title">邻里帮</div>
-        <div class="pc-desc">发个小忙 · 邻居抢单赚积分</div>
-      </div>
-      <div class="pc-right">
-        <span class="pc-btn">去帮忙</span>
-      </div>
-    </div>
-
     <div class="section-label">
       <span class="section-en">service</span>
       <span class="section-cn">服务</span>
@@ -235,20 +182,17 @@
       <span class="section-en">community</span>
       <span class="section-cn">邻里圈</span>
     </div>
-    <div class="community-entry" @click="$router.push('/community')">
-      <svg class="cm-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><path d="M20 20 a10 10 0 1 1 20 0 a10 10 0 1 1 -20 0 M14 44 h32 M16 34 a16 16 0 0 1 28 0"/><circle cx="78" cy="16" r="8"/><path d="M78 24 v14 M71 31 h14"/></svg>
-      <div class="cm-icon-box">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 8a5 5 0 0 0-10 0c0 4-2.5 5-2.5 5h15S17 12 17 8z"/>
-          <path d="M13.7 21a2 2 0 0 1-3.4 0"/>
-        </svg>
-      </div>
-      <div class="cm-left">
-        <div class="cm-title">邻里圈</div>
-        <div class="cm-desc">探店晒单 · 遛娃攻略 · 签到领成长值</div>
-      </div>
-      <div class="cm-right">
-        <span class="cm-btn">去逛逛</span>
+    <div class="neighbor-grid">
+      <div class="biz-card nl-card" v-for="m in neighborModules" :key="m.label" @click="go(m.route)">
+        <div class="biz-card-bg" :style="{background: m.grad}"></div>
+        <svg class="biz-card-illus" v-html="m.illus" viewBox="0 0 120 100" fill="none" preserveAspectRatio="xMinYMid slice"></svg>
+        <div class="biz-card-content">
+          <div class="biz-card-icon-sm">
+            <svg v-html="m.icon" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
+          </div>
+          <div class="biz-card-title">{{ m.label }}</div>
+          <div class="biz-card-desc">{{ m.desc }}</div>
+        </div>
       </div>
     </div>
 
@@ -659,12 +603,46 @@ const bizModules = [
   }
 ]
 
+const neighborModules = [
+  {
+    label: '邻里圈',
+    desc: '探店晒单 · 遛娃攻略',
+    route: '/community',
+    grad: 'linear-gradient(135deg, #FF7B2C 0%, #E85D04 60%, #C44A02 100%)',
+    icon: '<path d="M17 8a5 5 0 0 0-10 0c0 4-2.5 5-2.5 5h15S17 12 17 8z"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+    illus: '<circle cx="40" cy="36" r="14"/><path d="M40 50 v18"/><circle cx="80" cy="30" r="10"/><path d="M80 40 v16"/>'
+  },
+  {
+    label: '邻里帮',
+    desc: '发个小忙 · 抢单赚分',
+    route: '/neighbor-help',
+    grad: 'linear-gradient(135deg, #C4923A 0%, #A87C48 60%, #6E5440 100%)',
+    icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    illus: '<path d="M52 22 h40 a6 6 0 0 1 6 6 v6 a6 6 0 0 1 -6 6 H58 l-10 8 v-8 h-4 a6 6 0 0 1 -6 -6 V28 a6 6 0 0 1 6 -6 z"/><circle cx="34" cy="30" r="12"/>'
+  },
+  {
+    label: '邻里拼团',
+    desc: '5 人成团 · 满员发券',
+    route: '/group-buy',
+    grad: 'linear-gradient(135deg, #C9956C 0%, #B07F52 60%, #7E5A38 100%)',
+    icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    illus: '<circle cx="40" cy="40" r="15"/><circle cx="70" cy="36" r="11"/><circle cx="92" cy="44" r="7"/>'
+  },
+  {
+    label: '兴趣社',
+    desc: '夜跑 · 遛娃 · 球友约战',
+    route: '/interest-club',
+    grad: 'linear-gradient(135deg, #D4A59A 0%, #B98A7E 60%, #8B6359 100%)',
+    icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/>',
+    illus: '<circle cx="44" cy="34" r="14"/><circle cx="80" cy="34" r="10"/><path d="M40 56 v16 M70 56 v16"/>'
+  }
+]
+
 const entries = [
   { label: '导航地图', route: 'nav', icon: '<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/>', active: false, bg: '#8B8B90', bd: '#6A6A6E' },
   { label: '优惠促销', route: 'offers', icon: '<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/><line x1="12" y1="11" x2="12" y2="21"/><polyline points="4 7 12 11 20 7"/>', active: false, bg: '#C9956C', bd: '#A87C48' },
   { label: '活动报名', route: 'activities', icon: '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>', active: false, bg: '#6B6E64', bd: '#4E5049' },
   { label: '停车缴费', route: 'parking', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/>', active: false, bg: '#D4A59A', bd: '#A67D72' },
-  { label: '邻里帮', route: 'neighbor-help', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', active: false, bg: '#C4923A', bd: '#8A5E12' },
 ]
 
 const shops = computed(() => allShops.slice(0, 6))
@@ -817,8 +795,6 @@ function go(route) {
 .points-entry { display: flex; align-items: center; gap: 12px; margin: 4px 16px 20px; padding: 14px 16px; min-height: 82px; box-sizing: border-box; background-color: #E85D04; border: 3px solid #C44A02; border-radius: 18px; box-shadow: 0 0 0 3px rgba(232,93,4,0.22), 0 6px 16px rgba(232,93,4,0.45), inset 0 1px 0 rgba(255,255,255,0.22); cursor: pointer; -webkit-tap-highlight-color: transparent; animation: pcGlow 2.6s ease-in-out infinite; }
 @keyframes pcGlow { 0%,100% { box-shadow: 0 0 0 3px rgba(232,93,4,0.18), 0 6px 16px rgba(232,93,4,0.40), inset 0 1px 0 rgba(255,255,255,0.22); } 50% { box-shadow: 0 0 0 6px rgba(232,93,4,0.10), 0 8px 22px rgba(232,93,4,0.60), inset 0 1px 0 rgba(255,255,255,0.22); } }
 .points-entry:active { opacity: 0.82; }
-.nh-home-entry { background-color: #C4923A; border-color: #8A5E12; box-shadow: 0 0 0 3px rgba(196,146,58,0.22), 0 6px 16px rgba(196,146,58,0.45), inset 0 1px 0 rgba(255,255,255,0.22); }
-.nh-home-entry .pc-btn { background-color: #FF7B2C; border-color: #FF7B2C; }
 .pc-illus { position: absolute; right: 0; top: 0; width: 64%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.30; fill: #FFFFFF; stroke: #FFFFFF; stroke-width: 1; }
 .pc-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 2; }
 .pc-icon-box svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
@@ -828,16 +804,10 @@ function go(route) {
 .pc-right { flex-shrink: 0; position: relative; z-index: 2; }
 .pc-btn { display: inline-block; padding: 8px 20px; background-color: #FF7B2C; border: 3px solid #FF7B2C; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.35), inset -2px -2px 5px rgba(255,123,44,0.5); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
 
-/* 邻里圈 — 品牌橙 */
-.community-entry { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; min-height: 82px; box-sizing: border-box; background-color: #FF7B2C; border: 3px solid #D95A1F; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.community-entry:active { opacity: 0.82; }
-.cm-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 2; }
-.cm-icon-box svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
-.cm-left { flex: 1; min-width: 0; position: relative; z-index: 2; }
-.cm-title { font-size: var(--fs-body); font-weight: 700; color: #FFFFFF; margin-bottom: 2px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
-.cm-desc { font-size: var(--fs-secondary); color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
-.cm-right { flex-shrink: 0; position: relative; z-index: 2; }
-.cm-btn { display: inline-block; padding: 8px 20px; background-color: #D95A1F; border: 3px solid #D95A1F; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(255,123,44,0.45); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+/* 邻里圈栏目 — 2×2 多彩网格（复用 .biz-card 卡片样式） */
+.neighbor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; margin-bottom: 20px; }
+.nl-card { height: 150px; }
+.nl-card:active { transform: scale(0.97); }
 
 /* 物业报修与投诉 — 灰紫 */
 .property-entry { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; min-height: 82px; box-sizing: border-box; background-color: #8B8B90; border: 3px solid #6A6A6E; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); cursor: pointer; -webkit-tap-highlight-color: transparent; }
