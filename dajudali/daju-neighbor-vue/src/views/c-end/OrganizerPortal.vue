@@ -279,49 +279,54 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.op-root { min-height: 100vh; background: #0a0a0a; color: #ddd; padding: 16px; font-family: 'PingFang SC', sans-serif; max-width: 480px; margin: 0 auto; }
+.op-root { min-height: 100vh; background: #000000; color: rgba(255,255,255,0.9); padding: 16px; font-family: 'PingFang SC', sans-serif; max-width: 480px; margin: 0 auto; }
 .op-hdr { text-align: center; padding: 24px 0 16px; }
 .op-hdr h1 { margin: 0 0 6px; font-size: 22px; color: #C4923A; }
-.op-sub { font-size: 13px; color: #666; }
+.op-sub { font-size: 13px; color: rgba(255,255,255,0.55); }
 
 .op-tabs { display: flex; gap: 6px; margin-bottom: 20px; overflow-x: auto; }
-.op-tabs button { padding: 8px 14px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #888; font-size: 13px; cursor: pointer; white-space: nowrap; }
-.op-tabs button.active { background: #C4923A; color: #fff; border-color: #C4923A; }
+.op-tabs button { padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: #222; color: rgba(255,255,255,0.6); font-size: 13px; cursor: pointer; white-space: nowrap; }
+.op-tabs button.active { background: #9A7425; color: #fff; border-color: #9A7425;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45); }
 
-.op-card { background: #141414; border-radius: 12px; padding: 16px; margin-bottom: 14px; border: 1px solid #222; }
-.op-card-hdr { font-size: 15px; font-weight: 600; color: #eee; margin-bottom: 12px; }
+.op-card { background: #222; border-radius: 12px; padding: 16px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.08); box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); }
+.op-card-hdr { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 12px; }
 .op-form { display: flex; flex-direction: column; gap: 10px; }
-.op-input { padding: 10px 12px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #ddd; font-size: 14px; }
-.op-input::placeholder { color: #555; }
+.op-input { padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: #1a1a1a; color: #fff; font-size: 14px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.5); }
+.op-input::placeholder { color: rgba(255,255,255,0.4); }
 .op-textarea { resize: vertical; min-height: 60px; }
 .op-row2 { display: flex; gap: 10px; }
 .op-row2 .op-input { flex: 1; }
 
-.op-btn { padding: 10px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; }
+.op-btn { padding: 10px; border-radius: 12px; border: 3px solid transparent; font-size: 15px; font-weight: 600; cursor: pointer; color: #fff;
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4)); }
 .op-btn:disabled { opacity: 0.5; cursor: default; }
-.op-btn-primary { background: #C4923A; color: #fff; }
+.op-btn-primary { background: #9A7425; border-color: #9A7425;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45); }
+.op-btn-primary:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(196,146,58,0.35); }
 
 .op-slots { margin: 4px 0 8px; }
-.op-slots-label { font-size: 12px; color: #666; margin-bottom: 6px; }
+.op-slots-label { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 6px; }
 .op-slots-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-.op-slots-grid button { padding: 6px 12px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #555; font-size: 12px; cursor: pointer; }
+.op-slots-grid button { padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: #1a1a1a; color: rgba(255,255,255,0.45); font-size: 12px; cursor: pointer; }
 .op-slots-grid button.available { color: #4CAF50; border-color: #2D7D46; }
 .op-slots-grid button.selected { background: #2D7D46; color: #fff; border-color: #2D7D46; }
 .op-slots-grid button:disabled { opacity: 0.3; cursor: default; }
 
-.op-list-item { padding: 12px 0; border-bottom: 1px solid #1a1a1a; }
+.op-list-item { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
 .op-list-item:last-child { border-bottom: none; }
 .op-li-main { display: flex; justify-content: space-between; align-items: center; }
-.op-li-name { font-size: 14px; color: #ddd; }
-.op-li-status { font-size: 12px; padding: 2px 8px; border-radius: 4px; background: #333; color: #999; }
-.op-li-status.status-pending { background: #332; color: #C4923A; }
-.op-li-status.status-approved { background: #232; color: #4CAF50; }
-.op-li-status.status-confirmed { background: #232; color: #4CAF50; }
+.op-li-name { font-size: 14px; color: #fff; }
+.op-li-status { font-size: 12px; padding: 2px 8px; border-radius: 4px; background: #222; color: rgba(255,255,255,0.6); }
+.op-li-status.status-pending { background: #332a17; color: #C4923A; }
+.op-li-status.status-approved { background: #1f2e22; color: #4CAF50; }
+.op-li-status.status-confirmed { background: #1f2e22; color: #4CAF50; }
 .op-li-fee { font-size: 16px; font-weight: 700; color: #C4923A; }
-.op-li-sub { font-size: 12px; color: #666; margin-top: 4px; }
+.op-li-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 4px; }
 
 .op-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
-.op-stat { background: #1a1a1a; border-radius: 8px; padding: 12px; text-align: center; }
+.op-stat { background: #222; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.08); box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); }
 .op-stat-num { display: block; font-size: 28px; font-weight: 700; color: #C4923A; }
-.op-empty { text-align: center; color: #555; padding: 20px 0; font-size: 13px; }
+.op-empty { text-align: center; color: rgba(255,255,255,0.4); padding: 20px 0; font-size: 13px; }
 </style>

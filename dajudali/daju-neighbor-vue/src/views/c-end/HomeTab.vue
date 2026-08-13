@@ -608,7 +608,7 @@ const neighborModules = [
     label: '邻里圈',
     desc: '探店晒单 · 遛娃攻略',
     route: '/community',
-    grad: 'linear-gradient(135deg, #FF7B2C 0%, #E85D04 60%, #C44A02 100%)',
+    grad: 'linear-gradient(135deg, #C4923A 0%, #C4923A 60%, #C44A02 100%)',
     icon: '<path d="M17 8a5 5 0 0 0-10 0c0 4-2.5 5-2.5 5h15S17 12 17 8z"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
     illus: '<circle cx="40" cy="36" r="14"/><path d="M40 50 v18"/><circle cx="80" cy="30" r="10"/><path d="M80 40 v16"/>'
   },

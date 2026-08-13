@@ -45,8 +45,8 @@
         <div class="nh-title">{{ h.title }}</div>
         <div class="nh-detail" v-if="h.detail">{{ h.detail }}</div>
         <div class="nh-meta">
-          <span v-if="h.location">📍 {{ h.location }}</span>
-          <span v-if="h.expire_at">⏰ {{ h.expire_at }}</span>
+          <span v-if="h.location">地点 · {{ h.location }}</span>
+          <span v-if="h.expire_at">截止 · {{ h.expire_at }}</span>
         </div>
         <div class="nh-card-foot">
           <div class="nh-reward">

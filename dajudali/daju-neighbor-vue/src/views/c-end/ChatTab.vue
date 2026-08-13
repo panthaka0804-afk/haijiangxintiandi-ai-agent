@@ -238,9 +238,9 @@ const recording = ref(false)
 const showEmoji = ref(false)
 const textInputRef = ref(null)
 const emojiList = [
-  '😊','😂','🥰','😍','😘','😎','🤔','😅','😭','😡','🥺','😴',
-  '👍','👏','🙏','💪','🤝','👌','🎉','✨','🔥','💯','⭐','🌟',
-  '❤️','💔','🌹','💡','📍','💰','🛍️','🎁','🍔','☕','🚗','🐬'
+  '好','赞','哈','哭','怒','疑','谢','爱','福','喜','乐','安',
+  '迎','送','心','星','花','灯','金','银','康','旺','顺','吉',
+  '笑','萌','酷','棒','暖','甜','旺','运'
 ]
 function toggleEmoji() {
   showEmoji.value = !showEmoji.value
@@ -823,7 +823,7 @@ function getSessionId() {
 async function startHumanChat(btn) {
   humanChatActive.value = true
   humanChatWaiting.value = true
-  chatStore.addMessage({ role: 'ai', content: '正在为您转接人工客服，请描述您的问题，客服人员会尽快回复您 💬', time: now() })
+  chatStore.addMessage({ role: 'ai', content: '正在为您转接人工客服，请描述您的问题，客服人员会尽快回复您', time: now() })
   await scrollBottom()
   humanChatTimer = setInterval(pollHumanReply, 5000)
 }
@@ -987,10 +987,10 @@ function sendMsgWrapper() {
 }
 
 .user-bubble {
-  background: linear-gradient(135deg, #FF7B2C, #E85D04);
+  background: linear-gradient(135deg, #C4923A, #C4923A);
   color: #FFFFFF;
   border-radius: 18px 18px 4px 18px;
-  box-shadow: 0 2px 8px rgba(232,93,4,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+  box-shadow: 0 2px 8px rgba(196,146,58,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
   text-shadow: 0 -1px 1px rgba(0,0,0,0.25), 0 1px 1px rgba(255,255,255,0.2);
 }
 
@@ -1021,7 +1021,7 @@ function sendMsgWrapper() {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #FF7B2C;
+  background: #C4923A;
   animation: bounce 1.4s infinite ease-in-out;
 }
 
@@ -1090,7 +1090,7 @@ function sendMsgWrapper() {
 }
 .wave-bar-inline {
   width: 3px;
-  background: #1A1A1A;
+  background: #555;
   border-radius: 2px;
   animation: waveInline 0.5s ease-in-out infinite alternate;
 }
@@ -1266,7 +1266,7 @@ function sendMsgWrapper() {
 .qa-sw-5 { background:#6B6E64; border-color:#4E5049; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(107,110,100,0.45); }
 .wx-send-btn {
   flex-shrink: 0;
-  background: linear-gradient(135deg, #FF7B2C, #E85D04);
+  background: linear-gradient(135deg, #C4923A, #C4923A);
   color: #fff;
   border: none;
   border-radius: 18px;
@@ -1338,7 +1338,7 @@ function sendMsgWrapper() {
 /* ===== 结构化卡片 ===== */
 .ai-card {
   background: #2A2A2A;
-  border: 3px solid #E85D04;
+  border: 3px solid #C4923A;
   border-radius: 18px;
   overflow: hidden;
   margin: 4px 0 0;
@@ -1358,7 +1358,7 @@ function sendMsgWrapper() {
 .ai-card-name { font-size: 16px; font-weight: 500; color: #F0F0F0; line-height: 1.3; }
 .ai-card-desc { font-size: 13px; color: #999; margin-top: 2px; line-height: 1.2; }
 .ai-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
-.ai-card-tag { font-size: 11px; color: #999999; background: #1A1A1A; padding: 2px 6px; border-radius: 4px; font-weight: 500; white-space: nowrap; }
+.ai-card-tag { font-size: 11px; color: #999999; background: #222; padding: 2px 6px; border-radius: 4px; font-weight: 500; white-space: nowrap; }
 .ai-card-price { font-size: 15px; font-weight: 600; color: #999999; white-space: nowrap; }
 .ai-card-footer { font-size: 13px; color: #999; padding: 10px 14px; background: #222222; line-height: 1.4; border-top: 1px solid #2E2E2E; }
 
@@ -1368,14 +1368,14 @@ function sendMsgWrapper() {
 .transfer-btn {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 14px 28px; border-radius: 14px;
-  background: linear-gradient(135deg, #E8552A, #FF7B2C);
-  color: #fff; font-size: 17px; font-weight: 700; text-decoration: none;
-  box-shadow: 0 4px 16px rgba(232,85,42,0.4);
+  background: #9A7425; border: 3px solid #9A7425; color: #fff; font-size: 17px; font-weight: 700; text-decoration: none;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
   transition: transform 0.2s, box-shadow 0.2s;
-  border: none; cursor: pointer;
+  cursor: pointer;
 }
-.transfer-btn:hover { transform: scale(1.03); box-shadow: 0 6px 24px rgba(232,85,42,0.5); }
-.transfer-btn:active { transform: scale(0.98); }
+.transfer-btn:hover { transform: scale(1.03); }
+.transfer-btn:active { transform: scale(0.98); box-shadow: inset 5px 5px 10px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(196,146,58,0.35); }
 
 /* 人工客服模式横幅 */
 .human-chat-banner {

@@ -170,10 +170,10 @@ const couponClaimed = (id) => claimedIds.value.has(id)
 .cat-scroll { display: flex; gap: 10px; overflow-x: auto; padding: 0 16px 16px; -webkit-overflow-scrolling: touch; }
 .cat-scroll::-webkit-scrollbar { display: none; }
 .cat-btn {
-  flex-shrink: 0; padding: 8px 18px; border: 3px solid #6A6A6E; border-radius: 20px;
+  flex-shrink: 0; padding: 8px 18px; border: 3px solid #4E5049; border-radius: 20px;
   font-size: var(--fs-secondary); font-weight: 600; font-family: inherit; cursor: pointer;
-  background: #2A2A2A; color: #BBBBBB;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  background: #6B6E64; color: #fff;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(107,110,100,0.45);
   transition: all 0.15s;
   white-space: nowrap;
 }
@@ -182,7 +182,7 @@ const couponClaimed = (id) => claimedIds.value.has(id)
   box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45);
   filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
 }
-.cat-btn:not(.active):active { background: #333; }
+.cat-btn:not(.active):active { background: #4E5049; }
 
 /* ── 优惠券卡片：实色多彩（与首页同一套配色） ── */
 .coupon-list { display: flex; flex-direction: column; gap: 12px; margin: 0 16px; }
@@ -237,7 +237,7 @@ const couponClaimed = (id) => claimedIds.value.has(id)
   transition: opacity 0.15s;
 }
 .c-btn:active:not(.claimed) { opacity: 0.82; }
-.c-btn.claimed { background: #555555; border-color: #444444; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.5); color: #DDDDDD; filter: none; }
+.c-btn.claimed { background: #6A6A6E; border-color: #4F4F53; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.5); color: #DDDDDD; filter: none; }
 
 /* 按钮配色跟随穿插色（深一档 + 内凹高光） */
 .coupon-card.sw-0 .c-btn { background:#9A7425; border-color:#9A7425; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45); }

@@ -1,10 +1,10 @@
 <template>
-  <div class="nav-page" style="background:#1A1A1A">
+  <div class="nav-page" style="background:#000000">
     <!-- 苹果风顶部栏 - 毛玻璃 -->
     <div class="nav-top">
       <div class="nav-top-inner">
         <button class="nav-back" @click="$router.back()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <h2>室内导航</h2>
         <button class="nav-aa" @click="userStore.largeFont = !userStore.largeFont" :style="{ color: userStore.largeFont ? '#999999' : '#999', fontWeight: '700', fontSize: '14px' }">{{ userStore.largeFont ? '老年关怀' : '老年关怀' }}</button>
@@ -297,7 +297,7 @@ function parseSpotNumber(str) {
 }
 
 function setRouteTitle(plate, spot) {
-  routeTitle.value = plate ? `🅿️ ${plate} → ${spot || '车位'}` : `当前位置 → ${spot || '车位'}`
+  routeTitle.value = plate ? `车牌 ${plate} → ${spot || '车位'}` : `当前位置 → ${spot || '车位'}`
 }
 
 // SVG 拖拽平移
@@ -587,7 +587,7 @@ const svgContent = computed(() => {
   s += '</pattern>'
   s += '</defs>'
 
-  s += '<rect width="1840" height="1060" fill="#1A1A1A" rx="0"/>'
+  s += '<rect width="1840" height="1060" fill="#000000" rx="0"/>'
 
   for (let gx = 0; gx <= 1840; gx += 60)
     s += '<line x1="' + gx + '" y1="0" x2="' + gx + '" y2="1060" stroke="#2E2E2E" stroke-width=".5" opacity=".35"/>'
@@ -626,7 +626,7 @@ const svgContent = computed(() => {
     if (r.type !== 'elevator') continue
     const cl = cc('elevator')
     s += '<rect x="' + r.x + '" y="' + r.y + '" width="' + r.w + '" height="' + r.h + '" rx="7" fill="url(#g-elevator)" stroke="' + cl.stroke + '" stroke-width="1.5" filter="url(#s1)"/>'
-    s += '<text x="' + (r.x+r.w/2) + '" y="' + (r.y+r.h/2+5) + '" text-anchor="middle" font-size="' + (18 * (userStore.largeFont ? 1.7 : 1)) + '" fill="' + cl.text + '">⬍</text>'
+    s += '<text x="' + (r.x+r.w/2) + '" y="' + (r.y+r.h/2+5) + '" text-anchor="middle" font-size="' + (18 * (userStore.largeFont ? 1.7 : 1)) + '" fill="' + cl.text + '">梯</text>'
   }
 
   // 车位网格渲染（仅在1F且停车场区域可见时）
@@ -709,7 +709,7 @@ const svgContent = computed(() => {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   z-index: 9999;
-  background: #1A1A1A !important;
+  background: #000000 !important;
   display: flex;
   flex-direction: column;
   font-family: -apple-system, 'PingFang SC', 'SF Pro Display', sans-serif;
@@ -717,15 +717,15 @@ const svgContent = computed(() => {
 
 /* 确保地图区域有背景 */
 .nav-map-wrap {
-  background: #1A1A1A;
+  background: #000000;
 }
 
 /* 顶部栏 */
 .nav-top {
-  background: rgba(26,26,26,0.85);
+  background: rgba(0,0,0,0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 0.5px solid #333;
+  border-bottom: 0.5px solid rgba(255,255,255,0.08);
   flex-shrink: 0;
 }
 .nav-top-inner {
@@ -733,110 +733,114 @@ const svgContent = computed(() => {
   padding: 14px 12px 10px;
 }
 .nav-top h2 {
-  font-size: 17px; font-weight: 700; color: #F0F0F0; margin: 0;
+  font-size: 17px; font-weight: 700; color: #fff; margin: 0;
   letter-spacing: -0.2px;
 }
 
 /* iOS 分段控制器 */
 .nav-segmented {
   padding: 0 16px 8px; flex-shrink: 0;
-  background: rgba(26,26,26,0.85);
+  background: rgba(0,0,0,0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 .seg-track {
   display: flex; position: relative;
-  background: #1A1A1A; border-radius: 10px; padding: 2px;
+  background: #000000; border-radius: 10px; padding: 2px;
   box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.06);
 }
 .seg-bg {
   position: absolute; top: 2px; bottom: 2px;
-  background: #333; border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.3), 0 0 0 0.5px rgba(0,0,0,.2);
+  background: #9A7425; border-radius: 8px;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45);
   transition: transform .25s cubic-bezier(.4,0,.2,1);
 }
 .seg-btn {
   flex: 1; position: relative; z-index: 1;
   padding: 8px 0; border: none; background: none;
   font-size: 14px; font-weight: 600; cursor: pointer;
-  color: #BBBBBB; transition: color .15s;
+  color: rgba(255,255,255,0.6); transition: color .15s;
   font-family: inherit;
 }
-.seg-btn.active { color: #F0F0F0; }
+.seg-btn.active { color: #fff; }
 
 /* 搜索框 */
 .nav-search-wrap {
   padding: 0 16px 12px; flex-shrink: 0;
-  background: rgba(26,26,26,0.85);
+  background: rgba(0,0,0,0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: relative; z-index: 10;
 }
 .nav-search-inner {
   display: flex; align-items: center; gap: 8px;
-  background: #1A1A1A; border-radius: 10px;
+  background: #000000; border-radius: 10px;
   padding: 0 8px; height: 36px;
   transition: background .2s;
   box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.06);
 }
 .nav-search-inner:focus-within {
-  background: #1A1A1A;
+  background: #000000;
 }
 .search-icon { flex-shrink: 0; }
 .nav-search-inner input {
   flex: 1; border: none; background: none;
-  font-size: 15px; outline: none; color: #F0F0F0;
+  font-size: 15px; outline: none; color: #fff;
   font-family: inherit;
 }
-.nav-search-inner input::placeholder { color: #BBBBBB; }
+.nav-search-inner input::placeholder { color: rgba(255,255,255,0.4); }
 .search-clear {
   width: 20px; height: 20px; border: none; border-radius: 50%;
-  background: #1A1A1A; color: #fff; font-size: 10px;
+  background: #222; color: #fff; font-size: 10px;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
 .search-drop {
   position: absolute; left: 16px; right: 16px; top: 54px;
-  background: #222222; border-radius: 14px;
+  background: #222; border-radius: 14px;
   box-shadow: 0 8px 32px rgba(0,0,0,.4);
   max-height: 200px; overflow-y: auto; z-index: 20;
 }
 .search-item {
   padding: 12px 16px; font-size: 15px; cursor: pointer;
-  border-bottom: 0.5px solid #2E2E2E; color: #F0F0F0;
+  border-bottom: 0.5px solid rgba(255,255,255,0.08); color: #fff;
 }
-.search-item:active { background: #1A1A1A; }
-.search-floor { color: #BBBBBB; font-size: 13px; }
+.search-item:active { background: #2A2A2A; }
+.search-floor { color: rgba(255,255,255,0.5); font-size: 13px; }
 
 /* 路线卡片 */
 .route-card {
-  margin: 8px 16px; background: #222222; border-radius: 10px;
+  margin: 8px 16px; background: #222; border-radius: 10px;
   overflow: hidden; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.08);
 }
 .route-card-top {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; background: #222222; border-bottom: 0.5px solid #333;
+  padding: 10px 14px; background: #222; border-bottom: 0.5px solid rgba(255,255,255,0.08);
 }
-.route-title { font-size: 16px; font-weight: 500; color: #F0F0F0; }
+.route-title { font-size: 16px; font-weight: 500; color: #fff; }
 .route-play {
-  display: flex; align-items: center; gap: 4px; border: none;
-  background: #1A1A1A; color: #FFFFFF; font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 4px; border: 3px solid #9A7425;
+  background: #9A7425; color: #FFFFFF; font-size: 13px; font-weight: 500;
   padding: 6px 14px; border-radius: 999px; cursor: pointer; font-family: inherit;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
 }
+.route-play:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(196,146,58,0.35); }
 .route-steps { padding: 4px 0; }
 .route-step {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 14px; font-size: 14px; color: rgba(255,255,255,0.3); transition: all .3s;
 }
-.route-step--active { color: #999999; font-weight: 500; background: #1A1A1A; }
-.route-step--done { color: #BBBBBB; }
+.route-step--active { color: rgba(255,255,255,0.7); font-weight: 500; background: #222; }
+.route-step--done { color: rgba(255,255,255,0.75); }
 .step-dot {
   width: 22px; height: 22px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; font-weight: 600; flex-shrink: 0;
   background: #2A2A2A; color: rgba(255,255,255,0.3); transition: all .3s;
 }
-.route-step--active .step-dot { background: #1A1A1A; color: #FFFFFF; }
+.route-step--active .step-dot { background: #222; color: #FFFFFF; }
 .route-step--done .step-dot { background: #8A8A8A; color: #FFFFFF; }
 
 /* 地图 */
@@ -847,7 +851,7 @@ const svgContent = computed(() => {
   user-select: none;
   -webkit-user-select: none;
   position: relative;
-  background: #1A1A1A;
+  background: #000000;
 }
 .nav-map-wrap::-webkit-scrollbar { display: none; }
 .nav-map-wrap { -ms-overflow-style: none; scrollbar-width: none; }
@@ -875,7 +879,7 @@ const svgContent = computed(() => {
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  border: 1px solid #444;
+  border: 1px solid rgba(255,255,255,0.08);
   background: rgba(34,34,34,.92);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -893,7 +897,7 @@ const svgContent = computed(() => {
 .zoom-level {
   font-size: 11px;
   font-weight: 600;
-  color: #999;
+  color: rgba(255,255,255,0.5);
   padding: 2px 6px;
   border-radius: 6px;
   background: rgba(34,34,34,.85);

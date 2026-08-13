@@ -190,50 +190,56 @@ async function loadMyOrders() {
 </script>
 
 <style scoped>
-.ps-root { min-height: 100vh; background: #0a0a0a; color: #ddd; padding: 16px; font-family: 'PingFang SC', sans-serif; max-width: 480px; margin: 0 auto; }
+.ps-root { min-height: 100vh; background: #000000; color: #fff; padding: 16px; font-family: 'PingFang SC', sans-serif; max-width: 480px; margin: 0 auto; }
 .ps-hdr { text-align: center; padding: 24px 0 16px; }
-.ps-hdr h1 { margin: 0 0 6px; font-size: 22px; color: #8B8B90; }
-.ps-sub { font-size: 13px; color: #666; }
+.ps-hdr h1 { margin: 0 0 6px; font-size: 22px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.ps-sub { font-size: 13px; color: rgba(255,255,255,.6); }
 
 .ps-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
-.ps-tabs button { flex: 1; padding: 8px 14px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #888; font-size: 13px; cursor: pointer; white-space: nowrap; }
-.ps-tabs button.active { background: #8B8B90; color: #fff; border-color: #6A6A6E; }
+.ps-tabs button { flex: 1; padding: 8px 14px; border-radius: 20px; border: 3px solid #4E5049; background: #6B6E64; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(107,110,100,.45); }
+.ps-tabs button.active { background: #8B8B90; border-color: #6A6A6E; color: #fff; }
 
-.ps-card { background: #141414; border-radius: 12px; padding: 16px; margin-bottom: 14px; border: 1px solid #222; }
-.ps-card-hdr { font-size: 15px; font-weight: 600; color: #eee; margin-bottom: 8px; }
-.ps-hint { font-size: 12px; color: #777; margin-bottom: 14px; line-height: 1.5; }
+.ps-card { background: #6B6E64; border: 3px solid #4E5049; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); }
+.ps-card-hdr { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 8px; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.ps-hint { font-size: 12px; color: rgba(255,255,255,.8); margin-bottom: 14px; line-height: 1.5; }
 .ps-form { display: flex; flex-direction: column; gap: 10px; }
-.ps-input { padding: 10px 12px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #ddd; font-size: 14px; }
-.ps-input::placeholder { color: #555; }
+.ps-input { padding: 10px 12px; border-radius: 8px; border: 3px solid #4E5049; background: #000; color: #fff; font-size: 14px;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(107,110,100,.25); }
+.ps-input::placeholder { color: rgba(255,255,255,.4); }
 .ps-textarea { resize: vertical; min-height: 60px; }
 .ps-row2 { display: flex; gap: 10px; }
 .ps-row2 .ps-input { flex: 1; }
 
 .ps-upload { display: flex; align-items: center; gap: 10px; }
-.ps-upload-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; border: 1px dashed #555; color: #999; font-size: 13px; cursor: pointer; }
-.ps-upload-clear { font-size: 12px; color: #E8552A; cursor: pointer; }
+.ps-upload-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; border: 1px dashed #6A6A6E; color: rgba(255,255,255,.85); font-size: 13px; cursor: pointer; }
+.ps-upload-clear { font-size: 12px; color: #D4A59A; cursor: pointer; }
 
-.ps-btn { padding: 10px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; }
+.ps-btn { padding: 10px; border-radius: 20px; border: 3px solid #9A7425; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+  background: #9A7425; color: #fff;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4)); }
+.ps-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(196,146,58,.35); }
 .ps-btn:disabled { opacity: 0.5; cursor: default; }
-.ps-btn-primary { background: #8B8B90; color: #fff; }
+.ps-btn-primary { background: #9A7425; border-color: #9A7425; color: #fff; }
 .ps-btn-sm { flex-shrink: 0; padding: 10px 18px; font-size: 14px; }
 
-.ps-result { margin-top: 14px; padding: 12px 14px; background: #1a1810; border: 1px solid #8B8B90; border-radius: 10px; }
-.ps-result.lv-urgent { border-color: #FF7B2C; }
-.ps-result.lv-critical { border-color: #E8552A; background: #1f1210; }
-.ps-result-line { font-size: 13px; color: #ccc; line-height: 1.6; }
-.ps-result-level { font-weight: 600; color: #FFB400; }
-.ps-result.lv-critical .ps-result-level { color: #E8552A; }
+.ps-result { margin-top: 14px; padding: 12px 14px; background: #8B8B90; border: 3px solid #6A6A6E; border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255,255,255,.2); }
+.ps-result.lv-urgent { border-color: #C4923A; }
+.ps-result.lv-critical { border-color: #9B4A3E; background: #9B4A3E; }
+.ps-result-line { font-size: 13px; color: #fff; line-height: 1.6; }
+.ps-result-level { font-weight: 600; color: #C4923A; }
+.ps-result.lv-critical .ps-result-level { color: #D4A59A; }
 
 .ps-orders { margin-top: 12px; }
-.ps-order { padding: 12px 0; border-bottom: 1px solid #1a1a1a; }
+.ps-order { padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,.25); }
 .ps-order:last-child { border-bottom: none; }
 .ps-order-main { display: flex; justify-content: space-between; align-items: center; }
-.ps-order-title { font-size: 14px; color: #ddd; }
-.ps-order-status { font-size: 12px; padding: 2px 8px; border-radius: 4px; background: #333; color: #999; }
-.ps-order-status.st-pending { background: #332; color: #C4923A; }
-.ps-order-status.st-processing { background: #233; color: #4A90D9; }
-.ps-order-status.st-done { background: #232; color: #4CAF50; }
-.ps-order-meta { font-size: 12px; color: #666; margin-top: 4px; }
-.ps-empty { text-align: center; color: #555; padding: 20px 0; font-size: 13px; }
+.ps-order-title { font-size: 14px; color: #fff; }
+.ps-order-status { font-size: 12px; padding: 2px 8px; border-radius: 4px; background: #4E5049; color: #fff; }
+.ps-order-status.st-pending { background: #4E5049; color: #fff; }
+.ps-order-status.st-processing { background: #6B6E64; color: #fff; }
+.ps-order-status.st-done { background: #8B8B90; color: #fff; }
+.ps-order-meta { font-size: 12px; color: rgba(255,255,255,.7); margin-top: 4px; }
+.ps-empty { text-align: center; color: rgba(255,255,255,.5); padding: 20px 0; font-size: 13px; }
 </style>

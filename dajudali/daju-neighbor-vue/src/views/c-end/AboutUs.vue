@@ -25,22 +25,22 @@
       <h2 class="au-h">区位交通</h2>
       <div class="au-grid">
         <div class="au-cell">
-          <div class="au-cell-ic">🚇</div>
+          <div class="au-cell-ic">轨</div>
           <div class="au-cell-t">地铁 3 号线宝杨路站</div>
           <div class="au-cell-s">步行约 0.9 KM</div>
         </div>
         <div class="au-cell">
-          <div class="au-cell-ic">🚇</div>
+          <div class="au-cell-ic">轨</div>
           <div class="au-cell-t">地铁 3 号线友谊路站</div>
           <div class="au-cell-s">约 1.4 KM</div>
         </div>
         <div class="au-cell">
-          <div class="au-cell-ic">🚌</div>
+          <div class="au-cell-ic">巴</div>
           <div class="au-cell-t">21 个公交站点</div>
           <div class="au-cell-s">1KM 内通达全市</div>
         </div>
         <div class="au-cell">
-          <div class="au-cell-ic">🛣️</div>
+          <div class="au-cell-ic">道</div>
           <div class="au-cell-t">G1503 上海绕城高速</div>
           <div class="au-cell-s">驾车 5 分钟上高速</div>
         </div>
@@ -111,7 +111,7 @@
     <section class="au-card au-addr">
       <h2 class="au-h">项目地址</h2>
       <div class="au-addr-row">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF7B2C" stroke-width="1.6" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4923A" stroke-width="1.6" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
         <span>上海市宝山区牡丹江路 1228 – 1258 号</span>
       </div>
     </section>
@@ -153,25 +153,26 @@ const ips = [
 .au-logo {
   width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 18px;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #FF7B2C, #E85D04);
+  background: linear-gradient(135deg, #C4923A, #C4923A);
   color: #fff; font-size: 34px; font-weight: 800;
-  box-shadow: 0 4px 14px rgba(255, 123, 44, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 14px rgba(196, 146, 58, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .au-name { font-size: 24px; font-weight: 700; color: #F0F0F0; }
 .au-en { font-size: 12px; color: #8A8A8A; letter-spacing: 1px; margin-top: 4px; }
-.au-slogan { font-size: 15px; color: #FF7B2C; font-weight: 600; margin-top: 12px; }
+.au-slogan { font-size: 15px; color: #C4923A; font-weight: 600; margin-top: 12px; }
 .au-meta { font-size: 13px; color: #999; margin-top: 6px; }
 
 /* 卡片 */
 .au-card {
   margin-bottom: 10px; padding: 16px;
-  background: #1A1A1A; border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #222; border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
 .au-h {
   font-size: 16px; font-weight: 700; color: #FFFFFF;
   margin: 0 0 12px; padding-left: 10px;
-  border-left: 3px solid #FF7B2C;
+  border-left: 3px solid #C4923A;
 }
 .au-p { font-size: 14px; line-height: 1.85; color: #BDBDBD; margin: 0 0 10px; }
 .au-p:last-child { margin-bottom: 0; }
@@ -182,15 +183,15 @@ const ips = [
   background: #232323; border-radius: 12px; padding: 12px;
   display: flex; flex-direction: column; gap: 4px;
 }
-.au-cell-ic { font-size: 20px; }
+.au-cell-ic { font-size: 15px; font-weight: 700; width: 36px; height: 36px; border-radius: 10px; background: #232323; border: 1px solid #7E5413; color: #C4923A; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .au-cell-t { font-size: 13px; color: #E8E8E8; font-weight: 600; }
 .au-cell-s { font-size: 12px; color: #8A8A8A; }
 
 /* 统计 */
 .au-stats { display: flex; gap: 10px; margin-top: 14px; }
 .au-stat { flex: 1; text-align: center; background: #232323; border-radius: 12px; padding: 14px 6px; }
-.au-stat-num { font-size: 22px; font-weight: 800; color: #FF7B2C; }
-.au-stat-num span { font-size: 12px; font-weight: 600; color: #FF7B2C; margin-left: 2px; }
+.au-stat-num { font-size: 22px; font-weight: 800; color: #C4923A; }
+.au-stat-num span { font-size: 12px; font-weight: 600; color: #C4923A; margin-left: 2px; }
 .au-stat-lbl { font-size: 12px; color: #9A9A9A; margin-top: 4px; }
 
 /* 业态条 */
@@ -199,14 +200,14 @@ const ips = [
 .au-bar-lbl { width: 56px; font-size: 13px; color: #D0D0D0; flex-shrink: 0; }
 .au-bar-track { flex: 1; height: 10px; background: #2A2A2A; border-radius: 6px; overflow: hidden; }
 .au-bar-fill { height: 100%; border-radius: 6px; }
-.au-bar-pct { width: 38px; text-align: right; font-size: 13px; color: #FF7B2C; font-weight: 700; flex-shrink: 0; }
+.au-bar-pct { width: 38px; text-align: right; font-size: 13px; color: #C4923A; font-weight: 700; flex-shrink: 0; }
 
 /* 板块 */
 .au-block { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
 .au-block:last-child { margin-bottom: 0; }
 .au-block-no {
   flex-shrink: 0; width: 52px; height: 40px; border-radius: 10px;
-  background: #232323; color: #FF7B2C; font-size: 13px; font-weight: 700;
+  background: #232323; color: #C4923A; font-size: 13px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
 }
 .au-block-name { font-size: 14px; color: #F0F0F0; font-weight: 600; }
@@ -223,7 +224,7 @@ const ips = [
 .au-ip { margin-bottom: 14px; }
 .au-ip:last-child { margin-bottom: 0; }
 .au-ip-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
-.au-ip-title { font-size: 14px; font-weight: 700; color: #FF7B2C; }
+.au-ip-title { font-size: 14px; font-weight: 700; color: #C4923A; }
 .au-ip-sub { font-size: 12px; color: #8A8A8A; }
 .au-ip-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .au-ip-item {

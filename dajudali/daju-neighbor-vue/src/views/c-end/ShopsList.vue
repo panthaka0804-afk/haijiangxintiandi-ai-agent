@@ -12,13 +12,13 @@
     <div v-if="loading" class="loading-state">加载中...</div>
 
     <div class="sl-list" v-else>
-      <div v-for="s in filteredShops" :key="s.id" class="sl-card" @click="$router.push(`/shops/${s.id}`)">
+      <div v-for="(s, i) in filteredShops" :key="s.id" class="sl-card" :class="'sl-c' + (i % 5)" @click="$router.push(`/shops/${s.id}`)">
         <div class="slc-avatar" :style="{background: s.color}">{{ s.name[0] }}</div>
         <div class="slc-info">
           <div class="slc-name">{{ s.name }}</div>
           <div class="slc-meta">{{ s.floor }}F · {{ s.category }} {{ s.tags ? '· ' + (Array.isArray(s.tags) ? s.tags.join(' · ') : s.tags) : '' }}</div>
         </div>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
       <div v-if="!filteredShops.length" class="empty-state">暂无商铺</div>
     </div>
@@ -64,7 +64,7 @@ const filteredShops = computed(() => {
 </script>
 
 <style scoped>
-.shops-list { padding: 8px 12px; min-height: 100vh; background: #1A1A1A; }
+.shops-list { padding: 8px 12px; min-height: 100vh; background: #000000; }
 
 .loading-state, .empty-state {
   text-align: center; padding: 40px 20px; color: #666; font-size: 14px;
@@ -72,35 +72,39 @@ const filteredShops = computed(() => {
 
 .sl-search {
   display: flex; align-items: center; gap: 10px; padding: 10px 16px;
-  background: #2A2A2A; border: 1px solid #444; border-radius: 12px;
+  background: #000000; border: 3px solid #4E5049; border-radius: 12px;
   margin-bottom: 12px; transition: border-color 0.15s;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.05);
 }
-.sl-search:focus-within { border-color: #999999; }
+.sl-search:focus-within { border-color: #9A7425; }
 .sl-search input { flex: 1; border: none; background: none; outline: none; font-size: 15px; color: #F0F0F0; font-family: inherit; }
-.sl-search input::placeholder { color: #666; }
+.sl-search input::placeholder { color: #777; }
 
 .sl-cats { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
 .sl-cats::-webkit-scrollbar { display: none; }
 .sl-cat-btn {
-  flex-shrink: 0; padding: 7px 18px; border: 1px solid #333; border-radius: 12px;
+  flex-shrink: 0; padding: 7px 18px; border: 3px solid #4E5049; border-radius: 12px;
   font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
-  background: #222222; color: #999;
+  background: #6B6E64; color: #fff;
   transition: all 0.15s;
 }
-.sl-cat-btn.active { background: #1A1A1A; color: #fff; border-color: #999999; }
+.sl-cat-btn.active { background: #8B8B90; border-color: #6A6A6E; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); }
 
-.sl-list { display: flex; flex-direction: column; gap: 0; }
+.sl-list { display: flex; flex-direction: column; gap: 10px; }
 .sl-card {
-  background: #222222; padding: 14px 16px;
+  background-color: #C4923A; border: 3px solid #9A7425; border-radius: 14px; padding: 14px 16px;
   display: flex; align-items: center; gap: 14px;
-  cursor: pointer; transition: background 0.15s;
-  border-bottom: 0.5px solid #2E2E2E;
+  cursor: pointer; transition: opacity 0.15s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
 }
-.sl-card:first-child { border-radius: 12px 12px 0 0; }
-.sl-card:last-child { border-radius: 0 0 12px 12px; border-bottom: none; }
-.sl-card:active { background: #2A2A2A; }
-.slc-avatar { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.sl-c0 { background-color: #C4923A; border-color: #9A7425; }
+.sl-c1 { background-color: #C9956C; border-color: #A87C48; }
+.sl-c2 { background-color: #9B4A3E; border-color: #6E332A; }
+.sl-c3 { background-color: #8B8B90; border-color: #6A6A6E; }
+.sl-c4 { background-color: #6B6E64; border-color: #4E5049; }
+.sl-card:active { opacity: 0.85; }
+.slc-avatar { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #fff; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25); }
 .slc-info { flex: 1; }
-.slc-name { font-size: 16px; font-weight: 600; color: #F0F0F0; }
-.slc-meta { font-size: 12px; color: #999; margin-top: 4px; }
+.slc-name { font-size: 16px; font-weight: 600; color: #FFFFFF; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.slc-meta { font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 4px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
 </style>

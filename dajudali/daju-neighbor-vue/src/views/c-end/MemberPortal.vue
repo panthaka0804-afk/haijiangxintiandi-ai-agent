@@ -34,7 +34,7 @@
 
     <!-- 会员信息展示（与首页会员卡、更多页共享同一份登录态） -->
     <template v-else>
-      <div class="member-card">
+      <div class="member-card" :style="{ background: member.theme.bg, borderColor: member.theme.bd }">
         <div class="card-header">
           <div class="m-avatar">
             <img v-if="member.avatar" :src="member.avatar" class="m-avatar-img" alt="" />
@@ -383,11 +383,11 @@ async function showRedeemConfirm(item) {
 
 .member-card {
   margin: 16px;
-  background: linear-gradient(135deg, #1A1A1A, #2A2A2A);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: #6B6E64;
+  border: 3px solid #4E5049;
   border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
 }
 
 .card-header {
@@ -447,11 +447,11 @@ async function showRedeemConfirm(item) {
   display: flex;
   justify-content: space-between;
   font-size: 14px;
-  color: #AAA;
+  color: rgba(255,255,255,0.92);
 }
 
 .info-row .label {
-  color: #777;
+  color: rgba(255,255,255,0.7);
 }
 
 .info-row .value {
@@ -465,7 +465,7 @@ async function showRedeemConfirm(item) {
 }
 
 :deep(.van-nav-bar) {
-  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
+  background: #000000;
 }
 
 :deep(.van-nav-bar__title),

@@ -419,7 +419,7 @@ function go(route) { if (route) router.push(route) }
 .tier-jin  { background-color: #C4923A; border-color: #9A7425; }
 .tier-bo   { background-color: #9DA7B5; border-color: #7C8593; }
 .tier-zuan { background-color: #4F9CC9; border-color: #3A7BA0; }
-.tier-hei  { background-color: #2E2E33; border-color: #555555; }
+.tier-hei  { background-color: #6B6E64; border-color: #3C3E36; }
 .tier-concepts { margin-top: 6px; }
 .tier-line { font-size: 15px; font-weight: 600; line-height: 1.8; opacity: 0.96;
   text-shadow: 0 1px 2px rgba(0,0,0,0.35); }

@@ -26,9 +26,9 @@
       <!-- 签到抽奖区 -->
       <div class="sign-card" :style="checkinStyle">
         <div class="sign-info">
-          <div class="sign-title">每日签到抽奖 🎁</div>
+          <div class="sign-title">每日签到抽奖</div>
           <div class="sign-days">已连续签到 <b>{{ consecutiveDays }}</b> 天 · 累计 {{ totalCheckin }} 天 · 随机 5–50 分，还有机会抽券</div>
-          <div v-if="lastCoupon" class="sign-coupon">🎉 上次抽中：{{ lastCoupon }}</div>
+          <div v-if="lastCoupon" class="sign-coupon">上次抽中：{{ lastCoupon }}</div>
         </div>
         <button class="sign-btn" :class="{ signed: signedToday }" :disabled="signedToday" @click="doSign">
           {{ signedToday ? '今日已签' : '签到抽奖' }}
@@ -38,7 +38,7 @@
       <!-- 周三会员日 -->
       <div class="memberday-card" :style="memberDayStyle">
         <div class="md-info">
-          <div class="md-title">周三会员日 ☕🥐</div>
+          <div class="md-title">周三会员日</div>
           <div class="md-sub">
             <template v-if="memberDay.claimed">本周已领：<b>{{ memberDay.coupon_label }}</b></template>
             <template v-else-if="isWednesday">星巴克 / 烘焙特价券待领取</template>

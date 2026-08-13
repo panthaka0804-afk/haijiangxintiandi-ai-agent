@@ -147,30 +147,37 @@ async function submitTeam() {
 </script>
 
 <style scoped>
-.bc-root { min-height: 100vh; background: #0a0a0a; color: #ddd; padding: 16px; font-family: 'PingFang SC', sans-serif; max-width: 480px; margin: 0 auto; }
+.bc-root { min-height: 100vh; background: #000000; color: #fff; padding: 16px; font-family: 'PingFang SC', sans-serif; max-width: 480px; margin: 0 auto; }
 .bc-hdr { text-align: center; padding: 24px 0 16px; }
-.bc-hdr h1 { margin: 0 0 6px; font-size: 22px; color: #C9823F; }
-.bc-sub { font-size: 13px; color: #666; }
+.bc-hdr h1 { margin: 0 0 6px; font-size: 22px; color: #C4923A; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.bc-sub { font-size: 13px; color: rgba(255,255,255,.6); }
 
 .bc-tabs { display: flex; gap: 6px; margin-bottom: 20px; overflow-x: auto; }
-.bc-tabs button { padding: 8px 14px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #888; font-size: 13px; cursor: pointer; white-space: nowrap; }
-.bc-tabs button.active { background: #C9823F; color: #fff; border-color: #9A6428; }
+.bc-tabs button { padding: 8px 14px; border-radius: 20px; border: 3px solid #4E5049; background: #6B6E64; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(107,110,100,.45); }
+.bc-tabs button.active { background: #C4923A; color: #fff; border-color: #9A7425;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
 
-.bc-card { background: #141414; border-radius: 12px; padding: 16px; margin-bottom: 14px; border: 1px solid #222; }
-.bc-card-hdr { font-size: 15px; font-weight: 600; color: #eee; margin-bottom: 8px; }
-.bc-hint { font-size: 12px; color: #777; margin-bottom: 14px; line-height: 1.5; }
+.bc-card { background: #6B6E64; border: 3px solid #4E5049; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); }
+.bc-card-hdr { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 8px; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.bc-hint { font-size: 12px; color: rgba(255,255,255,.8); margin-bottom: 14px; line-height: 1.5; }
 .bc-form { display: flex; flex-direction: column; gap: 10px; }
-.bc-input { padding: 10px 12px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #ddd; font-size: 14px; }
-.bc-input::placeholder { color: #555; }
+.bc-input { padding: 10px 12px; border-radius: 8px; border: 3px solid #4E5049; background: #000; color: #fff; font-size: 14px;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(107,110,100,.25); }
+.bc-input::placeholder { color: rgba(255,255,255,.4); }
 .bc-textarea { resize: vertical; min-height: 60px; }
 .bc-row2 { display: flex; gap: 10px; }
 .bc-row2 .bc-input { flex: 1; }
 
-.bc-btn { padding: 10px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; }
+.bc-btn { padding: 10px; border-radius: 20px; border: 3px solid #9A7425; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+  background: #9A7425; color: #fff;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4)); }
+.bc-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(196,146,58,.35); }
 .bc-btn:disabled { opacity: 0.5; cursor: default; }
-.bc-btn-primary { background: #C9823F; color: #fff; }
+.bc-btn-primary { background: #9A7425; border-color: #9A7425; color: #fff; }
 
-.bc-suggestion { margin-top: 14px; padding: 12px 14px; background: #1a1810; border: 1px solid #C9823F; border-radius: 10px; }
-.bc-sug-hdr { font-size: 13px; font-weight: 600; color: #C9823F; margin-bottom: 6px; }
-.bc-sug-body { font-size: 13px; color: #ccc; line-height: 1.6; }
+.bc-suggestion { margin-top: 14px; padding: 12px 14px; background: #8B8B90; border: 3px solid #6A6A6E; border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255,255,255,.2); }
+.bc-sug-hdr { font-size: 13px; font-weight: 600; color: #C4923A; margin-bottom: 6px; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.bc-sug-body { font-size: 13px; color: #fff; line-height: 1.6; }
 </style>

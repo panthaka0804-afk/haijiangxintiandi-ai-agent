@@ -95,11 +95,11 @@ async function onSubmit() {
 .login-card {
   width: 100%;
   max-width: 380px;
-  background-color: #FF7B2C;
-  border: 3px solid #E85D04;
+  background-color: #161618;
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 18px;
   padding: 30px 22px 24px;
-  box-shadow: 0 8px 24px rgba(232, 93, 4, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.40);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 /* 标题块：完整中文「海江新天地」 */
@@ -108,7 +108,7 @@ async function onSubmit() {
   font-family: var(--font-primary);
   font-size: 24px; font-weight: 800; letter-spacing: 1px; line-height: 1.2;
   color: #FFFFFF;
-  text-shadow: 0 1px 2px rgba(120, 50, 0, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 .brand-sub {
   font-size: 13px; font-weight: 400; color: rgba(255, 255, 255, 0.85); margin-top: 6px;
@@ -116,28 +116,32 @@ async function onSubmit() {
 
 /* 输入区：干净白底圆角块（无多余框线） */
 .login-fields {
-  background: #FFFFFF;
+  background: #0E0E10;
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(120, 50, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 :deep(.van-cell-group--inset) { margin: 0; background: transparent; }
-:deep(.van-cell) { background: transparent; color: #1A1A1A; padding: 14px 12px; }
-:deep(.van-cell::after) { border-color: #EEEEEE; left: 12px; right: 12px; }
-:deep(.van-field__label) { color: #666666; width: 56px; }
-:deep(.van-field__control) { color: #1A1A1A; font-size: var(--fs-body); }
-:deep(.van-field__control::placeholder) { color: #AAAAAA; }
+:deep(.van-cell) { background: transparent; color: #fff; padding: 14px 12px; }
+:deep(.van-cell::after) { border-color: rgba(255, 255, 255, 0.1); left: 12px; right: 12px; }
+:deep(.van-field__label) { color: rgba(255, 255, 255, 0.7); width: 56px; }
+:deep(.van-field__control) { color: #fff; font-size: var(--fs-body); }
+:deep(.van-field__control::placeholder) { color: rgba(255, 255, 255, 0.4); }
 
-/* 登录按钮：白底橙字（在橙卡上清爽醒目） */
+/* 登录按钮：金棕凹陷（覆盖 Vant 默认 primary，禁止白色扁平按钮） */
 .login-btn-wrap { margin: 18px 0 4px; }
 :deep(.van-button--primary) {
-  background: #FFFFFF;
-  border: 3px solid #FFFFFF;
-  border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(120, 50, 0, 0.20);
-  color: #E85D04; font-weight: 800; letter-spacing: 4px;
+  background: #9A7425;
+  border: 3px solid #9A7425;
+  border-radius: 20px !important;
+  box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196, 146, 58, 0.45);
+  color: #fff; font-weight: 800; letter-spacing: 4px;
+  filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4));
 }
-:deep(.van-button--primary:active) { background: #FFF3E8; }
+:deep(.van-button--primary:active) {
+  box-shadow: inset 5px 5px 10px rgba(0, 0, 0, 0.55), inset -2px -2px 5px rgba(196, 146, 58, 0.35);
+}
 
 /* 底部链接：白色（橙卡上橙字看不清，改白） */
 .links { display: flex; justify-content: center; gap: 24px; margin-top: 18px; }

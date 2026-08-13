@@ -1,6 +1,6 @@
 <template>
   <div class="shop-detail">
-    <div class="sd-header" :style="{background: shop.color + 'DD'}">
+    <div class="sd-header">
       <div class="sd-back" @click="$router.back()">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
       </div>
@@ -100,68 +100,72 @@ function goNav() {
 </script>
 
 <style scoped>
-.shop-detail { min-height: 100vh; background: #1A1A1A; }
+.shop-detail { min-height: 100vh; background: #000000; }
 
 .sd-header {
   height: 180px; position: relative; overflow: hidden;
   display: flex; flex-direction: column; justify-content: flex-end;
+  background: linear-gradient(135deg, #C4923A, #A8761F);
 }
 .sd-shine {
   position: absolute; top: -60px; right: -30px;
   width: 140px; height: 140px;
-  background: radial-gradient(circle, #1A1A1A 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0,0,0,0.15) 0%, transparent 70%);
   border-radius: 50%;
 }
 .sd-back { position: absolute; top: 16px; left: 12px; padding: 6px; cursor: pointer; z-index: 2; }
 .sd-hero { position: relative; z-index: 1; padding: 0 20px 24px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-.sd-avatar { width: 56px; height: 56px; border-radius: 12px; background: #1A1A1A; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #fff; }
-.sd-name { font-size: 22px; font-weight: 700; color: #fff; }
-.sd-tags { font-size: 13px; color: rgba(255,255,255,0.7); }
+.sd-avatar { width: 56px; height: 56px; border-radius: 12px; background: rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25); }
+.sd-name { font-size: 22px; font-weight: 700; color: #fff; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.sd-tags { font-size: 13px; color: rgba(255,255,255,0.85); text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
 
 .sd-body { padding: 16px 12px; display: flex; flex-direction: column; gap: 12px; }
 
 .sd-info-card {
-  background: #222222; border-radius: 12px; padding: 4px 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background-color: #6B6E64; border: 3px solid #4E5049; border-radius: 14px; padding: 4px 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
 }
 .sd-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
-.sd-row:not(:last-child) { border-bottom: 0.5px solid #2E2E2E; }
-.sd-info-label { font-size: 14px; color: #999; width: 64px; flex-shrink: 0; }
-.sd-info-val { font-size: 14px; color: #F0F0F0; font-weight: 500; }
+.sd-row:not(:last-child) { border-bottom: 0.5px solid rgba(255,255,255,0.18); }
+.sd-info-label { font-size: 14px; color: rgba(255,255,255,0.85); width: 64px; flex-shrink: 0; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.sd-info-val { font-size: 14px; color: #FFFFFF; font-weight: 500; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
 
 .sd-coupon-card {
-  background: #222222; border-radius: 12px; padding: 16px;
+  background-color: #C4923A; border: 3px solid #9A7425; border-radius: 14px; padding: 16px;
   display: flex; align-items: center; justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
 }
 .sdc-left { display: flex; align-items: center; gap: 12px; }
-.sdc-icon { width: 44px; height: 44px; border-radius: 12px; background: #1A1A1A; display: flex; align-items: center; justify-content: center; }
-.sdc-title { font-size: 15px; font-weight: 600; color: #F0F0F0; }
-.sdc-expire { font-size: 12px; color: #999; margin-top: 2px; }
+.sdc-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; }
+.sdc-title { font-size: 15px; font-weight: 600; color: #FFFFFF; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.sdc-expire { font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 2px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
 .sdc-btn {
-  padding: 8px 18px; border: none; border-radius: 12px;
-  background: #1A1A1A; color: #fff; font-size: 13px; font-weight: 600;
+  padding: 8px 18px; border: 3px solid #9A7425; border-radius: 20px;
+  background-color: #9A7425; color: #fff; font-size: 13px; font-weight: 600;
   cursor: pointer; font-family: inherit; transition: opacity 0.15s;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
 }
-.sdc-btn:active { opacity: 0.8; }
+.sdc-btn:active { opacity: 0.82; }
 
 .sd-nav-btn {
-  padding: 14px; border: none; border-radius: 12px;
-  background: #222222; color: #999999; font-size: 16px; font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  padding: 14px; border: 3px solid #4E5049; border-radius: 20px;
+  background-color: #4E5049; color: #FFFFFF; font-size: 16px; font-weight: 700;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(107,110,100,0.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
   cursor: pointer; font-family: inherit; transition: opacity 0.15s;
 }
-.sd-nav-btn:active { opacity: 0.8; }
+.sd-nav-btn:active { opacity: 0.82; }
 
 .sd-features {
-  background: #222222; border-radius: 12px; padding: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background-color: #8B8B90; border: 3px solid #6A6A6E; border-radius: 14px; padding: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
 }
-.sd-feature-title { font-size: 14px; color: #999; margin-bottom: 10px; }
+.sd-feature-title { font-size: 14px; color: rgba(255,255,255,0.9); margin-bottom: 10px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
 .sd-feature-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .sd-feature-tag {
   padding: 5px 12px; border-radius: 8px;
-  background: #1A1A1A; border: 1px solid #999999;
-  font-size: 13px; color: #9E9E9E;
+  background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.30);
+  font-size: 13px; color: #FFFFFF; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25);
 }
 </style>

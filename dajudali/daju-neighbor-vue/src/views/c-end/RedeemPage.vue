@@ -104,19 +104,19 @@ const decorated = computed(() => {
 </script>
 
 <style scoped>
-.rp-page { padding: 8px 12px; min-height: 100vh; background: #1A1A1A; }
+.rp-page { padding: 8px 12px; min-height: 100vh; background: #000000; }
 
 .loading-state, .empty-state {
   text-align: center; padding: 40px 20px; color: #BBBBBB; font-size: 14px;
 }
 
 .rp-pts-card {
-  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
+  background: linear-gradient(135deg, var(--ac-bg, #C4923A), var(--ac-bd, #9A7425));
   border: 3px solid var(--ac-bd, #4E5049); border-radius: 18px; padding: 24px; position: relative; overflow: hidden; margin-bottom: 16px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
   text-align: center;
 }
-.rp-pts-shine { position: absolute; top: -50px; right: -30px; width: 120px; height: 120px; background: radial-gradient(circle, var(--ac-accent, #2A2A2A) 0%, transparent 70%); border-radius: 50%; opacity: 0.35; }
+.rp-pts-shine { position: absolute; top: -50px; right: -30px; width: 120px; height: 120px; background: radial-gradient(circle, var(--ac-accent, #C4923A) 0%, transparent 70%); border-radius: 50%; opacity: 0.35; }
 .rp-pts-ring { position: absolute; right: -10px; bottom: -8px; width: 80px; height: 40px; border: 2px solid var(--ac-bd, rgba(255,255,255,0.1)); border-radius: 50%; transform: rotate(-10deg); }
 .rp-pts-level { position: relative; z-index: 1; font-size: 14px; color: var(--ac-accent, rgba(255,255,255,0.7)); }
 .rp-pts-num { position: relative; z-index: 1; font-size: 42px; font-weight: 800; color: #fff; margin-top: 6px; }

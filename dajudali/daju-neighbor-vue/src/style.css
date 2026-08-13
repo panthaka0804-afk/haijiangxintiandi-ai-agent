@@ -1,6 +1,6 @@
 /* ================================================================
    海江新天地 — 黑橙亮色暗黑主题
-   品牌色: #FF7B2C (暖橙)
+   品牌色: #C4923A (暖橙)
    ================================================================ */
 
 :root {
@@ -18,7 +18,7 @@
   --orange-200: #5A3828;
   --orange-300: #6A4030;
   --orange-400: #8A5040;
-  --orange-500: #FF7B2C;
+  --orange-500: #C4923A;
   --orange-600: #E86A1F;
   --orange-700: #C15818;
   --orange-800: #9A4612;
@@ -30,7 +30,7 @@
   --text-hint: #666666;
 
   /* 极少强调色（仅主按钮/关键强调，整体保持黑白灰） */
-  --accent: #FF7B2C;
+  --accent: #C4923A;
   --accent-strong: #E86A1F;
 
   /* 灰阶表面（凹陷/凸起表面的细微深浅差） */
@@ -99,12 +99,12 @@ html, body {
 
 /* ========== Vant 暗黑覆盖 ========== */
 :root {
-  --van-primary-color: #FF7B2C;
+  --van-primary-color: #C4923A;
   --van-nav-bar-background: #000000;
   --van-nav-bar-title-text-color: #F0F0F0;
-  --van-nav-bar-icon-color: #FF7B2C;
-  --van-button-primary-background: #FF7B2C;
-  --van-button-primary-border-color: #FF7B2C;
+  --van-nav-bar-icon-color: #C4923A;
+  --van-button-primary-background: #C4923A;
+  --van-button-primary-border-color: #C4923A;
   --van-overlay-background: rgba(0,0,0,0.6);
   --van-toast-background: rgba(36,36,38,0.92);
   --van-field-label-color: #999999;
@@ -115,10 +115,10 @@ html, body {
   --van-cell-text-color: #F0F0F0;
   --van-tabbar-background: #000000;
   --van-tabbar-item-text-color: #777777;
-  --van-tabbar-item-active-color: #FF7B2C;
+  --van-tabbar-item-active-color: #C4923A;
   --van-tabs-nav-background: #222222;
   --van-tab-font-size: 15px;
-  --van-tab-active-text-color: #FF7B2C;
+  --van-tab-active-text-color: #C4923A;
   --van-tab-text-color: #777777;
   --van-popup-background: #222222;
   --van-popup-round-radius: 16px;
@@ -196,7 +196,7 @@ html, body {
 
 /* ========== Element Plus 暗色主题覆盖（黑白灰统一） ========== */
 :root {
-  --el-color-primary: #FF7B2C;
+  --el-color-primary: #C4923A;
   --el-color-primary-light-3: #C15818;
   --el-color-primary-light-5: #8A5040;
   --el-color-primary-light-7: #5A3828;

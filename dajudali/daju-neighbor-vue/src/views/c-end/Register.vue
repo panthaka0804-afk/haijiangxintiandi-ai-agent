@@ -32,7 +32,7 @@
       </div>
 
       <div class="tips">
-        <p>🎁 注册即送 <b>500积分</b>，享普卡会员 <b>98折</b>优惠</p>
+        <p>新人礼 · 注册即送 <b>500积分</b>，享普卡会员 <b>98折</b>优惠</p>
       </div>
     </van-form>
   </div>
@@ -69,27 +69,48 @@ async function onSubmit() {
 <style scoped>
 .register-page {
   min-height: 100vh;
-  background: #1A1A1A;
+  background: #000000;
 }
 
 .tips {
   text-align: center;
   padding: 16px;
-  color: #AAA;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
 }
 
 .tips b {
-  color: #999999;
+  color: #C4923A;
 }
 
 :deep(.van-nav-bar) {
-  background: linear-gradient(135deg, #1A1A1A, #1A1A1A);
+  background: #000000;
 }
 
 :deep(.van-nav-bar__title),
 :deep(.van-nav-bar__text),
 :deep(.van-nav-bar .van-icon) {
   color: #fff;
+}
+
+/* 表单暗色化，与整站纯黑底+白字一致 */
+:deep(.van-cell-group--inset) { background: #161618; border-radius: 12px; margin: 0 16px; }
+:deep(.van-cell) { background: transparent; color: #fff; padding: 14px 12px; }
+:deep(.van-cell::after) { border-color: rgba(255, 255, 255, 0.1); left: 12px; right: 12px; }
+:deep(.van-field__label) { color: rgba(255, 255, 255, 0.7); width: 56px; }
+:deep(.van-field__control) { color: #fff; font-size: var(--fs-body); }
+:deep(.van-field__control::placeholder) { color: rgba(255, 255, 255, 0.4); }
+
+/* 提交按钮：金棕凹陷（覆盖 Vant 默认 primary） */
+:deep(.van-button--primary) {
+  background: #9A7425;
+  border: 3px solid #9A7425;
+  border-radius: 20px !important;
+  box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196, 146, 58, 0.45);
+  color: #fff; font-weight: 700; letter-spacing: 2px;
+  filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4));
+}
+:deep(.van-button--primary:active) {
+  box-shadow: inset 5px 5px 10px rgba(0, 0, 0, 0.55), inset -2px -2px 5px rgba(196, 146, 58, 0.35);
 }
 </style>

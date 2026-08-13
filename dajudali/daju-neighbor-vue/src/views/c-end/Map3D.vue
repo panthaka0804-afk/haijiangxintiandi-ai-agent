@@ -19,5 +19,5 @@
   padding: 7px 14px; border-radius: 20px; cursor: pointer; font-family: inherit;
   -webkit-tap-highlight-color: transparent;
 }
-.back-btn:active { background: #FF7B2C; color: #fff; }
+.back-btn:active { background: #C4923A; color: #fff; }
 </style>

@@ -42,7 +42,7 @@
           <h2>排队列表</h2>
           <span class="md-sec-count">{{ queues.length }} 组等待</span>
         </div>
-        <div v-if="queues.length === 0" class="md-empty">暂无排队，休息一下 ☕</div>
+        <div v-if="queues.length === 0" class="md-empty">暂无排队，休息一下吧</div>
         <div v-for="q in queues" :key="q.id" class="md-card">
           <div class="md-card-main">
             <div class="md-qnum">{{ q.queue_number }}号</div>
@@ -331,8 +331,8 @@ onUnmounted(() => {
 <style scoped>
 .md-root {
   min-height: 100vh;
-  background: #111;
-  color: #e0e0e0;
+  background: #000000;
+  color: rgba(255,255,255,0.9);
   font-family: 'PingFang SC', sans-serif;
   padding: 16px;
   max-width: 480px;
@@ -343,41 +343,45 @@ onUnmounted(() => {
   margin-bottom: 16px;
 }
 .md-hdr-left h1 { margin: 0; font-size: 22px; color: #fff; }
-.md-hdr-sub { font-size: 13px; color: #888; }
+.md-hdr-sub { font-size: 13px; color: rgba(255,255,255,0.55); }
 .md-hdr-right { display: flex; gap: 8px; align-items: center; }
 .md-badge {
   display: inline-block; padding: 3px 10px; border-radius: 10px;
-  font-size: 12px; background: #333; color: #999;
+  font-size: 12px; background: #222; color: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.08);
 }
-.md-badge.peak { background: #E8552A; color: #fff; }
+.md-badge.peak { background: #9B4A3E; color: #fff; }
 .md-refresh {
-  padding: 4px 12px; border-radius: 6px; border: 1px solid #444;
-  background: #222; color: #ccc; font-size: 13px; cursor: pointer;
+  padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);
+  background: #222; color: rgba(255,255,255,0.7); font-size: 13px; cursor: pointer;
 }
 .md-stats {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
   margin-bottom: 20px;
 }
 .md-stat {
-  background: #1a1a1a; border-radius: 10px; padding: 14px 10px;
-  text-align: center; border: 1px solid #2a2a2a;
+  background: #222; border-radius: 10px; padding: 14px 10px;
+  text-align: center; border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
 .md-stat-num { font-size: 28px; font-weight: 700; color: #C4923A; }
-.md-stat-label { font-size: 12px; color: #777; margin-top: 4px; }
-.md-error { padding: 20px; color: #E8552A; text-align: center; }
-.md-loading { padding: 40px; color: #666; text-align: center; }
+.md-stat-label { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 4px; }
+.md-error { padding: 20px; color: #9B4A3E; text-align: center; }
+.md-loading { padding: 40px; color: rgba(255,255,255,0.5); text-align: center; }
 .md-section {
-  background: #161616; border-radius: 12px; padding: 16px;
-  margin-bottom: 16px; border: 1px solid #222;
+  background: #222; border-radius: 12px; padding: 16px;
+  margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
 .md-sec-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.md-sec-hdr h2 { margin: 0; font-size: 16px; color: #ddd; }
-.md-sec-count { font-size: 13px; color: #666; }
-.md-empty { text-align: center; color: #555; padding: 24px 0; font-size: 14px; }
+.md-sec-hdr h2 { margin: 0; font-size: 16px; color: #fff; }
+.md-sec-count { font-size: 13px; color: rgba(255,255,255,0.5); }
+.md-empty { text-align: center; color: rgba(255,255,255,0.4); padding: 24px 0; font-size: 14px; }
 .md-card {
   display: flex; flex-direction: column; gap: 10px;
-  background: #1e1e1e; border-radius: 10px; padding: 12px 14px;
-  margin-bottom: 10px; border: 1px solid #2a2a2a;
+  background: #222; border-radius: 10px; padding: 12px 14px;
+  margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
 .md-card-main { display: flex; gap: 14px; align-items: center; }
 .md-qnum {
@@ -385,35 +389,43 @@ onUnmounted(() => {
   min-width: 56px; text-align: center;
 }
 .md-res-time {
-  font-size: 22px; font-weight: 600; color: #8E9FE6;
+  font-size: 22px; font-weight: 600; color: #C4923A;
   min-width: 56px; text-align: center;
 }
 .md-qinfo { flex: 1; }
-.md-qname { font-size: 15px; color: #ddd; font-weight: 500; }
-.md-qtime { font-size: 12px; color: #777; margin-top: 2px; }
-.md-qphone { font-size: 12px; color: #5a7; margin-top: 2px; }
+.md-qname { font-size: 15px; color: #fff; font-weight: 500; }
+.md-qtime { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+.md-qphone { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
 .md-card-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .md-btn {
-  padding: 6px 14px; border-radius: 6px; border: none;
-  font-size: 13px; cursor: pointer; font-weight: 500;
+  padding: 6px 14px; border-radius: 14px; border: 3px solid transparent;
+  font-size: 13px; cursor: pointer; font-weight: 600; color: #fff;
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
 }
 .md-btn:disabled { opacity: 0.4; cursor: default; }
-.md-btn-primary { background: #C4923A; color: #fff; }
-.md-btn-success { background: #2D7D46; color: #fff; }
-.md-btn-danger { background: #8B3A3A; color: #fff; }
+.md-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(196,146,58,0.35); }
+.md-btn-primary { background: #9A7425; border-color: #9A7425;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45); }
+.md-btn-success { background: #2D7D46; border-color: #2D7D46;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(80,180,110,0.45); }
+.md-btn-success:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(80,180,110,0.35); }
+.md-btn-danger { background: #8B3A3A; border-color: #8B3A3A;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(190,90,90,0.45); }
+.md-btn-danger:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(190,90,90,0.35); }
 .md-webhook { padding-bottom: 20px; }
 .md-wh-row { display: flex; gap: 8px; margin-bottom: 6px; }
 .md-input {
-  flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid #333;
-  background: #1a1a1a; color: #ddd; font-size: 13px;
+  flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);
+  background: #1a1a1a; color: #fff; font-size: 13px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
 }
-.md-wh-hint { font-size: 11px; color: #555; }
+.md-wh-hint { font-size: 11px; color: rgba(255,255,255,0.45); }
 .md-coupon-form { display: flex; flex-direction: column; gap: 8px; }
 .md-coupon-row { display: flex; gap: 8px; }
 .md-input-sm { flex: 1; }
 .md-coupon-form select.md-input { cursor: pointer; }
 .md-footer {
   text-align: center; padding: 20px 0 40px; font-size: 12px;
-  color: #444; display: flex; justify-content: space-between;
+  color: rgba(255,255,255,0.45); display: flex; justify-content: space-between;
 }
 </style>

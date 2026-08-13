@@ -86,6 +86,6 @@ async function submit() {
 .rm-textarea::placeholder { color: #555; }
 .rm-actions { display: flex; gap: 10px; margin-top: 14px; }
 .rm-btn-cancel { flex: 1; padding: 11px 0; border-radius: 10px; border: 1px solid #333; background: #151515; color: #999; font-size: 14px; cursor: pointer; }
-.rm-btn-submit { flex: 2; padding: 11px 0; border-radius: 10px; border: none; background: linear-gradient(135deg, #E8552A, #FF7B2C); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+.rm-btn-submit { flex: 2; padding: 11px 0; border-radius: 10px; border: none; background: linear-gradient(135deg, #E8552A, #C4923A); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
 .rm-btn-submit:disabled { opacity: 0.4; cursor: default; }
 </style>

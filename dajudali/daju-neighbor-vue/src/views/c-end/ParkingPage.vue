@@ -55,7 +55,7 @@
 
     <!-- 支付成功 -->
     <div v-if="paid" class="pp-paid-card">
-      <div class="pp-paid-icon">✓</div>
+      <div class="pp-paid-icon">已</div>
       <div class="pp-paid-text">缴费成功</div>
       <div class="pp-paid-detail">{{ payResult?.message }}</div>
     </div>
@@ -181,106 +181,120 @@ async function doExit() {
 </script>
 
 <style scoped>
-.parking-page { padding: 0 12px; min-height: 100vh; background: #1A1A1A; }
+.parking-page { padding: 0 12px; min-height: 100vh; background: #000000; }
 .pp-back { padding: 10px 0; cursor: pointer; display: inline-block; }
 
 .pp-hero { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; padding: 4px 0; }
-.pp-title { font-size: 24px; font-weight: 700; color: #F0F0F0; }
+.pp-title { font-size: 24px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
 
 .pp-plate-section { margin-bottom: 16px; }
-.pp-plate-label { font-size: 13px; font-weight: 600; color: #999; margin-bottom: 8px; }
+.pp-plate-label { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.7); margin-bottom: 8px; }
 .pp-plate-input-wrap {
-  background: #2A2A2A; border: 1px solid #444; border-radius: 12px;
+  background: #000; border: 3px solid #4E5049; border-radius: 12px;
   margin-bottom: 10px; transition: border-color 0.15s;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(107,110,100,.25);
 }
-.pp-plate-input-wrap:focus-within { border-color: #999999; }
+.pp-plate-input-wrap:focus-within { border-color: #6B6E64; }
 .pp-plate-input {
   width: 100%; padding: 16px; border: none; background: none; outline: none;
-  font-size: 28px; font-weight: 700; color: #F0F0F0; text-align: center;
+  font-size: 28px; font-weight: 700; color: #fff; text-align: center;
   letter-spacing: 2px; font-family: inherit;
 }
 .pp-plate-presets { display: flex; gap: 8px; flex-wrap: wrap; }
 .pp-preset-btn {
-  padding: 8px 16px; border: 1px solid #333; border-radius: 12px;
-  background: #222222; color: #999; font-size: 13px; font-weight: 500;
+  padding: 8px 16px; border: 3px solid #4E5049; border-radius: 20px;
+  background: #6B6E64; color: #fff; font-size: 13px; font-weight: 500;
   cursor: pointer; font-family: inherit; transition: all 0.15s;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(107,110,100,.45);
 }
-.pp-preset-btn:active { background: #2A2A2A; }
-.pp-preset-btn.add { color: #999999; border-color: #999999; }
+.pp-preset-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(107,110,100,.35); }
+.pp-preset-btn.add { background: #C4923A; border-color: #9A7425; color: #fff; }
 
 .pp-query-btn {
-  width: 100%; padding: 14px; border: none; border-radius: 12px;
-  background: #2A2A2A; color: #666; font-size: 16px; font-weight: 600;
+  width: 100%; padding: 14px; border: 3px solid #9A7425; border-radius: 20px;
+  background: #9A7425; color: #fff; font-size: 16px; font-weight: 600;
   cursor: pointer; font-family: inherit; transition: all 0.15s; margin-bottom: 20px;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
 }
-.pp-query-btn:not(:disabled) { background: #1A1A1A; color: #fff; }
-.pp-query-btn:not(:disabled):active { opacity: 0.8; }
+.pp-query-btn:not(:disabled):active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(196,146,58,.35); }
 .pp-query-btn:disabled { opacity: 0.5; }
 
 .pp-error {
-  background: #1A1A1A; border: 1px solid #767676;
-  color: #818181; font-size: 13px; padding: 10px 14px; border-radius: 10px;
+  background: #8B8B90; border: 3px solid #6A6A6E;
+  color: #fff; font-size: 13px; padding: 10px 14px; border-radius: 10px;
   margin-bottom: 16px; text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2);
 }
 
 .pp-status-card {
-  background: #222222; border-radius: 12px; padding: 4px 0; margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background: #6B6E64; border: 3px solid #4E5049; border-radius: 12px; padding: 4px 0; margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
 }
 .pps-row { display: flex; justify-content: space-between; padding: 14px 16px; }
-.pps-label { font-size: 14px; color: #999; }
-.pps-val { font-size: 14px; color: #F0F0F0; font-weight: 500; }
-.pps-divider { height: 1px; background: #2E2E2E; margin: 0 16px; }
+.pps-label { font-size: 14px; color: rgba(255,255,255,.85); }
+.pps-val { font-size: 14px; color: #fff; font-weight: 500; }
+.pps-divider { height: 1px; background: rgba(0,0,0,.25); margin: 0 16px; }
 .pps-fee { display: flex; justify-content: space-between; padding: 18px 16px; align-items: center; }
-.pps-fee-label { font-size: 16px; font-weight: 600; color: #F0F0F0; }
-.pps-fee-val { font-size: 28px; font-weight: 800; color: #999999; }
+.pps-fee-label { font-size: 16px; font-weight: 600; color: #fff; }
+.pps-fee-val { font-size: 28px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
 
 .pp-pay-btn {
-  width: 100%; padding: 16px; border: none; border-radius: 12px;
-  background: #1A1A1A; color: #fff; font-size: 17px; font-weight: 700;
+  width: 100%; padding: 16px; border: 3px solid #9A7425; border-radius: 20px;
+  background: #9A7425; color: #fff; font-size: 17px; font-weight: 700;
   cursor: pointer; font-family: inherit; transition: opacity 0.15s;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
 }
-.pp-pay-btn:active { opacity: 0.8; }
+.pp-pay-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(196,146,58,.35); }
 .pp-pay-btn:disabled { opacity: 0.5; }
 
 .pp-paid-card {
-  background: #222222; border-radius: 12px; padding: 32px 20px;
-  text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background: #C4923A; border: 3px solid #9A7425; border-radius: 12px; padding: 32px 20px;
+  text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
 }
 .pp-paid-icon {
-  width: 48px; height: 48px; border-radius: 50%; background: #1A1A1A;
-  color: #fff; font-size: 24px; font-weight: 700;
+  width: 48px; height: 48px; border-radius: 50%; background: #9A7425;
+  color: #fff; font-size: 20px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto 12px;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45);
 }
-.pp-paid-text { font-size: 18px; font-weight: 700; color: #878787; margin-bottom: 8px; }
-.pp-paid-detail { font-size: 13px; color: #999; }
+.pp-paid-text { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.pp-paid-detail { font-size: 13px; color: rgba(255,255,255,.85); }
 
 .pp-seamless {
-  margin-top: 24px; padding: 16px; background: #222222; border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  margin-top: 24px; padding: 16px; background: #8B8B90; border: 3px solid #6A6A6E; border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
 }
-.pps-title { font-size: 17px; font-weight: 700; color: #F0F0F0; margin-bottom: 6px; }
-.pps-sub { font-size: 12px; color: #888; line-height: 1.6; margin-bottom: 14px; }
-.pps-plates { font-size: 13px; color: #999; margin-bottom: 14px; }
-.pps-plates b { color: #F0F0F0; }
-.pps-link { color: #9AA39A; margin-left: 8px; text-decoration: underline; cursor: pointer; }
+.pps-title { font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 6px; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.pps-sub { font-size: 12px; color: rgba(255,255,255,.85); line-height: 1.6; margin-bottom: 14px; }
+.pps-plates { font-size: 13px; color: rgba(255,255,255,.85); margin-bottom: 14px; }
+.pps-plates b { color: #fff; }
+.pps-link { color: #fff; margin-left: 8px; text-decoration: underline; cursor: pointer; }
 .pps-actions { display: flex; gap: 10px; margin-bottom: 12px; }
 .pps-btn {
-  flex: 1; padding: 13px; border: none; border-radius: 12px;
+  flex: 1; padding: 13px; border: 3px solid #4E5049; border-radius: 20px;
   font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+  background: #6B6E64; color: #fff;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(107,110,100,.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
 }
-.pps-btn.entry { background: #2A2A2A; color: #fff; }
-.pps-btn.exit { background: #1A1A1A; color: #fff; }
+.pps-btn.entry { background: #6B6E64; border-color: #4E5049; color: #fff; }
+.pps-btn.exit { background: #9B4A3E; border-color: #6E332A; color: #fff;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(155,74,62,.45);
+}
 .pps-btn:disabled { opacity: 0.5; }
-.pps-msg { font-size: 13px; color: #8FB98F; margin-bottom: 10px; }
-.pps-result { background: #1A1A1A; border-radius: 10px; padding: 12px 14px; margin-top: 4px; }
-.pps-r-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 14px; color: #999; }
-.pps-r-row b { color: #F0F0F0; font-weight: 600; }
-.pps-r-row.total { border-top: 1px solid #2E2E2E; margin-top: 4px; padding-top: 10px; }
-.pps-r-row.total b { color: #9AA39A; }
+.pps-msg { font-size: 13px; color: #fff; margin-bottom: 10px; }
+.pps-result { background: #6B6E64; border: 3px solid #4E5049; border-radius: 10px; padding: 12px 14px; margin-top: 4px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2);
+}
+.pps-r-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 14px; color: rgba(255,255,255,.85); }
+.pps-r-row b { color: #fff; font-weight: 600; }
+.pps-r-row.total { border-top: 1px solid rgba(0,0,0,.25); margin-top: 4px; padding-top: 10px; }
+.pps-r-row.total b { color: #fff; }
 .pps-barrier { margin-top: 10px; padding: 10px; border-radius: 10px; text-align: center; font-size: 14px; font-weight: 600; }
-.pps-barrier.open { background: #1E2A1E; color: #8FB98F; }
-.pps-barrier.pay { background: #2A2420; color: #C8A07A; }
-.pps-msg2 { font-size: 12px; color: #999; margin-top: 8px; text-align: center; }
+.pps-barrier.open { background: #6B6E64; border: 3px solid #4E5049; color: #fff; }
+.pps-barrier.pay { background: #9B4A3E; border: 3px solid #6E332A; color: #fff; }
+.pps-msg2 { font-size: 12px; color: rgba(255,255,255,.85); margin-top: 8px; text-align: center; }
 </style>

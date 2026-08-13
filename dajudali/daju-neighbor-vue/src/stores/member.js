@@ -69,7 +69,7 @@ export const useMemberStore = defineStore('member', () => {
       '金卡':   { bg: '#C4923A', bd: '#9A7425', accent: '#DDB873' },
       '铂金卡': { bg: '#9DA7B5', bd: '#7C8593', accent: '#C3CBD6' },
       '钻石卡': { bg: '#4F9CC9', bd: '#3A7BA0', accent: '#8FC8E8' },
-      '黑钻卡': { bg: '#2E2E33', bd: '#555555', accent: '#6E6E76' },
+      '黑钻卡': { bg: '#6B6E64', bd: '#3C3E36', accent: '#8A8D82' },
     }
     return map[level] || map['普卡']
   }

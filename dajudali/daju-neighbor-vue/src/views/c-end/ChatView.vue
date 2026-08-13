@@ -69,7 +69,7 @@ function onSwitchTab(tab) {
 </script>
 
 <style scoped>
-.app-shell { display: flex; flex-direction: column; height: 100vh; background: #1A1A1A; }
+.app-shell { display: flex; flex-direction: column; height: 100vh; background: #000000; }
 
 /* 内容 */
 .tab-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -77,14 +77,14 @@ function onSwitchTab(tab) {
 /* TabBar — 暗黑底 + 顶部分割线 */
 .tab-bar {
   height: 56px; display: flex; flex-shrink: 0;
-  background: #1A1A1A;
-  border-top: 0.5px solid #333;
+  background: #000000;
+  border-top: 0.5px solid rgba(255,255,255,0.08);
 }
 .tb-item {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 2px; cursor: pointer; color: #777; transition: all 0.15s;
+  gap: 2px; cursor: pointer; color: rgba(255,255,255,0.55); transition: all 0.15s;
 }
-.tb-item.active { color: #999999; }
+.tb-item.active { color: #C4923A; }
 .tb-icon {
   width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
   border-radius: 10px; transition: all 0.15s;

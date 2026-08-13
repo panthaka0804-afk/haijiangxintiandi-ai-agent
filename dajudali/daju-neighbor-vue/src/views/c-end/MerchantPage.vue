@@ -16,19 +16,19 @@
       <div class="mp-card-title">项目优势</div>
       <div class="mp-advantage">
         <div class="mp-ad-item">
-          <div class="mp-ad-icon">📍</div>
+          <div class="mp-ad-icon">址</div>
           <div class="mp-ad-text">核心商圈 · 日均客流 3 万+</div>
         </div>
         <div class="mp-ad-item">
-          <div class="mp-ad-icon">🏢</div>
+          <div class="mp-ad-icon">楼</div>
           <div class="mp-ad-text">5 层商业体 · 200+ 商铺</div>
         </div>
         <div class="mp-ad-item">
-          <div class="mp-ad-icon">🅿️</div>
+          <div class="mp-ad-icon">车</div>
           <div class="mp-ad-text">地下停车场 · 500 车位</div>
         </div>
         <div class="mp-ad-item">
-          <div class="mp-ad-icon">📊</div>
+          <div class="mp-ad-icon">势</div>
           <div class="mp-ad-text">统一运营 · 品牌推广支持</div>
         </div>
       </div>
@@ -74,35 +74,46 @@ function call() { window.location.href = 'tel:4008888888' }
 </script>
 
 <style scoped>
-.mp-page { padding: 0 12px; min-height: 100vh; background: #1A1A1A; }
+.mp-page { padding: 0 12px; min-height: 100vh; background: #000000; }
 .mp-back { padding: 10px 0; cursor: pointer; display: inline-block; margin-bottom: 4px; }
 
 .mp-hero { text-align: center; padding: 24px 0 20px; }
 .mp-hero-icon { margin-bottom: 12px; }
-.mp-hero-title { font-size: 24px; font-weight: 700; color: #F0F0F0; }
-.mp-hero-sub { font-size: 14px; color: #777; margin-top: 6px; }
+.mp-hero-title { font-size: 24px; font-weight: 700; color: #fff; }
+.mp-hero-sub { font-size: 14px; color: rgba(255,255,255,0.55); margin-top: 6px; }
 
-.mp-card { margin-bottom: 10px; padding: 16px; background: #2A2A2A; border-radius: 14px; }
-.mp-card-title { font-size: 15px; font-weight: 600; color: #F0F0F0; margin-bottom: 12px; }
+.mp-card { margin-bottom: 10px; padding: 16px; background: #222; border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08); box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); }
+.mp-card-title { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 12px; }
 
 .mp-advantage { display: flex; flex-direction: column; gap: 10px; }
 .mp-ad-item { display: flex; align-items: center; gap: 10px; }
-.mp-ad-icon { font-size: 18px; }
-.mp-ad-text { font-size: 14px; color: #AAA; }
+.mp-ad-icon {
+  font-size: 15px; font-weight: 700; width: 32px; height: 32px; border-radius: 8px;
+  background: #232323; border: 1px solid #7E5413; color: #C4923A;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.mp-ad-text { font-size: 14px; color: rgba(255,255,255,0.7); }
 
 .mp-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .mp-tag {
-  padding: 5px 14px; border-radius: 20px; background: #1A1A1A; color: #999999;
+  padding: 5px 14px; border-radius: 20px; background: #222; color: rgba(255,255,255,0.65);
+  border: 1px solid rgba(255,255,255,0.08);
   font-size: 13px; font-weight: 500;
 }
 
 .mp-contact { display: flex; flex-direction: column; gap: 12px; }
-.mp-contact-item { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #AAA; cursor: pointer; }
+.mp-contact-item { display: flex; align-items: center; gap: 10px; font-size: 14px; color: rgba(255,255,255,0.7); cursor: pointer; }
 
 .mp-call-btn {
-  display: block; width: 100%; padding: 14px; border: none; border-radius: 14px;
-  background: #1A1A1A; color: #fff; font-size: 16px; font-weight: 700;
+  display: block; width: 100%; padding: 14px; border: 3px solid #9A7425; border-radius: 14px;
+  background: #9A7425; color: #fff; font-size: 16px; font-weight: 700;
   text-align: center; text-decoration: none; cursor: pointer; margin-top: 8px;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
+}
+.mp-call-btn:active {
+  box-shadow: inset 5px 5px 10px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(196,146,58,0.35);
 }
 .spacer { height: 40px; }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div class="ad-page">
     <!-- 头图 -->
-    <div class="ad-header" :style="{background: activity.gradient || '#333'}">
+    <div class="ad-header">
       <div class="ad-back" @click="$router.back()">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
       </div>
@@ -91,7 +91,7 @@
       <!-- ====== 报名结果 / 电子凭证 ====== -->
       <div v-if="ticket" class="ad-ticket">
         <div class="at-card">
-          <div class="at-h">🎫 报名成功</div>
+          <div class="at-h">报名成功</div>
           <div class="at-body">
             <div class="at-row"><span class="at-lbl">活动</span><span>{{ ticket.activity_title }}</span></div>
             <div class="at-row"><span class="at-lbl">场次</span><span>{{ ticket.session }}</span></div>
@@ -111,7 +111,7 @@
       <div v-if="showMyRegs" class="ad-reg-list">
         <div class="ad-section-title">
           我的报名
-          <button class="arl-close" @click="showMyRegs = false">✕</button>
+          <button class="arl-close" @click="showMyRegs = false">X</button>
         </div>
         <div v-if="myRegs.length === 0" class="ad-card" style="color:#666;text-align:center">暂无报名记录</div>
         <div v-for="r in myRegs" :key="r.id" class="arl-item">
@@ -299,66 +299,73 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.ad-page { min-height: 100vh; background: #1A1A1A; }
+.ad-page { min-height: 100vh; background: #000000; }
 
-.ad-header { height: 180px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+.ad-header { height: 180px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; background: linear-gradient(135deg, #C4923A, #A8761F); }
 .ad-back { position: absolute; top: 16px; left: 12px; padding: 6px; cursor: pointer; z-index: 2; }
 .ad-hero { position: relative; z-index: 1; padding: 0 20px 24px; display: flex; flex-direction: column; gap: 8px; }
-.ad-title { font-size: 22px; font-weight: 700; color: #fff; }
-.ad-meta { display: flex; gap: 16px; font-size: 13px; color: rgba(255,255,255,0.8); }
+.ad-title { font-size: 22px; font-weight: 700; color: #fff; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.ad-meta { display: flex; gap: 16px; font-size: 13px; color: rgba(255,255,255,0.85); }
 
 .ad-body { padding: 16px 12px; display: flex; flex-direction: column; gap: 10px; }
 .ad-section-title { font-size: 14px; font-weight: 600; color: #999; padding-left: 4px; display: flex; align-items: center; justify-content: space-between; }
-.ad-card { background: #222; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); font-size: 15px; color: #AAA; line-height: 1.7; }
+.ad-card { background-color: #C4923A; border: 3px solid #9A7425; border-radius: 14px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); font-size: 15px; color: #FFFFFF; line-height: 1.7; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
 .ad-card p { margin: 0; }
 
 .ad-price-row { margin-top: 12px; display: flex; gap: 12px; align-items: center; }
-.ad-price { color: #999999; font-size: 18px; font-weight: 700; }
-.ad-points { color: #BDBDBD; font-size: 14px; }
+.ad-price { color: #FFFFFF; font-size: 18px; font-weight: 700; }
+.ad-points { color: #FFFFFF; font-size: 14px; }
 
 /* 场次 */
 .ad-sessions { display: flex; gap: 10px; overflow-x: auto; padding: 0 4px; }
 .ad-session-item {
-  flex-shrink: 0; width: 140px; background: #222; border: 1px solid #333; border-radius: 12px;
+  flex-shrink: 0; width: 140px; background-color: #8B8B90; border: 3px solid #6A6A6E; border-radius: 12px;
   padding: 12px; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; gap: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
+  color: #FFFFFF;
 }
-.ad-session-item.selected { border-color: #999999; background: #1A1A1A; }
+.ad-session-item.selected { border-color: #9A7425; background-color: #C4923A; }
 .ad-session-item.full { opacity: 0.4; cursor: not-allowed; }
-.asi-date { font-size: 14px; font-weight: 600; color: #F0F0F0; }
-.asi-time { font-size: 13px; color: #999999; font-weight: 600; }
-.asi-venue { font-size: 12px; color: #777; }
-.asi-left { font-size: 12px; color: #878787; }
+.asi-date { font-size: 14px; font-weight: 600; color: #FFFFFF; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.asi-time { font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 600; }
+.asi-venue { font-size: 12px; color: rgba(255,255,255,0.75); }
+.asi-left { font-size: 12px; color: rgba(255,255,255,0.75); }
 
 /* 报名表单 */
 .ad-form { display: flex; flex-direction: column; gap: 12px; }
 .ad-field { display: flex; flex-direction: column; gap: 6px; }
 .ad-field label { font-size: 13px; color: #999; font-weight: 500; }
-.ad-input-wrap { background: #2A2A2A; border: 1px solid #444; border-radius: 12px; transition: border-color 0.15s; }
-.ad-input-wrap:focus-within { border-color: #999999; }
+.ad-input-wrap { background: #000000; border: 3px solid #4E5049; border-radius: 12px; transition: border-color 0.15s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.05); }
+.ad-input-wrap:focus-within { border-color: #9A7425; }
 .ad-input-wrap input { width: 100%; padding: 12px 14px; border: none; background: none; outline: none; font-size: 15px; color: #F0F0F0; font-family: inherit; }
-.ad-input-wrap input::placeholder { color: #666; }
+.ad-input-wrap input::placeholder { color: #777; }
 
 .ad-pay-row { display: flex; gap: 8px; }
 .ad-pay-btn {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 10px; border: 1px solid #444; border-radius: 12px;
-  background: #2A2A2A; color: #999; font-size: 14px; font-family: inherit; cursor: pointer;
+  padding: 10px; border: 3px solid #4E5049; border-radius: 12px;
+  background-color: #4E5049; color: #FFFFFF; font-size: 14px; font-family: inherit; cursor: pointer;
   transition: all 0.15s;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(107,110,100,0.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
 }
-.ad-pay-btn.on { border-color: #999999; color: #999999; background: #1A1A1A; }
+.ad-pay-btn.on { background-color: #9A7425; border-color: #9A7425; color: #FFFFFF; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45); }
 
 .ad-member-tip {
-  background: #1A1A1A; border: 1px solid #2D2D2D; border-radius: 10px;
-  padding: 10px 14px; font-size: 13px; color: #BDBDBD;
+  background-color: #6B6E64; border: 3px solid #4E5049; border-radius: 10px;
+  padding: 10px 14px; font-size: 13px; color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
 }
 
 .ad-submit {
-  width: 100%; padding: 14px; border: none; border-radius: 12px;
-  background: #1A1A1A; color: #fff; font-size: 16px; font-weight: 700;
+  width: 100%; padding: 14px; border: 3px solid #9A7425; border-radius: 20px;
+  background-color: #9A7425; color: #fff; font-size: 16px; font-weight: 700;
   cursor: pointer; font-family: inherit; transition: opacity 0.15s; margin-top: 6px;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
 }
-.ad-submit:disabled { background: #444; color: #777; cursor: not-allowed; }
-.ad-submit:not(:disabled):active { opacity: 0.8; }
+.ad-submit:disabled { background: #444; border-color: #444; color: #777; cursor: not-allowed; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.5); }
+.ad-submit:not(:disabled):active { opacity: 0.82; }
 
 /* 电子凭证 */
 .ad-ticket {
@@ -366,40 +373,44 @@ onMounted(() => {
   display: flex; align-items: center; justify-content: center; z-index: 100;
 }
 .at-card {
-  background: #222; border-radius: 16px; padding: 24px; width: 90%; max-width: 360px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  background-color: #C4923A; border: 3px solid #9A7425; border-radius: 16px; padding: 24px; width: 90%; max-width: 360px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5); color: #FFFFFF;
 }
-.at-h { font-size: 18px; font-weight: 700; color: #999999; margin-bottom: 16px; text-align: center; }
+.at-h { font-size: 18px; font-weight: 700; color: #FFFFFF; margin-bottom: 16px; text-align: center; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
 .at-body { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-.at-row { display: flex; justify-content: space-between; font-size: 14px; }
-.at-lbl { color: #777; }
-.at-code { color: #999999; font-weight: 700; font-family: monospace; }
+.at-row { display: flex; justify-content: space-between; font-size: 14px; color: #FFFFFF; }
+.at-lbl { color: rgba(255,255,255,0.85); }
+.at-code { color: #FFFFFF; font-weight: 700; font-family: monospace; }
 .at-actions { display: flex; gap: 8px; }
 .at-btn {
-  flex: 1; padding: 10px; border: none; border-radius: 10px;
-  background: #1A1A1A; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  flex: 1; padding: 10px; border: 3px solid #9A7425; border-radius: 20px;
+  background-color: #9A7425; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
 }
-.at-btn.secondary { background: #333; color: #AAA; }
+.at-btn.secondary { background-color: #4E5049; border-color: #4E5049; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(107,110,100,0.45); }
 
 /* 报名列表 */
 .ad-reg-list { display: flex; flex-direction: column; gap: 10px; }
-.arl-close { border: none; background: none; color: #666; font-size: 18px; cursor: pointer; }
+.arl-close { border: none; background: none; color: #999; font-size: 18px; cursor: pointer; }
 .arl-item {
-  background: #222; border-radius: 12px; padding: 14px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background-color: #8B8B90; border: 3px solid #6A6A6E; border-radius: 12px; padding: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); color: #FFFFFF;
 }
 .arli-top { display: flex; justify-content: space-between; align-items: center; }
-.arli-title { font-size: 15px; font-weight: 600; color: #F0F0F0; }
+.arli-title { font-size: 15px; font-weight: 600; color: #FFFFFF; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
 .arli-status { font-size: 12px; padding: 3px 8px; border-radius: 6px; }
-.arli-status.confirmed { background: #1A1A1A; color: #878787; }
-.arli-status.refunding { background: #1A1A1A; color: #BDBDBD; }
-.arli-status.cancelled { background: #1A1A1A; color: #767676; }
-.arli-info { font-size: 13px; color: #999; margin-top: 6px; }
-.arli-code { font-size: 12px; color: #999999; font-family: monospace; margin-top: 4px; }
+.arli-status.confirmed { background: rgba(0,0,0,0.22); color: #FFFFFF; }
+.arli-status.refunding { background: rgba(0,0,0,0.22); color: #FFFFFF; }
+.arli-status.cancelled { background: rgba(0,0,0,0.22); color: rgba(255,255,255,0.7); }
+.arli-info { font-size: 13px; color: rgba(255,255,255,0.85); margin-top: 6px; }
+.arli-code { font-size: 12px; color: #FFFFFF; font-family: monospace; margin-top: 4px; }
 .arli-actions { display: flex; gap: 8px; margin-top: 10px; }
 .arli-btn {
-  padding: 6px 14px; border: 1px solid #444; border-radius: 8px;
-  background: #333; color: #AAA; font-size: 13px; cursor: pointer; font-family: inherit;
+  padding: 6px 14px; border: 3px solid #9A7425; border-radius: 20px;
+  background-color: #9A7425; color: #fff; font-size: 13px; cursor: pointer; font-family: inherit;
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45);
+  filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4));
 }
-.arli-btn.danger { border-color: #2D2D2D; color: #767676; }
+.arli-btn.danger { background-color: #4E5049; border-color: #4E5049; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(107,110,100,0.45); }
 </style>

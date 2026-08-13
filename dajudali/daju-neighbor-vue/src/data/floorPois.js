@@ -53,7 +53,7 @@ const floorPois = {
 "x": 0.6078,
 "y": 0.2154,
 "category": "餐饮",
-"color": "#E85D04"
+"color": "#C4923A"
 },
 {
 "name": "手心兔小吐司",
@@ -67,7 +67,7 @@ const floorPois = {
 "x": 0.7564,
 "y": 0.2182,
 "category": "餐饮",
-"color": "#E85D04"
+"color": "#C4923A"
 },
 {
 "name": "成都你六姐",
@@ -95,7 +95,7 @@ const floorPois = {
 "x": 0.5242,
 "y": 0.3887,
 "category": "餐饮",
-"color": "#E85D04"
+"color": "#C4923A"
 },
 {
 "name": "潮纪",
@@ -109,7 +109,7 @@ const floorPois = {
 "x": 0.5242,
 "y": 0.459,
 "category": "餐饮",
-"color": "#E85D04"
+"color": "#C4923A"
 },
 {
 "name": "临榆炸鸡腿",
@@ -130,7 +130,7 @@ const floorPois = {
 "x": 0.5817,
 "y": 0.4923,
 "category": "餐饮",
-"color": "#E85D04"
+"color": "#C4923A"
 },
 {
 "name": "万酒堂",
@@ -274,21 +274,21 @@ const floorPois = {
 "x": 0.5229,
 "y": 0.2565,
 "category": "餐饮",
-"color": "#E85D04"
+"color": "#C4923A"
 },
 {
 "name": "泰士多",
 "x": 0.5863,
 "y": 0.2565,
 "category": "餐饮",
-"color": "#E85D04"
+"color": "#C4923A"
 },
 {
 "name": "刘栋梁大排档",
 "x": 0.6766,
 "y": 0.2535,
 "category": "餐饮",
-"color": "#E85D04"
+"color": "#C4923A"
 },
 {
 "name": "星巴克",
@@ -330,7 +330,7 @@ const floorPois = {
 "x": 0.3861,
 "y": 0.3445,
 "category": "餐饮",
-"color": "#E85D04"
+"color": "#C4923A"
 }
 ]
 },
@@ -433,7 +433,7 @@ const floorPois = {
 "x": 0.1368,
 "y": 0.516,
 "category": "餐饮",
-"color": "#E85D04"
+"color": "#C4923A"
 },
 {
 "name": "戴海川·美蛙",
@@ -482,14 +482,14 @@ const floorPois = {
 "x": 0.3467,
 "y": 0.5251,
 "category": "餐饮",
-"color": "#E85D04"
+"color": "#C4923A"
 },
 {
 "name": "深夜食堂",
 "x": 0.2625,
 "y": 0.5248,
 "category": "餐饮",
-"color": "#E85D04"
+"color": "#C4923A"
 },
 {
 "name": "汽石锅鱼",
@@ -753,7 +753,7 @@ const floorPois = {
 "x": 0.5535,
 "y": 0.5291,
 "category": "娱乐",
-"color": "#E85D04"
+"color": "#C4923A"
 }
 ]
 }

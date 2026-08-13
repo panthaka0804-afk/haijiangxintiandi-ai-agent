@@ -8,18 +8,18 @@ const raw = [
   { id:'s004', name:'秀目眼镜', floor:1, zone:'1区', category:'零售', tags:['眼镜', '验光'], color:'#4A90D9' },
   { id:'s005', name:'霸王茶姬', floor:1, zone:'1区', category:'餐饮', tags:['茶饮', '新茶饮'], color:'#6E4B3A' },
   { id:'s006', name:'小杨生煎', floor:1, zone:'1区', category:'餐饮', tags:['生煎', '小吃'], color:'#C0392B' },
-  { id:'s007', name:'新贝乐', floor:1, zone:'1区', category:'餐饮', tags:['本帮菜', '家常菜'], color:'#E85D04' },
+  { id:'s007', name:'新贝乐', floor:1, zone:'1区', category:'餐饮', tags:['本帮菜', '家常菜'], color:'#C4923A' },
   { id:'s008', name:'手心兔小吐司', floor:1, zone:'1区', category:'餐饮', tags:['吐司', '烘焙'], color:'#C9975A' },
-  { id:'s009', name:'贵华嫂', floor:1, zone:'1区', category:'餐饮', tags:['小吃', '面点'], color:'#E85D04' },
+  { id:'s009', name:'贵华嫂', floor:1, zone:'1区', category:'餐饮', tags:['小吃', '面点'], color:'#C4923A' },
   { id:'s010', name:'成都你六姐', floor:1, zone:'1区', category:'餐饮', tags:['川菜', '江湖菜'], color:'#C2185B' },
   { id:'s011', name:'晨光文具', floor:1, zone:'1区', category:'零售', tags:['文具', '办公'], color:'#4A90D9' },
   { id:'s012', name:'老盛兴汤包馆', floor:1, zone:'1区', category:'餐饮', tags:['汤包', '小吃'], color:'#C0392B' },
-  { id:'s013', name:'烧饼文化', floor:1, zone:'1区', category:'餐饮', tags:['烧饼', '小吃'], color:'#E85D04' },
+  { id:'s013', name:'烧饼文化', floor:1, zone:'1区', category:'餐饮', tags:['烧饼', '小吃'], color:'#C4923A' },
   { id:'s014', name:'潮纪', floor:1, zone:'1区', category:'餐饮', tags:['潮汕', '牛肉'], color:'#C2185B' },
-  { id:'s015', name:'喜姐炸串', floor:1, zone:'1区', category:'餐饮', tags:['炸串', '小吃'], color:'#E85D04' },
+  { id:'s015', name:'喜姐炸串', floor:1, zone:'1区', category:'餐饮', tags:['炸串', '小吃'], color:'#C4923A' },
   { id:'s016', name:'临榆炸鸡腿', floor:1, zone:'1区', category:'餐饮', tags:['炸鸡', '小吃'], color:'#D52B1E' },
   { id:'s017', name:'银流咖啡', floor:1, zone:'1区', category:'餐饮', tags:['咖啡', '轻食'], color:'#6F4E37' },
-  { id:'s018', name:'海江食集', floor:1, zone:'1区', category:'餐饮', tags:['美食广场', '小吃集合'], color:'#E85D04' },
+  { id:'s018', name:'海江食集', floor:1, zone:'1区', category:'餐饮', tags:['美食广场', '小吃集合'], color:'#C4923A' },
   { id:'s019', name:'万酒堂', floor:1, zone:'1区', category:'零售', tags:['酒水', '零售'], color:'#4A90D9' },
   { id:'s020', name:'诺家智慧大药房', floor:1, zone:'1区', category:'生活服务', tags:['药房', '健康'], color:'#3E8E41' },
   { id:'s021', name:'古康元', floor:1, zone:'1区', category:'生活服务', tags:['理疗', '养生'], color:'#3E8E41' },
@@ -35,15 +35,15 @@ const raw = [
   { id:'s031', name:'哇咔健身', floor:3, zone:'1区', category:'娱乐', tags:['健身', '团课'], color:'#9B7BD4' },
   { id:'s032', name:'锦光星耀桌球俱乐部', floor:3, zone:'1区', category:'娱乐', tags:['桌球', '台球'], color:'#9B7BD4' },
   { id:'s033', name:'尊柜KTV/棋牌室', floor:4, zone:'1区', category:'娱乐', tags:['KTV', '棋牌'], color:'#9B7BD4' },
-  { id:'s034', name:'徐妈串串', floor:1, zone:'3区', category:'餐饮', tags:['串串', '川味'], color:'#E85D04' },
-  { id:'s035', name:'泰士多', floor:1, zone:'3区', category:'餐饮', tags:['东南亚', '料理'], color:'#E85D04' },
-  { id:'s036', name:'刘栋梁大排档', floor:1, zone:'3区', category:'餐饮', tags:['大排档', '夜宵'], color:'#E85D04' },
+  { id:'s034', name:'徐妈串串', floor:1, zone:'3区', category:'餐饮', tags:['串串', '川味'], color:'#C4923A' },
+  { id:'s035', name:'泰士多', floor:1, zone:'3区', category:'餐饮', tags:['东南亚', '料理'], color:'#C4923A' },
+  { id:'s036', name:'刘栋梁大排档', floor:1, zone:'3区', category:'餐饮', tags:['大排档', '夜宵'], color:'#C4923A' },
   { id:'s037', name:'星巴克', floor:1, zone:'3区', category:'餐饮', tags:['咖啡', '第三空间'], color:'#00704A' },
   { id:'s038', name:'味千拉面', floor:1, zone:'3区', category:'餐饮', tags:['拉面', '日式'], color:'#E60012' },
   { id:'s039', name:'小灶湘', floor:1, zone:'3区', category:'餐饮', tags:['湘菜', '剁椒'], color:'#C2185B' },
   { id:'s040', name:'朱光玉火锅', floor:1, zone:'3区', category:'餐饮', tags:['火锅', '重庆'], color:'#C2185B' },
   { id:'s041', name:'扬春茶社', floor:1, zone:'3区', category:'餐饮', tags:['茶馆', '茶饮'], color:'#6E4B3A' },
-  { id:'s042', name:'肖记公安牛杂', floor:1, zone:'3区', category:'餐饮', tags:['牛杂', '湖北'], color:'#E85D04' },
+  { id:'s042', name:'肖记公安牛杂', floor:1, zone:'3区', category:'餐饮', tags:['牛杂', '湖北'], color:'#C4923A' },
   { id:'s043', name:'大城小野', floor:2, zone:'3区', category:'餐饮', tags:['料理', '创意菜'], color:'#C2185B' },
   { id:'s044', name:'伴月楼', floor:2, zone:'3区', category:'餐饮', tags:['杭帮菜', '本帮'], color:'#C0392B' },
   { id:'s045', name:'星巴克', floor:2, zone:'3区', category:'餐饮', tags:['咖啡', '第三空间'], color:'#00704A' },
@@ -51,15 +51,15 @@ const raw = [
   { id:'s047', name:'苏宁易购', floor:1, zone:'4区', category:'零售', tags:['电器', '数码'], color:'#E60012' },
   { id:'s048', name:'华为/迪信通', floor:1, zone:'4区', category:'零售', tags:['手机', '数码'], color:'#4A90D9' },
   { id:'s049', name:'足浴养生', floor:3, zone:'4区', category:'生活服务', tags:['足浴', '养生'], color:'#3E8E41' },
-  { id:'s050', name:'民谣星烧烤酒馆', floor:1, zone:'6区', category:'餐饮', tags:['烧烤', '音乐'], color:'#E85D04' },
+  { id:'s050', name:'民谣星烧烤酒馆', floor:1, zone:'6区', category:'餐饮', tags:['烧烤', '音乐'], color:'#C4923A' },
   { id:'s051', name:'戴海川·美蛙', floor:1, zone:'6区', category:'餐饮', tags:['美蛙', '川味'], color:'#C2185B' },
   { id:'s052', name:'暴走牛牛·碳火烧肉', floor:1, zone:'6区', category:'餐饮', tags:['烧肉', '日式'], color:'#C0392B' },
   { id:'s053', name:'鱼石尚云南蒸石锅鱼', floor:1, zone:'6区', category:'餐饮', tags:['蒸汽石锅鱼', '云南菜'], color:'#3E8E41' },
   { id:'s054', name:'福海面馆', floor:1, zone:'6区', category:'餐饮', tags:['面', '快餐'], color:'#E60012' },
   { id:'s055', name:'Jenga精酿啤酒馆', floor:1, zone:'6区', category:'餐饮', tags:['精酿', '啤酒'], color:'#C9975A' },
   { id:'s056', name:'潮汕·草根活鱼火锅', floor:1, zone:'6区', category:'餐饮', tags:['火锅', '潮汕'], color:'#C2185B' },
-  { id:'s057', name:'阿国烤局', floor:1, zone:'6区', category:'餐饮', tags:['烤串', '夜宵'], color:'#E85D04' },
-  { id:'s058', name:'深夜食堂', floor:1, zone:'6区', category:'餐饮', tags:['夜宵', '小炒'], color:'#E85D04' },
+  { id:'s057', name:'阿国烤局', floor:1, zone:'6区', category:'餐饮', tags:['烤串', '夜宵'], color:'#C4923A' },
+  { id:'s058', name:'深夜食堂', floor:1, zone:'6区', category:'餐饮', tags:['夜宵', '小炒'], color:'#C4923A' },
   { id:'s059', name:'汽石锅鱼', floor:1, zone:'6区', category:'餐饮', tags:['石锅鱼', '川味'], color:'#3E8E41' },
   { id:'s060', name:'牛肉档', floor:1, zone:'6区', category:'餐饮', tags:['牛肉', '火锅'], color:'#C0392B' },
   { id:'s061', name:'合一瑜伽健身', floor:2, zone:'6区', category:'娱乐', tags:['瑜伽', '健身'], color:'#9B7BD4' },
@@ -91,7 +91,7 @@ const raw = [
   { id:'s087', name:'诚之书院', floor:2, zone:'7区', category:'亲子', tags:['书院', '国学'], color:'#E8809E' },
   { id:'s088', name:'嘻戏英语', floor:2, zone:'7区', category:'亲子', tags:['英语', '培训'], color:'#E8809E' },
   { id:'s089', name:'沪小胖', floor:3, zone:'7区', category:'餐饮', tags:['小龙虾', '夜宵'], color:'#E60012' },
-  { id:'s090', name:'SFC上影影城', floor:3, zone:'7区', category:'娱乐', tags:['影院', '电影'], color:'#E85D04' },
+  { id:'s090', name:'SFC上影影城', floor:3, zone:'7区', category:'娱乐', tags:['影院', '电影'], color:'#C4923A' },
 ]
 
 const CAT_INTRO = {"餐饮": "汇聚人气美食，满足全时段味蕾需求，是街区的活力引擎。", "零售": "精选好物与品牌，打造舒适惬意的购物体验。", "生活服务": "贴心周到的生活服务，便捷周边日常所需。", "亲子": "亲子同乐的成长空间，陪伴孩子快乐探索世界。", "娱乐": "潮流娱乐聚场，释放精彩的昼夜生活。"}
@@ -99,7 +99,7 @@ const HOURS = {"餐饮": "10:00 - 22:00", "零售": "10:00 - 22:00", "生活服�
 const HOURS_SPECIAL = {"生活服务,银行": "09:00 - 17:00", "娱乐,KTV": "18:00 - 02:00", "娱乐,棋牌": "10:00 - 24:00"}
 const FEATURES = {"餐饮": ["可堂食", "外卖配送", "支持扫码点单"], "零售": ["线上线下同价", "支持退换", "会员积分"], "生活服务": ["专业服务", "可预约"], "亲子": ["亲子友好", "可免费体验"], "娱乐": ["可预约", "适合聚会"]}
 const COUPON = {"餐饮": [50, 10], "零售": [200, 30], "生活服务": [0, 5], "亲子": [100, 20], "娱乐": [0, 30]}
-const CAT_COLOR = {"餐饮": "#E85D04", "零售": "#4A90D9", "生活服务": "#3E8E41", "亲子": "#E8809E", "娱乐": "#9B7BD4"}
+const CAT_COLOR = {"餐饮": "#C4923A", "零售": "#4A90D9", "生活服务": "#3E8E41", "亲子": "#E8809E", "娱乐": "#9B7BD4"}
 const PHONE = '021-5656 8888'
 const EXPIRE = '2026-12-31'
 

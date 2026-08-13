@@ -97,14 +97,15 @@
 .doc-body h2 {
   font-size: 16px; font-weight: 700; color: #FFFFFF;
   margin: 22px 0 8px; padding-left: 10px;
-  border-left: 3px solid #FF7B2C;
+  border-left: 3px solid #C4923A;
 }
 .doc-end { text-align: center; color: #9A9A9A; margin-top: 22px; letter-spacing: 1px; }
 .doc-back {
-  display: block; margin: 22px auto 0; padding: 10px 28px;
-  background: #E85D04; border: 3px solid #E85D04; border-radius: 20px;
-  box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(255, 123, 44, 0.45);
+  display: block; margin: 22px auto 0; padding: 9px 26px;
+  background: #9A7425; border: 3px solid #9A7425; border-radius: 20px;
+  box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196, 146, 58, 0.45);
   color: #FFFFFF; font-size: 14px; font-weight: 600; cursor: pointer;
+  filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4));
 }
-.doc-back:active { opacity: 0.92; }
+.doc-back:active { box-shadow: inset 5px 5px 10px rgba(0, 0, 0, 0.55), inset -2px -2px 5px rgba(196, 146, 58, 0.35); }
 </style>

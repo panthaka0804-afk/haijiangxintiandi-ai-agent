@@ -172,64 +172,64 @@ onUnmounted(() => {
 
 <style scoped>
 .cd-root {
-  min-height: 100vh; background: #0a0a0a; color: #fff;
+  min-height: 100vh; background: #000000; color: #fff;
   font-family: 'PingFang SC', sans-serif; padding: 0; margin: 0;
   display: flex; flex-direction: column; max-width: 100vw; overflow: hidden;
 }
 .cd-hdr {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 20px 24px; background: #111; border-bottom: 1px solid #222;
+  padding: 20px 24px; background: #161618; border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 .cd-hdr-shop { font-size: 24px; font-weight: 700; color: #C4923A; }
-.cd-hdr-stats { font-size: 14px; color: #888; display: flex; gap: 10px; }
-.cd-hdr-stats .peak { color: #E8552A; font-weight: 600; }
-.cd-divider { color: #444; }
+.cd-hdr-stats { font-size: 14px; color: rgba(255,255,255,0.6); display: flex; gap: 10px; }
+.cd-hdr-stats .peak { color: #C4923A; font-weight: 600; }
+.cd-divider { color: rgba(255,255,255,0.3); }
 
 .cd-current {
   text-align: center; padding: 40px 20px 30px;
-  background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+  background: linear-gradient(180deg, #161618 0%, #000000 100%);
 }
-.cd-cur-label { font-size: 18px; color: #666; margin-bottom: 8px; }
+.cd-cur-label { font-size: 18px; color: rgba(255,255,255,0.55); margin-bottom: 8px; }
 .cd-cur-num {
   font-size: 120px; font-weight: 900; color: #C4923A; line-height: 1;
   transition: transform 0.3s, color 0.3s;
 }
-.cd-cur-num.animate { transform: scale(1.2); color: #FFD700; }
-.cd-cur-info { font-size: 20px; color: #aaa; margin-top: 12px; }
+.cd-cur-num.animate { transform: scale(1.2); color: #FFE8B0; }
+.cd-cur-info { font-size: 20px; color: rgba(255,255,255,0.7); margin-top: 12px; }
 
 .cd-waiting { padding: 16px 24px; flex: 1; }
 .cd-wait-hdr {
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 16px; color: #888; margin-bottom: 12px;
+  font-size: 16px; color: rgba(255,255,255,0.6); margin-bottom: 12px;
 }
 .cd-wait-count { color: #C4923A; font-weight: 600; }
-.cd-empty { text-align: center; color: #444; padding: 60px 0; font-size: 24px; }
+.cd-empty { text-align: center; color: rgba(255,255,255,0.4); padding: 60px 0; font-size: 24px; }
 
 .cd-wait-grid { display: flex; flex-wrap: wrap; gap: 12px; }
 .cd-wait-item {
   display: flex; align-items: center; gap: 14px;
-  background: #161616; border-radius: 10px; padding: 14px 18px;
-  width: calc(50% - 6px); border: 1px solid #222;
+  background: #222; border-radius: 10px; padding: 14px 18px;
+  width: calc(50% - 6px); border: 1px solid rgba(255,255,255,0.08); box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
-.cd-wait-item.highlight { border-color: #C4923A; background: #1a1810; }
+.cd-wait-item.highlight { border-color: #C4923A; background: #2a2417; }
 .cd-wi-num { font-size: 32px; font-weight: 800; color: #C4923A; min-width: 56px; text-align: center; }
-.cd-wi-info { flex: 1; font-size: 16px; color: #ddd; }
-.cd-wi-people { font-size: 13px; color: #777; margin-top: 2px; }
-.cd-wi-wait { font-size: 13px; color: #666; white-space: nowrap; }
+.cd-wi-info { flex: 1; font-size: 16px; color: rgba(255,255,255,0.85); }
+.cd-wi-people { font-size: 13px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+.cd-wi-wait { font-size: 13px; color: rgba(255,255,255,0.5); white-space: nowrap; }
 
 .cd-reservations { padding: 0 24px 16px; }
 .cd-res-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .cd-res-item {
   display: flex; gap: 16px; align-items: center;
-  background: #161616; border-radius: 8px; padding: 10px 16px;
-  font-size: 14px; color: #aaa; border: 1px solid #222;
+  background: #222; border-radius: 8px; padding: 10px 16px;
+  font-size: 14px; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.08); box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
-.cd-res-time { color: #8E9FE6; font-weight: 600; }
-.cd-res-phone { color: #5a7; }
+.cd-res-time { color: #C4923A; font-weight: 600; }
+.cd-res-phone { color: rgba(255,255,255,0.6); }
 
 .cd-footer {
   display: flex; justify-content: space-between; padding: 14px 24px;
-  font-size: 13px; color: #444; background: #0a0a0a; border-top: 1px solid #1a1a1a;
+  font-size: 13px; color: rgba(255,255,255,0.4); background: #000000; border-top: 1px solid rgba(255,255,255,0.08);
 }
 
 @media (max-width: 600px) {

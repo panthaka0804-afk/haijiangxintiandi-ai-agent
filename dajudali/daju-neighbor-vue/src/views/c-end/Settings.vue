@@ -251,16 +251,16 @@ async function confirmUnregister() {
 }
 .st-acc-avatar {
   width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(135deg, #FF7B2C, #E85D04);
+  background: linear-gradient(135deg, #C4923A, #C4923A);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 3px 10px rgba(255,123,44,0.3);
+  box-shadow: 0 3px 10px rgba(196,146,58,0.3);
 }
 .st-acc-info { flex: 1; min-width: 0; }
 .st-acc-name { font-size: 17px; font-weight: 700; color: #F0F0F0; }
 .st-acc-phone { font-size: 13px; color: #9A9A9A; margin-top: 3px; }
 .st-acc-level {
-  font-size: 12px; font-weight: 700; color: #FFE8B0;
-  background: rgba(255,123,44,0.15); border: 1px solid rgba(255,123,44,0.35);
+  font-size: 12px; font-weight: 700;   color: #FFE8B0;
+  background: rgba(196,146,58,0.15); border: 1px solid rgba(196,146,58,0.35);
   border-radius: 8px; padding: 4px 10px; flex-shrink: 0;
 }
 
@@ -317,7 +317,7 @@ async function confirmUnregister() {
   width: 44px; height: 26px; border-radius: 13px; flex-shrink: 0;
   background: #3A3A3A; position: relative; cursor: pointer; transition: background 0.2s;
 }
-.st-switch.on { background: linear-gradient(135deg, #FF7B2C, #E85D04); }
+.st-switch.on { background: linear-gradient(135deg, #C4923A, #C4923A); }
 .st-knob {
   position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
   border-radius: 50%; background: #fff; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.4);
@@ -329,7 +329,7 @@ async function confirmUnregister() {
 .st-unregister .st-row-left span:last-child { color: #FFFFFF; font-weight: 700; }
 
 /* 底部 */
-.st-footer { text-align: center; color: #5A5A5A; font-size: 12px; padding: 16px 0 40px; }
+.st-footer { text-align: center; color: rgba(255,255,255,0.45); font-size: 12px; padding: 16px 0 40px; }
 
 /* 弹窗 */
 .st-modal-mask {
@@ -351,7 +351,7 @@ async function confirmUnregister() {
   width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0;
   border: 1.5px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center;
 }
-.st-check-box.on { background: #FF7B2C; border-color: #FF7B2C; }
+.st-check-box.on { background: #C4923A; border-color: #C4923A; }
 .st-modal-btns { display: flex; gap: 12px; }
 .st-btn {
   flex: 1; padding: 12px 0; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;

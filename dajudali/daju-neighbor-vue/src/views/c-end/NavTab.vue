@@ -53,7 +53,7 @@
               <polygon
                 :points="polyStr(s.poly)"
                 fill="none"
-                :stroke="selected && selected.name === s.name ? '#FF7B2C' : s.color"
+                :stroke="selected && selected.name === s.name ? '#C4923A' : s.color"
                 :stroke-width="selected && selected.name === s.name ? 3.6 : 2.2"
                 :class="['shop-poly', { sel: selected && selected.name === s.name }]"
                 @click.stop="onShopClick(s)"
@@ -73,8 +73,8 @@
 
             <!-- 目的地标记 -->
             <g v-if="selected">
-              <circle :cx="selected.x*1000" :cy="selected.y*H" r="13" fill="#FF7B2C" stroke="#fff" stroke-width="3.5" />
-              <circle :cx="selected.x*1000" :cy="selected.y*H" r="22" fill="none" stroke="#FF7B2C" stroke-width="2" opacity="0.45" />
+              <circle :cx="selected.x*1000" :cy="selected.y*H" r="13" fill="#C4923A" stroke="#fff" stroke-width="3.5" />
+              <circle :cx="selected.x*1000" :cy="selected.y*H" r="22" fill="none" stroke="#C4923A" stroke-width="2" opacity="0.45" />
             </g>
 
             <!-- 我的位置（起点） -->
@@ -90,7 +90,7 @@
       <!-- 右上角开关 -->
       <div class="nav-controls">
         <button class="nc-btn" :class="{ on: showLabels }" @click="showLabels = !showLabels" title="显示/隐藏店名">店名 Aa</button>
-        <button class="nc-btn" :class="{ on: voiceOn }" @click="toggleVoice" :title="voiceOn ? '语音播报开' : '语音播报关'">{{ voiceOn ? '🔊 语音' : '🔇 静音' }}</button>
+        <button class="nc-btn" :class="{ on: voiceOn }" @click="toggleVoice" :title="voiceOn ? '语音播报开' : '语音播报关'">{{ voiceOn ? '语音开' : '静音关' }}</button>
       </div>
 
       <!-- 左上角楼层标签 -->
@@ -123,7 +123,7 @@
           <div class="pp-name">{{ selected.name }}</div>
           <div class="pp-sub">{{ activeZone }} · {{ activeFloorLabel }}</div>
         </div>
-        <button class="pp-voice" @click="replayVoice" title="语音播报">🔊</button>
+        <button class="pp-voice" @click="replayVoice" title="语音播报">播</button>
         <button class="pp-nav" @click="clearRoute">取消</button>
         <button class="pp-go" @click="goDetail(selected)">详情 ›</button>
       </div>
@@ -131,15 +131,15 @@
       <!-- 分步导航卡 -->
       <div v-if="selected" class="steps-sheet" :class="{ collapsed: !stepsOpen }" @pointerdown.stop>
         <div class="ss-head" @click="stepsOpen = !stepsOpen">
-          <span class="ss-title">🧭 导航路线 · 共 {{ navSteps.length }} 步</span>
+          <span class="ss-title">导航路线 · 共 {{ navSteps.length }} 步</span>
           <span class="ss-actions">
-            <button class="ss-voice" @click.stop="replayVoice" title="重播语音">🔊</button>
+            <button class="ss-voice" @click.stop="replayVoice" title="重播语音">播</button>
             <span class="ss-chev">{{ stepsOpen ? '▾' : '▴' }}</span>
           </span>
         </div>
         <div v-if="stepsOpen" class="ss-body">
           <div v-for="(st, i) in navSteps" :key="i" class="ss-step" :class="'st-' + st.type">
-            <span class="ss-ico">{{ st.type === 'arrive' ? '🏁' : st.type === 'start' ? '🚩' : (st.turn === '右转' ? '↩' : st.turn === '左转' ? '↪' : '↑') }}</span>
+            <span class="ss-ico">{{ st.type === 'arrive' ? '到' : st.type === 'start' ? '起' : (st.turn === '右转' ? '右' : st.turn === '左转' ? '左' : '直') }}</span>
             <span class="ss-text">{{ st.text }}</span>
           </div>
         </div>
@@ -495,26 +495,26 @@ function onSearchItem(shop) {
 </script>
 
 <style scoped>
-.nav-page { display: flex; flex-direction: column; height: 100vh; background: #0c0c0c; overflow: hidden; }
+.nav-page { display: flex; flex-direction: column; height: 100vh; background: #000000; overflow: hidden; }
 
-.nav-search { display: flex; align-items: center; gap: 8px; padding: 7px 14px; margin: 6px 12px 0; background: #1E1E1E; border: 1px solid transparent; border-radius: 10px; transition: border-color .15s; }
-.nav-search:focus-within { border-color: #FF7B2C; }
+.nav-search { display: flex; align-items: center; gap: 8px; padding: 7px 14px; margin: 6px 12px 0; background: #222; border: 1px solid transparent; border-radius: 10px; transition: border-color .15s; }
+.nav-search:focus-within { border-color: #C4923A; }
 .nav-search input { flex: 1; border: none; background: none; outline: none; font-size: 14px; color: #F0F0F0; font-family: inherit; }
-.nav-search input::placeholder { color: #666; }
-.sc-clear { border: none; background: none; font-size: 15px; color: #888; cursor: pointer; padding: 0 2px; }
+.nav-search input::placeholder { color: rgba(255,255,255,0.4); }
+.sc-clear { border: none; background: none; font-size: 15px; color: rgba(255,255,255,0.6); cursor: pointer; padding: 0 2px; }
 
-.search-drop { margin: 4px 12px 0; background: #1E1E1E; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.4); max-height: 220px; overflow-y: auto; z-index: 30; position: relative; }
+.search-drop { margin: 4px 12px 0; background: #222; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.4); max-height: 220px; overflow-y: auto; z-index: 30; position: relative; }
 .sd-item { padding: 11px 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 14px; color: #F0F0F0; }
-.sd-item:not(:last-child) { border-bottom: .5px solid #2A2A2A; }
+.sd-item:not(:last-child) { border-bottom: .5px solid rgba(255,255,255,0.08); }
 .sd-item:active { background: #2A2A2A; }
-.sd-meta { font-size: 11px; color: #888; white-space: nowrap; margin-left: 8px; }
+.sd-meta { font-size: 11px; color: rgba(255,255,255,0.5); white-space: nowrap; margin-left: 8px; }
 
 .tab-row { display: flex; gap: 6px; padding: 6px 12px 0; overflow-x: auto; scrollbar-width: none; }
 .tab-row::-webkit-scrollbar { display: none; }
-.tab-pill { flex-shrink: 0; border: 1px solid #333; background: #161616; color: #999; font-size: 13px; font-weight: 600; padding: 5px 14px; border-radius: 20px; cursor: pointer; font-family: inherit; transition: all .2s; white-space: nowrap; }
-.tab-pill.active { background: #FF7B2C; border-color: #FF7B2C; color: #fff; }
+.tab-pill { flex-shrink: 0; border: 1px solid rgba(255,255,255,0.08); background: #222; color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 600; padding: 5px 14px; border-radius: 20px; cursor: pointer; font-family: inherit; transition: all .2s; white-space: nowrap; }
+.tab-pill.active { background: #C4923A; border-color: #C4923A; color: #fff; }
 
-.route-banner { display: flex; align-items: center; gap: 8px; margin: 6px 12px 0; background: linear-gradient(90deg, #FF7B2C, #E85D04); color: #fff; border-radius: 10px; padding: 8px 12px; font-size: 13px; box-shadow: 0 4px 14px rgba(255,123,44,.3); }
+.route-banner { display: flex; align-items: center; gap: 8px; margin: 6px 12px 0; background: linear-gradient(90deg, #C4923A, #C4923A); color: #fff; border-radius: 10px; padding: 8px 12px; font-size: 13px; box-shadow: 0 4px 14px rgba(196,146,58,.3); }
 .rb-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .rb-start { background: #2E8BFF; box-shadow: 0 0 0 3px rgba(46,139,255,.35); }
 .rb-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -530,25 +530,25 @@ function onSearchItem(shop) {
 .floor-svg { display: block; -webkit-user-drag: none; }
 
 .shop-poly { cursor: pointer; transition: stroke .15s; }
-.shop-poly:hover { stroke: #FF7B2C !important; }
-.shop-poly.sel { fill: rgba(255,123,44,.18) !important; }
+.shop-poly:hover { stroke: #C4923A !important; }
+.shop-poly.sel { fill: rgba(196,146,58,.18) !important; }
 .shop-label { font-size: 30px; fill: #2b2b2b; font-weight: 600; text-anchor: middle; dominant-baseline: middle; paint-order: stroke; stroke: #fff; stroke-width: 3.4px; stroke-linejoin: round; pointer-events: none; font-family: inherit; user-select: none; }
-.shop-label.sel { fill: #E85D04; font-weight: 700; }
+.shop-label.sel { fill: #C4923A; font-weight: 700; }
 .fac-text { font-size: 20px; fill: #6b6459; font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; pointer-events: none; font-family: inherit; user-select: none; }
 
 .route-casing { fill: none; stroke: #fff; stroke-width: 16; stroke-linejoin: round; stroke-linecap: round; opacity: .9; }
-.route-line { fill: none; stroke: #FF7B2C; stroke-width: 7; stroke-linejoin: round; stroke-linecap: round; }
+.route-line { fill: none; stroke: #C4923A; stroke-width: 7; stroke-linejoin: round; stroke-linecap: round; }
 .me-text { font-size: 24px; fill: #2E8BFF; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: #fff; stroke-width: 3.4px; stroke-linejoin: round; pointer-events: none; font-family: inherit; }
 
 .map-label { position: absolute; top: 10px; left: 12px; font-size: 13px; font-weight: 700; color: #fff; background: rgba(0,0,0,.5); padding: 3px 10px; border-radius: 6px; z-index: 8; pointer-events: none; }
 
 .nav-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; z-index: 9; }
 .nc-btn { border: 1px solid rgba(0,0,0,.12); background: rgba(255,255,255,.9); color: #888; font-size: 11px; font-weight: 600; padding: 5px 9px; border-radius: 16px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.15); font-family: inherit; -webkit-tap-highlight-color: transparent; }
-.nc-btn.on { background: #FF7B2C; color: #fff; border-color: #FF7B2C; }
+.nc-btn.on { background: #C4923A; color: #fff; border-color: #C4923A; }
 
 .zoom-controls { position: absolute; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 4px; z-index: 9; align-items: flex-end; }
 .zc-btn { width: 36px; height: 36px; border: none; border-radius: 50%; background: rgba(255,255,255,.92); color: #333; font-size: 19px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,.18); -webkit-tap-highlight-color: transparent; }
-.zc-btn:active { background: #FF7B2C; color: #fff; }
+.zc-btn:active { background: #C4923A; color: #fff; }
 .zc-reset { font-size: 15px; }
 .zc-level { font-size: 10px; color: #555; background: rgba(255,255,255,.85); padding: 2px 8px; border-radius: 8px; margin-top: 2px; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 
@@ -559,7 +559,7 @@ function onSearchItem(shop) {
 .legend-row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #333; padding: 3px 0; }
 .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
 
-.poi-popup { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; z-index: 10; background: rgba(24,24,24,.96); border: 1px solid #333; border-radius: 12px; padding: 8px 10px; box-shadow: 0 6px 20px rgba(0,0,0,.5); max-width: 94%; }
+.poi-popup { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; z-index: 10; background: rgba(34,34,34,.96); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 8px 10px; box-shadow: 0 6px 20px rgba(0,0,0,.5); max-width: 94%; }
 .pp-cat { font-size: 11px; color: #fff; padding: 3px 8px; border-radius: 6px; font-weight: 700; flex-shrink: 0; }
 .pp-info { min-width: 0; }
 .pp-name { font-size: 14px; font-weight: 700; color: #FFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -567,11 +567,11 @@ function onSearchItem(shop) {
 .pp-voice, .pp-nav, .pp-go { border: none; border-radius: 8px; font-size: 12px; padding: 6px 10px; cursor: pointer; font-family: inherit; flex-shrink: 0; }
 .pp-voice { background: #2E8BFF; color: #fff; }
 .pp-nav { background: #333; color: #CCC; }
-.pp-go { background: #FF7B2C; color: #fff; font-weight: 600; }
+.pp-go { background: #C4923A; color: #fff; font-weight: 600; }
 
 .steps-sheet { position: absolute; left: 10px; right: 64px; bottom: 56px; z-index: 8; background: rgba(255,255,255,.96); border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.25); overflow: hidden; max-height: 42%; display: flex; flex-direction: column; }
 .steps-sheet.collapsed { max-height: 40px; }
-.ss-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; cursor: pointer; background: linear-gradient(90deg, #FF7B2C, #E85D04); color: #fff; }
+.ss-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; cursor: pointer; background: linear-gradient(90deg, #C4923A, #C4923A); color: #fff; }
 .ss-title { font-size: 13px; font-weight: 700; }
 .ss-actions { display: flex; align-items: center; gap: 8px; }
 .ss-voice { border: none; background: rgba(255,255,255,.22); color: #fff; font-size: 13px; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; }
@@ -581,22 +581,22 @@ function onSearchItem(shop) {
 .ss-step:last-child { border-bottom: none; }
 .ss-ico { font-size: 17px; flex-shrink: 0; width: 22px; text-align: center; line-height: 1.3; }
 .ss-text { font-size: 13px; line-height: 1.45; color: #2b2b2b; }
-.st-arrive .ss-text { font-weight: 700; color: #E85D04; }
+.st-arrive .ss-text { font-weight: 700; color: #C4923A; }
 
-.shop-drawer { background: #161616; border-radius: 16px 16px 0 0; box-shadow: 0 -2px 12px rgba(0,0,0,.35); transition: max-height .32s ease; max-height: 42px; overflow: hidden; flex-shrink: 0; }
+.shop-drawer { background: #222; border-radius: 16px 16px 0 0; border-top: 1px solid rgba(255,255,255,0.08); box-shadow: 0 -2px 12px rgba(0,0,0,.35); transition: max-height .32s ease; max-height: 42px; overflow: hidden; flex-shrink: 0; }
 .shop-drawer.open { max-height: 280px; }
 .drawer-handle { padding: 8px 16px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; -webkit-tap-highlight-color: transparent; }
-.drawer-pill { width: 32px; height: 4px; background: #444; border-radius: 2px; transition: background .2s; }
-.shop-drawer.open .drawer-pill { background: #FF7B2C; }
-.drawer-hint { font-size: 11px; color: #777; }
-.shop-drawer.open .drawer-hint { color: #AAA; }
+.drawer-pill { width: 32px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; transition: background .2s; }
+.shop-drawer.open .drawer-pill { background: #C4923A; }
+.drawer-hint { font-size: 11px; color: rgba(255,255,255,0.55); }
+.shop-drawer.open .drawer-hint { color: rgba(255,255,255,0.8); }
 .drawer-body { padding: 0 14px 14px; overflow-y: auto; max-height: 230px; }
-.shop-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; cursor: pointer; border-bottom: .5px solid #222; }
+.shop-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; cursor: pointer; border-bottom: .5px solid rgba(255,255,255,0.08); }
 .shop-item:active { background: #222; }
 .shop-item:last-child { border-bottom: none; }
 .si-dot { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; }
 .si-info { flex: 1; min-width: 0; }
-.si-name { font-size: 14px; font-weight: 600; color: #EEE; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.si-tags { font-size: 11px; color: #888; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.shop-empty { text-align: center; color: #666; font-size: 13px; padding: 20px 0; }
+.si-name { font-size: 14px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.si-tags { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shop-empty { text-align: center; color: rgba(255,255,255,0.4); font-size: 13px; padding: 20px 0; }
 </style>
