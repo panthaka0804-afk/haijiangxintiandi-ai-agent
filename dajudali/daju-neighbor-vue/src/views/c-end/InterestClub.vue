@@ -48,7 +48,7 @@
       </div>
       <div v-if="eventsLoading" class="ic-loading">加载中…</div>
       <div v-else-if="!events.length" class="ic-empty">该分类暂无进行中的活动群</div>
-      <div v-for="(e, i) in events" :key="e.id" class="ic-ev-card" :class="'ic-c-' + (i % 5)" @click="openEvent(e)">
+      <div v-for="(e, i) in events" :key="e.id" class="ic-ev-card" :class="'ic-c-' + (i % 5)" @click="openEvent(e, i)">
         <div class="ic-ev-avatar">{{ initial(e.club_name) }}</div>
         <div class="ic-ev-main">
           <div class="ic-ev-top">
@@ -123,7 +123,7 @@
           </div>
 
           <!-- 底部操作 -->
-          <div class="ic-sheet-ft">
+          <div class="ic-sheet-ft" :class="'ic-c-' + (detail.colorIdx || 0)">
             <template v-if="!detail.joined_by_me">
               <button class="ic-join-btn" @click="joinEvent(detail)">加入活动群（{{ detail.remain }} 个名额）</button>
             </template>
@@ -242,13 +242,13 @@ async function toggleClub(c) {
   } catch (e) { showToast('网络异常') }
 }
 
-async function openEvent(e) {
-  await openEventById(e.id)
+async function openEvent(e, i = 0) {
+  await openEventById(e.id, i)
 }
-async function openEventById(id) {
+async function openEventById(id, colorIdx = 0) {
   try {
     const res = await getClubEventDetail(id, phone.value)
-    if (res.ok) detail.value = res.data
+    if (res.ok) { detail.value = res.data; detail.value.colorIdx = colorIdx }
     else showToast(res.error || '活动群不存在')
   } catch (e) { showToast('网络异常') }
 }
@@ -325,6 +325,17 @@ async function sendMsg(d) {
 .ic-club-btn { flex-shrink: 0; padding: 8px 20px; background-color: #9A7425; border: 3px solid #9A7425; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; cursor: pointer; filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4)); }
 .ic-club-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(196,146,58,.35); }
 .ic-club-btn.joined { background-color: rgba(0,0,0,0.35); border: 3px solid rgba(255,255,255,0.30); color: rgba(255,255,255,0.85); box-shadow: inset 3px 3px 7px rgba(0,0,0,.5), inset -2px -2px 5px rgba(255,255,255,.08); filter: none; }
+/* 加入按钮跟随卡片五色（与拼团一致） */
+.ic-c-0 .ic-club-btn { background-color: #8A5E12; border-color: #6E4A0E; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
+.ic-c-1 .ic-club-btn { background-color: #A87C48; border-color: #87613A; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(201,149,108,.45); }
+.ic-c-2 .ic-club-btn { background-color: #5C241D; border-color: #451B16; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(155,74,62,.45); }
+.ic-c-3 .ic-club-btn { background-color: #54545A; border-color: #3F3F44; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(139,139,144,.45); }
+.ic-c-4 .ic-club-btn { background-color: #3C3E36; border-color: #2C2E28; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(107,110,100,.45); }
+.ic-c-0 .ic-club-btn.joined { background-color: #6E4A0E; }
+.ic-c-1 .ic-club-btn.joined { background-color: #87613A; }
+.ic-c-2 .ic-club-btn.joined { background-color: #451B16; }
+.ic-c-3 .ic-club-btn.joined { background-color: #3F3F44; }
+.ic-c-4 .ic-club-btn.joined { background-color: #2C2E28; }
 
 .ic-filter { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px; }
 .ic-chip { flex-shrink: 0; height: 32px; padding: 0 14px; border: 1px solid rgba(255,255,255,0.12); background: #161618; color: rgba(255,255,255,0.6); font-size: 13px; border-radius: 16px; cursor: pointer; white-space: nowrap; }
@@ -383,6 +394,12 @@ async function sendMsg(d) {
 .ic-join-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(196,146,58,.35); }
 .ic-msg-input { flex: 1; height: 44px; border: 1px solid rgba(255,255,255,0.15); background: #0F0F11; color: #fff; border-radius: 12px; padding: 0 14px; font-size: 14px; }
 .ic-send-btn { padding: 8px 20px; background-color: #9A7425; border: 3px solid #9A7425; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; cursor: pointer; filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4)); }
+/* 弹层操作按钮跟随活动群卡片五色（与首页一致，零高饱和橙） */
+.ic-c-0 .ic-join-btn, .ic-c-0 .ic-send-btn { background-color: #8A5E12; border-color: #6E4A0E; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
+.ic-c-1 .ic-join-btn, .ic-c-1 .ic-send-btn { background-color: #A87C48; border-color: #87613A; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(201,149,108,.45); }
+.ic-c-2 .ic-join-btn, .ic-c-2 .ic-send-btn { background-color: #5C241D; border-color: #451B16; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(155,74,62,.45); }
+.ic-c-3 .ic-join-btn, .ic-c-3 .ic-send-btn { background-color: #54545A; border-color: #3F3F44; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(139,139,144,.45); }
+.ic-c-4 .ic-join-btn, .ic-c-4 .ic-send-btn { background-color: #3C3E36; border-color: #2C2E28; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(107,110,100,.45); }
 
 .ic-slide-enter-active, .ic-slide-leave-active { transition: opacity 0.25s; }
 .ic-slide-enter-from, .ic-slide-leave-to { opacity: 0; }
