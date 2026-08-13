@@ -61,22 +61,6 @@
       </div>
     </div>
 
-    <!-- ── 数据统计行（深灰绿） ── -->
-    <div class="stats-card">
-      <div class="stat-item">
-        <div class="stat-num">{{ member ? member.points : 0 }}</div>
-        <div class="stat-label">积分</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-num">{{ member ? (member.membership_level || '普卡') : '普卡' }}</div>
-        <div class="stat-label">等级</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-num">{{ member && member.coupon_count ? member.coupon_count : 5 }}</div>
-        <div class="stat-label">优惠券</div>
-      </div>
-    </div>
-
     <!-- ── 版块标题：Member Benefit / 会员权益（与首页统一） ── -->
     <div class="section-label">
       <span class="section-en">Member Benefit</span>
@@ -263,7 +247,7 @@ function go(route) { if (route) router.push(route) }
 .ph-avatar-sm { border: 1.5px solid rgba(255,255,255,0.25); }
 
 /* ── 通用：白字 + 凹陷阴影 ── */
-.uc-name, .uc-phone, .mem-title, .mem-sub, .stat-num, .stat-label,
+.uc-name, .uc-phone, .mem-title, .mem-sub,
 .bc-title, .bc-level, .bc-expire, .bc-status, .bc-next, .bc-big-num,
 .fn-label, .s-item span {
   color: #FFFFFF;
@@ -333,20 +317,6 @@ function go(route) { if (route) router.push(route) }
 }
 .mem-title { font-size: var(--fs-body); font-weight: 700; line-height: 1.35; }
 .mem-sub { font-size: var(--fs-aux); opacity: 0.85; }
-
-/* ── 数据统计行：深灰绿 ── */
-.stats-card {
-  display: flex; margin: 0 16px 22px;
-  background-color: #6B6E64;
-  border: 3px solid #4E5049;
-  border-radius: 16px;
-  padding: 18px 0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
-}
-.stat-item { flex: 1; text-align: center; border-right: 0.5px solid rgba(255,255,255,0.25); }
-.stat-item:last-child { border-right: none; }
-.stat-num { font-size: 28px; font-weight: 800; line-height: 1.2; }
-.stat-label { font-size: var(--fs-aux); margin-top: 4px; opacity: 0.9; }
 
 /* ── 版块标题（与首页统一） ── */
 .section-label { display: flex; flex-direction: column; margin: 22px 16px 18px; }
