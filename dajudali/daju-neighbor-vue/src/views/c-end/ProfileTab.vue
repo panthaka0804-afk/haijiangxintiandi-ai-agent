@@ -98,6 +98,13 @@
                 <div class="tier-concepts">
                   <div class="tier-line" v-for="(c, ci) in t.concepts" :key="ci">{{ c }}</div>
                 </div>
+                <!-- 成长值进度（合并进当前等级卡，与 GrowthCenter 同一套 LEVELS 逻辑） -->
+                <div class="growth-in-card" v-if="i === memberLevelIndex">
+                  <div class="gib-points">{{ growth.points }} <em>成长值</em></div>
+                  <div class="gib-bar"><div class="gib-fill" :style="{ width: growth.pct + '%', background: t.accent }"></div></div>
+                  <div class="gib-hint" v-if="growth.nextName">距离「{{ growth.nextName }}」还差 {{ growth.gap }} 成长值</div>
+                  <div class="gib-hint" v-else>已是最高等级，尊享全部权益</div>
+                </div>
                 <div class="tier-current" v-if="i === tierCurrent">● 当前等级</div>
               </div>
             </div>
@@ -181,6 +188,29 @@ const tiers = [
   return { ...t, bg: th.bg, bd: th.bd, accent: th.accent }
 })
 // 海江之友各等级使用各自的山峰图（t.mountain），普卡已配置，其余待替换
+
+// ── 成长值进度（合并进会员当前等级卡；与 GrowthCenter 同一套 LEVELS 逻辑） ──
+const GROWTH_LEVELS = [
+  { name: '普卡', min: 0, next: 2000 },
+  { name: '银卡', min: 2000, next: 5000 },
+  { name: '金卡', min: 5000, next: 20000 },
+  { name: '钻石卡', min: 20000, next: null },
+]
+const memberLevelIndex = computed(() => {
+  const lv = member.value && member.value.membership_level
+  return lv && levelToIndex[lv] != null ? levelToIndex[lv] : 0
+})
+const growth = computed(() => {
+  const lv = (member.value && member.value.membership_level) || '普卡'
+  const cur = GROWTH_LEVELS.find(l => l.name === lv) || GROWTH_LEVELS[0]
+  const pts = member.value ? (member.value.points || 0) : 0
+  if (!cur.next) return { pct: 100, gap: 0, nextName: null, points: pts }
+  const pct = Math.max(0, Math.min(100, (pts - cur.min) / (cur.next - cur.min) * 100))
+  const gap = Math.max(0, cur.next - pts)
+  const nextName = GROWTH_LEVELS[GROWTH_LEVELS.findIndex(l => l.name === lv) + 1]?.name
+  return { pct, gap, nextName, points: pts }
+})
+
 const tierCurrent = ref(0)
 const tierViewport = ref(null)
 function goTier(i) {
@@ -409,6 +439,14 @@ function go(route) { if (route) router.push(route) }
 .tier-zuan { background-color: #4F9CC9; border-color: #3A7BA0; }
 .tier-hei  { background-color: #6B6E64; border-color: #3C3E36; }
 .tier-concepts { margin-top: 6px; }
+
+/* ── 成长值进度（合并进当前等级卡） ── */
+.growth-in-card { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.18); }
+.gib-points { font-size: 24px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
+.gib-points em { font-style: normal; font-size: 12px; color: rgba(255,255,255,0.85); font-weight: 400; margin-left: 4px; }
+.gib-bar { height: 8px; background: rgba(0,0,0,0.22); border-radius: 4px; overflow: hidden; margin: 8px 0; }
+.gib-fill { height: 100%; border-radius: 4px; transition: width 0.4s; }
+.gib-hint { font-size: 12px; color: rgba(255,255,255,0.92); text-shadow: 0 1px 1px rgba(0,0,0,0.25); }
 .tier-line { font-size: 15px; font-weight: 600; line-height: 1.8; opacity: 0.96;
   text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
 .tier-current { margin-top: 10px; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: #FFE8B0; opacity: 0.95; }

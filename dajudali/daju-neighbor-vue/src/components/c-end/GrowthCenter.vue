@@ -7,19 +7,6 @@
     </div>
 
     <template v-else>
-      <!-- 成长值卡片 -->
-      <div class="growth-card">
-        <div class="growth-top">
-          <span class="growth-level" :style="{ background: theme.bg, borderColor: theme.bd }">{{ level }}</span>
-          <span class="growth-points">{{ points }} <em>成长值</em></span>
-        </div>
-        <div class="growth-bar">
-          <div class="growth-bar-fill" :style="{ width: progress.pct + '%', background: theme.accent }"></div>
-        </div>
-        <div class="growth-hint" v-if="progress.nextName">距离「{{ progress.nextName }}」还差 {{ progress.gap }} 成长值</div>
-        <div class="growth-hint" v-else>已是最高等级，尊享全部权益</div>
-      </div>
-
       <!-- 签到抽奖区 -->
       <div class="sign-card" :style="checkinStyle">
         <div class="sign-info">
@@ -61,19 +48,26 @@
         </div>
       </div>
 
-      <!-- 成长值明细 -->
+      <!-- 成长值明细（默认折叠，点击展开） -->
       <div class="log-section">
-        <div class="section-title">成长值明细</div>
-        <div v-if="logs.length" class="log-list">
-          <div v-for="l in logs" :key="l.id" class="log-item">
-            <div class="log-left">
-              <div class="log-remark">{{ l.remark }}</div>
-              <div class="log-time">{{ l.created_at }}</div>
-            </div>
-            <div class="log-points" :class="{ minus: l.points < 0 }">{{ l.points > 0 ? '+' : '' }}{{ l.points }}</div>
-          </div>
+        <div class="section-title log-toggle" @click="toggleLogs">
+          <span>成长值明细</span>
+          <span class="log-chevron" :class="{ open: logsOpen }">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
         </div>
-        <div v-else class="log-empty">还没有成长值记录，先去签到吧~</div>
+        <div v-show="logsOpen">
+          <div v-if="logs.length" class="log-list">
+            <div v-for="l in logs" :key="l.id" class="log-item">
+              <div class="log-left">
+                <div class="log-remark">{{ l.remark }}</div>
+                <div class="log-time">{{ l.created_at }}</div>
+              </div>
+              <div class="log-points" :class="{ minus: l.points < 0 }">{{ l.points > 0 ? '+' : '' }}{{ l.points }}</div>
+            </div>
+          </div>
+          <div v-else class="log-empty">还没有成长值记录，先去签到吧~</div>
+        </div>
       </div>
     </template>
   </div>
@@ -90,14 +84,13 @@ const router = useRouter()
 const memberStore = useMemberStore()
 
 const phone = ref('')
-const points = ref(0)
-const level = ref('普卡')
 const signedToday = ref(false)
 const consecutiveDays = ref(0)
 const totalCheckin = ref(0)
 const lastCoupon = ref('')
 const badges = ref([])
 const logs = ref([])
+const logsOpen = ref(false)
 
 // 多彩卡片配色（对齐首页）
 const checkinStyle = { background: 'linear-gradient(135deg,#C4923A,#A8761F)', borderColor: '#7E5413' }
@@ -105,24 +98,9 @@ const memberDayStyle = { background: 'linear-gradient(135deg,#9B4A3E,#7A342B)', 
 const isWednesday = computed(() => new Date().getDay() === 3)
 const memberDay = ref({ claimed: false, coupon_label: '' })
 
-const theme = computed(() => memberStore.levelTheme(level.value))
 const earnedCount = computed(() => badges.value.filter(b => b.earned).length)
 
-const LEVELS = [
-  { name: '普卡', min: 0, next: 2000 },
-  { name: '银卡', min: 2000, next: 5000 },
-  { name: '金卡', min: 5000, next: 20000 },
-  { name: '钻石卡', min: 20000, next: null },
-]
-
-const progress = computed(() => {
-  const cur = LEVELS.find(l => l.name === level.value) || LEVELS[0]
-  if (!cur.next) return { pct: 100, gap: 0, nextName: null }
-  const pct = Math.max(0, Math.min(100, (points.value - cur.min) / (cur.next - cur.min) * 100))
-  const gap = Math.max(0, cur.next - points.value)
-  const nextName = LEVELS[LEVELS.findIndex(l => l.name === level.value) + 1]?.name
-  return { pct, gap, nextName }
-})
+function toggleLogs() { logsOpen.value = !logsOpen.value }
 
 async function load() {
   if (!phone.value) return
@@ -159,7 +137,6 @@ async function doSign() {
     const res = await doCheckin(phone.value)
     if (res.ok) {
       const d = res.data
-      points.value = (points.value || 0) + (d.points_gained || 0)
       signedToday.value = true
       consecutiveDays.value = (consecutiveDays.value || 0) + 1
       totalCheckin.value = (totalCheckin.value || 0) + 1
@@ -197,8 +174,6 @@ onMounted(() => {
   const m = memberStore.member
   if (m && m.phone) {
     phone.value = m.phone
-    points.value = m.points || 0
-    level.value = m.membership_level || m.level || '普卡'
     load()
   }
 })
@@ -212,16 +187,6 @@ onMounted(() => {
 .gc-empty .empty-title { font-size: 18px; color: #eee; margin-bottom: 8px; }
 .gc-empty .empty-hint { font-size: 14px; }
 .gc-login-btn { background: #9A7425; border-color: #9A7425; margin-top: 16px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); }
-
-/* 成长值卡片 — 银灰多彩卡（渐变实色底 + 深边框 + 内高光） */
-.growth-card { margin: 0 0 12px; padding: 18px 16px; background: linear-gradient(135deg, #9CA1A8 0%, #7A7E84 100%); border: 3px solid #6A6E74; border-radius: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px rgba(0,0,0,0.35); }
-.growth-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.growth-level { padding: 4px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.55); font-size: 13px; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.30); }
-.growth-points { font-size: 26px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
-.growth-points em { font-style: normal; font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 400; margin-left: 4px; }
-.growth-bar { height: 8px; background: rgba(0,0,0,0.22); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
-.growth-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s; }
-.growth-hint { font-size: 12px; color: rgba(255,255,255,0.92); text-shadow: 0 1px 1px rgba(0,0,0,0.25); }
 
 /* 签到抽奖卡 — 金黄多彩卡 */
 .sign-card { margin: 0 0 12px; padding: 16px; background: linear-gradient(135deg, #C4923A 0%, #A8761F 100%); border: 3px solid #7E5413; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px rgba(196,146,58,0.35); }
@@ -254,8 +219,11 @@ onMounted(() => {
 .badge-item:not(.earned) .badge-name { color: #888; }
 .badge-desc { font-size: 10px; color: #777; margin-top: 3px; line-height: 1.3; }
 
-/* 成长值明细 — 深灰绿多彩卡 */
+/* 成长值明细 — 深灰绿多彩卡；标题可点击折叠 */
 .log-section { margin: 0; }
+.log-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 10px; user-select: none; }
+.log-chevron { display: inline-flex; color: rgba(255,255,255,0.85); transition: transform 0.25s ease; }
+.log-chevron.open { transform: rotate(180deg); }
 .log-list { background: linear-gradient(135deg, #6B6E64 0%, #565952 100%); border: 3px solid #44463F; border-radius: 14px; overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 4px 12px rgba(0,0,0,0.30); }
 .log-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid rgba(0,0,0,0.22); }
 .log-item:last-child { border-bottom: none; }
