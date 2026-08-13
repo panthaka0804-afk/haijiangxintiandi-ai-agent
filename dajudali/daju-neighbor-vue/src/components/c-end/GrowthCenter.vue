@@ -36,16 +36,16 @@
         </button>
       </div>
 
-      <!-- 徽章墙 -->
+      <!-- 徽章墙：横向滑动，仅显示已解锁成就 -->
       <div class="badge-section">
-        <div class="section-title">成就徽章 <span class="section-sub">（{{ earnedCount }} / {{ badges.length }}）</span></div>
-        <div class="badge-grid">
-          <div v-for="b in badges" :key="b.code" class="badge-item" :class="{ earned: b.earned }">
-            <div class="badge-icon" :style="b.earned ? { background: '#C4923A', borderColor: '#9A7425', color: '#fff' } : {}">{{ b.name.slice(0, 1) }}</div>
+        <div class="section-title">成就徽章 <span class="section-sub">已点亮 {{ earnedCount }} 枚</span></div>
+        <div v-if="earnedBadges.length" class="badge-strip">
+          <div v-for="b in earnedBadges" :key="b.code" class="badge-item">
+            <div class="badge-icon">{{ b.name.slice(0, 1) }}</div>
             <div class="badge-name">{{ b.name }}</div>
-            <div class="badge-desc">{{ b.description }}</div>
           </div>
         </div>
+        <div v-else class="badge-empty">还没有成就徽章，去签到、领会员日券解锁吧~</div>
       </div>
 
       <!-- 成长值明细（默认折叠，点击展开） -->
@@ -99,6 +99,7 @@ const isWednesday = computed(() => new Date().getDay() === 3)
 const memberDay = ref({ claimed: false, coupon_label: '' })
 
 const earnedCount = computed(() => badges.value.filter(b => b.earned).length)
+const earnedBadges = computed(() => badges.value.filter(b => b.earned))
 
 function toggleLogs() { logsOpen.value = !logsOpen.value }
 
@@ -207,17 +208,32 @@ onMounted(() => {
 .md-btn.got { background: #5C241D; border-color: #5C241D; color: #fff; cursor: default; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(155,74,62,0.45); }
 .md-btn.off { background: #5C241D; border-color: #5C241D; color: rgba(255,255,255,0.85); box-shadow: inset 3px 3px 7px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(155,74,62,0.45); }
 
-/* 徽章墙 — 玻璃容器 + 多彩徽章 */
+/* 徽章墙 — 横向滑动，仅显示已解锁成就 */
 .badge-section { margin: 0 0 12px; }
 .section-title { font-size: 16px; color: #fff; font-weight: 600; margin-bottom: 12px; }
 .section-sub { font-size: 12px; color: #999; font-weight: 400; }
-.badge-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.badge-item { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; padding: 12px 6px; text-align: center; }
-.badge-icon { width: 40px; height: 40px; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; background: rgba(255,255,255,0.10); color: #888; border: 1px solid rgba(255,255,255,0.18); }
-.badge-item.earned .badge-icon { background: linear-gradient(135deg, #C4923A, #A8761F); border-color: #7E5413; color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.30), 0 2px 6px rgba(196,146,58,0.40); }
+.badge-strip {
+  display: flex; gap: 10px;
+  overflow-x: auto; scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px; scrollbar-width: none;
+}
+.badge-strip::-webkit-scrollbar { display: none; }
+.badge-item {
+  flex: 0 0 auto; width: 84px; box-sizing: border-box;
+  scroll-snap-align: start;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 12px; padding: 12px 6px; text-align: center;
+}
+.badge-icon {
+  width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; font-weight: 700;
+  background: linear-gradient(135deg, #C4923A, #A8761F); border: 1px solid #7E5413; color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.30), 0 2px 6px rgba(196,146,58,0.40);
+}
 .badge-name { font-size: 13px; color: #eee; }
-.badge-item:not(.earned) .badge-name { color: #888; }
-.badge-desc { font-size: 10px; color: #777; margin-top: 3px; line-height: 1.3; }
+.badge-empty { font-size: 13px; color: rgba(255,255,255,0.70); padding: 16px 4px; }
 
 /* 成长值明细 — 深灰绿多彩卡；标题可点击折叠 */
 .log-section { margin: 0; }
