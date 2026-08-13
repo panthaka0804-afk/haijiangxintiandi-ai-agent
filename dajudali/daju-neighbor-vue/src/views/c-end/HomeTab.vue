@@ -125,6 +125,27 @@
       </div>
     </div>
 
+    <div class="section-label">
+      <span class="section-en">offers</span>
+      <span class="section-cn">优惠</span>
+    </div>
+
+    <div class="daily-deal" @click="$router.push('/offers')">
+      <svg class="dd-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><path d="M78 10 l6 14 15 2 -11 10 3 15 -13 -8 -13 8 3 -15 -11 -10 15 -2 z"/><circle cx="40" cy="44" r="8"/><path d="M40 37 v14 M33 44 h14"/></svg>
+      <div class="dd-icon-box">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
+      </div>
+      <div class="dd-left">
+        <div class="dd-title">每日特惠</div>
+        <div class="dd-desc">精选商户限时折扣，天天有好价</div>
+      </div>
+      <div class="dd-right">
+        <span class="dd-btn">立即查看</span>
+      </div>
+    </div>
+
     <!-- 激励中心 banner（首页直接引流，深橙红突出） -->
     <div class="points-entry" @click="$router.push('/points')">
       <svg class="pc-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><path d="M64 12 l3.6 7.3 8 1.2 -5.8 5.6 1.4 8 -7.2 -3.8 -7.2 3.8 1.4 -8 -5.8 -5.6 8 -1.2 z" opacity="0.5"/><circle cx="30" cy="40" r="6" opacity="0.4"/></svg>
@@ -193,27 +214,6 @@
           <div class="biz-card-title">{{ m.label }}</div>
           <div class="biz-card-desc">{{ m.desc }}</div>
         </div>
-      </div>
-    </div>
-
-    <div class="section-label">
-      <span class="section-en">offers</span>
-      <span class="section-cn">优惠</span>
-    </div>
-
-    <div class="daily-deal" @click="$router.push('/offers')">
-      <svg class="dd-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><path d="M78 10 l6 14 15 2 -11 10 3 15 -13 -8 -13 8 3 -15 -11 -10 15 -2 z"/><circle cx="40" cy="44" r="8"/><path d="M40 37 v14 M33 44 h14"/></svg>
-      <div class="dd-icon-box">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#E8E8E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-        </svg>
-      </div>
-      <div class="dd-left">
-        <div class="dd-title">每日特惠</div>
-        <div class="dd-desc">精选商户限时折扣，天天有好价</div>
-      </div>
-      <div class="dd-right">
-        <span class="dd-btn">立即查看</span>
       </div>
     </div>
 
