@@ -19,8 +19,8 @@
       <div class="ic-sec-title">选标签 · 自动入社</div>
       <div v-if="clubsLoading" class="ic-loading">加载中…</div>
       <div v-else-if="!clubs.length" class="ic-empty">暂无兴趣社</div>
-      <div v-for="c in clubs" :key="c.id" class="ic-club-card" :style="{ background: c.gradient }">
-        <div class="ic-club-emoji">{{ c.cover_emoji }}</div>
+      <div v-for="(c, i) in clubs" :key="c.id" class="ic-club-card" :class="'ic-c-' + (i % 5)">
+        <div class="ic-club-avatar">{{ initial(c.name) }}</div>
         <div class="ic-club-main">
           <div class="ic-club-top">
             <span class="ic-club-name">{{ c.name }}</span>
@@ -43,20 +43,20 @@
       <div class="ic-filter">
         <button :class="['ic-chip', { active: filterClub === 0 }]" @click="filterByClub(0)">全部</button>
         <button v-for="c in clubs" :key="c.id" :class="['ic-chip', { active: filterClub === c.id }]" @click="filterByClub(c.id)">
-          {{ c.cover_emoji }} {{ c.name }}
+          {{ c.name }}
         </button>
       </div>
       <div v-if="eventsLoading" class="ic-loading">加载中…</div>
       <div v-else-if="!events.length" class="ic-empty">该分类暂无进行中的活动群</div>
-      <div v-for="e in events" :key="e.id" class="ic-ev-card" @click="openEvent(e)">
-        <div class="ic-ev-emoji" :style="{ background: e.gradient }">{{ e.cover_emoji }}</div>
+      <div v-for="(e, i) in events" :key="e.id" class="ic-ev-card" :class="'ic-c-' + (i % 5)" @click="openEvent(e)">
+        <div class="ic-ev-avatar">{{ initial(e.club_name) }}</div>
         <div class="ic-ev-main">
           <div class="ic-ev-top">
             <span class="ic-ev-club">{{ e.club_name }}</span>
             <span class="ic-ev-tag">#{{ e.tag }}</span>
           </div>
           <div class="ic-ev-title">{{ e.title }}</div>
-          <div class="ic-ev-info">🕒 {{ e.meet_time }}　📍 {{ e.place }}</div>
+          <div class="ic-ev-info"><span class="ic-ev-k">时间</span> {{ e.meet_time }}　<span class="ic-ev-k">地点</span> {{ e.place }}</div>
           <div class="ic-ev-progress">
             <div class="ic-ev-bar"><div class="ic-ev-fill" :style="{ width: evPct(e) + '%' }"></div></div>
             <span class="ic-ev-txt">已报名 {{ e.joined_count }}/{{ e.need_count }} 人</span>
@@ -70,8 +70,8 @@
     <section v-if="tab === 'mine'" class="ic-sec">
       <div class="ic-sec-title">我的兴趣社</div>
       <div v-if="!myClubs.length" class="ic-empty">还没加入任何兴趣社，去「兴趣社」选标签加入吧~</div>
-      <div v-for="c in myClubs" :key="c.id" class="ic-my-club">
-        <span class="ic-my-emoji">{{ c.cover_emoji }}</span>
+      <div v-for="(c, i) in myClubs" :key="c.id" class="ic-my-club" :class="'ic-c-' + (i % 5)">
+        <span class="ic-my-avatar">{{ initial(c.name) }}</span>
         <div class="ic-my-info">
           <div class="ic-my-name">{{ c.name }} <span class="ic-my-tag">#{{ c.tag }}</span></div>
           <div class="ic-my-intro">{{ c.intro }}</div>
@@ -82,7 +82,7 @@
       <div v-if="!myEvents.length" class="ic-empty">还没有参与任何活动群</div>
       <div v-for="e in myEvents" :key="e.id" class="ic-my-ev" @click="openEventById(e.id)">
         <div class="ic-my-ev-title">{{ e.title }}</div>
-        <div class="ic-my-ev-meta">🕒 {{ e.meet_time }}　📍 {{ e.place }}</div>
+        <div class="ic-my-ev-meta"><span class="ic-ev-k">时间</span> {{ e.meet_time }}　<span class="ic-ev-k">地点</span> {{ e.place }}</div>
         <span class="ic-my-ev-status" :class="e.status">{{ e.status === 'open' ? '进行中' : '已结束' }}</span>
       </div>
     </section>
@@ -92,7 +92,7 @@
       <div v-if="detail" class="ic-mask" @click.self="closeDetail">
         <div class="ic-sheet">
           <div class="ic-sheet-hd">
-            <div class="ic-sheet-emoji" :style="{ background: detail.gradient }">{{ detail.cover_emoji }}</div>
+            <div class="ic-sheet-avatar">{{ initial(detail.club_name) }}</div>
             <div class="ic-sheet-hd-main">
               <div class="ic-sheet-club">{{ detail.club_name }} · #{{ detail.tag }}</div>
               <div class="ic-sheet-title">{{ detail.title }}</div>
@@ -105,13 +105,13 @@
             <div class="ic-sheet-row"><span>详情</span><b>{{ detail.detail || '—' }}</b></div>
             <div class="ic-sheet-row"><span>进度</span><b>已报名 {{ detail.joined_count }}/{{ detail.need_count }} 人（还差 {{ detail.remain }}）</b></div>
 
-            <div class="ic-sheet-sub">👥 群成员（{{ detail.joined_count }}）</div>
+            <div class="ic-sheet-sub">群成员（{{ detail.joined_count }}）</div>
             <div class="ic-members">
               <span v-for="(m, i) in detail.members" :key="i" class="ic-member">{{ m.name }}</span>
               <span v-if="!detail.members.length" class="ic-member ghost">虚位以待</span>
             </div>
 
-            <div class="ic-sheet-sub">💬 留言接龙（{{ detail.messages.length }}）</div>
+            <div class="ic-sheet-sub">留言接龙（{{ detail.messages.length }}）</div>
             <div class="ic-msgs">
               <div v-for="(x, i) in detail.messages" :key="i" class="ic-msg">
                 <span class="ic-msg-name">{{ x.name }}</span>
@@ -222,6 +222,12 @@ function evPct(e) {
   return Math.min(100, Math.round((e.joined_count / e.need_count) * 100))
 }
 
+function initial(name) {
+  if (!name) return '·'
+  const ch = String(name).trim().charAt(0)
+  return ch ? ch.toUpperCase() : '·'
+}
+
 async function toggleClub(c) {
   if (!phone.value) { showToast('请先在会员中心绑定手机号'); return }
   try {
@@ -288,63 +294,75 @@ async function sendMsg(d) {
 
 .ic-tabs { display: flex; gap: 8px; padding: 12px 16px; position: sticky; top: 61px; background: #000; z-index: 9; }
 .ic-tab { flex: 1; height: 38px; border: 1px solid rgba(255,255,255,0.12); background: #161618; color: rgba(255,255,255,0.6); font-size: 14px; font-weight: 700; border-radius: 10px; cursor: pointer; }
-.ic-tab.active { background: linear-gradient(135deg,#E85D04,#FF7B2C); color: #fff; border-color: transparent; }
+.ic-tab.active { background: #9A7425; color: #fff; border-color: #8A5E12; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
+
+/* 多彩卡片：实色渐变底 + 3px 深边框 + 内高光 + 白字（与首页一致：金黄/浅橙棕/深红棕/灰紫/深灰绿） */
+.ic-c-0 { background: linear-gradient(135deg, #C4923A, #A8741C); border-color: #8A5E12; }
+.ic-c-1 { background: linear-gradient(135deg, #C9956C, #B07E4E); border-color: #A87C48; }
+.ic-c-2 { background: linear-gradient(135deg, #9B4A3E, #7E3328); border-color: #5C241D; }
+.ic-c-3 { background: linear-gradient(135deg, #8B8B90, #6F6F76); border-color: #54545A; }
+.ic-c-4 { background: linear-gradient(135deg, #6B6E64, #505247); border-color: #3C3E36; }
 
 .ic-sec { padding: 0 16px; }
 .ic-sec-title { font-size: 14px; font-weight: 700; color: #fff; margin: 16px 0 10px; letter-spacing: 0.5px; }
 
-.ic-club-card { display: flex; align-items: center; gap: 12px; border-radius: 16px; padding: 14px; margin-bottom: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
-.ic-club-emoji { width: 46px; height: 46px; border-radius: 12px; background: rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+.ic-club-card, .ic-ev-card, .ic-my-club, .ic-my-ev {
+  border: 3px solid transparent; border-radius: 16px; padding: 14px; margin-bottom: 12px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.22);
+}
+.ic-my-ev { display: flex; align-items: center; justify-content: space-between; }
+.ic-club-card, .ic-ev-card { display: flex; align-items: center; gap: 12px; }
+.ic-club-avatar, .ic-ev-avatar, .ic-my-avatar, .ic-sheet-avatar {
+  width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800; color: #fff; flex-shrink: 0; background: rgba(0,0,0,0.28); text-shadow: 0 1px 1px rgba(0,0,0,.4);
+}
 .ic-club-main { flex: 1; min-width: 0; }
 .ic-club-top { display: flex; align-items: center; gap: 8px; }
-.ic-club-name { font-size: 15px; font-weight: 800; color: #fff; }
-.ic-club-tag { font-size: 11px; color: rgba(255,255,255,0.85); background: rgba(0,0,0,0.22); padding: 2px 8px; border-radius: 10px; }
-.ic-club-intro { font-size: 12px; color: rgba(255,255,255,0.82); margin: 4px 0; line-height: 1.5; }
-.ic-club-meta { font-size: 11px; color: rgba(255,255,255,0.7); }
-.ic-club-btn { flex-shrink: 0; height: 34px; padding: 0 16px; border: 1px solid rgba(255,255,255,0.7); background: rgba(255,255,255,0.16); color: #fff; font-size: 13px; font-weight: 700; border-radius: 18px; cursor: pointer; }
-.ic-club-btn.joined { background: rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.4); }
+.ic-club-name { font-size: 15px; font-weight: 800; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
+.ic-club-tag { font-size: 11px; color: #fff; background: rgba(0,0,0,0.22); padding: 2px 8px; border-radius: 10px; }
+.ic-club-intro { font-size: 12px; color: rgba(255,255,255,0.85); margin: 4px 0; line-height: 1.5; }
+.ic-club-meta { font-size: 11px; color: rgba(255,255,255,0.75); }
+.ic-club-btn { flex-shrink: 0; height: 34px; padding: 0 16px; border: 1px solid #8A5E12; background: #9A7425; color: #fff; font-size: 13px; font-weight: 700; border-radius: 18px; cursor: pointer; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
+.ic-club-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(196,146,58,.35); }
+.ic-club-btn.joined { background: rgba(0,0,0,0.30); border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.85); box-shadow: inset 3px 3px 7px rgba(0,0,0,.5), inset -2px -2px 5px rgba(255,255,255,.08); }
 
 .ic-filter { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px; }
 .ic-chip { flex-shrink: 0; height: 32px; padding: 0 14px; border: 1px solid rgba(255,255,255,0.12); background: #161618; color: rgba(255,255,255,0.6); font-size: 13px; border-radius: 16px; cursor: pointer; white-space: nowrap; }
-.ic-chip.active { background: rgba(255,123,44,0.18); color: #FF7B2C; border-color: rgba(255,123,44,0.5); }
+.ic-chip.active { background: #9A7425; color: #fff; border-color: #8A5E12; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
 
-.ic-ev-card { display: flex; align-items: center; gap: 12px; background: #161618; border: 1px solid rgba(255,255,255,0.10); border-radius: 14px; padding: 12px; margin-bottom: 12px; cursor: pointer; position: relative; }
-.ic-ev-emoji { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
 .ic-ev-main { flex: 1; min-width: 0; }
 .ic-ev-top { display: flex; align-items: center; gap: 8px; }
-.ic-ev-club { font-size: 12px; color: #FF7B2C; font-weight: 700; }
-.ic-ev-tag { font-size: 11px; color: rgba(255,255,255,0.5); }
-.ic-ev-title { font-size: 15px; font-weight: 700; margin: 3px 0; }
-.ic-ev-info { font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 6px; }
+.ic-ev-club { font-size: 12px; color: #fff; font-weight: 700; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
+.ic-ev-tag { font-size: 11px; color: rgba(255,255,255,0.75); }
+.ic-ev-title { font-size: 15px; font-weight: 700; margin: 3px 0; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
+.ic-ev-info { font-size: 12px; color: rgba(255,255,255,0.8); margin-bottom: 6px; }
+.ic-ev-k { color: rgba(255,255,255,0.6); margin-right: 2px; }
 .ic-ev-progress { display: flex; align-items: center; gap: 8px; }
-.ic-ev-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.10); border-radius: 3px; overflow: hidden; }
-.ic-ev-fill { height: 100%; background: linear-gradient(90deg,#E85D04,#FF7B2C); border-radius: 3px; }
-.ic-ev-txt { font-size: 11px; color: rgba(255,255,255,0.6); white-space: nowrap; }
-.ic-ev-badge { position: absolute; top: 10px; right: 10px; font-size: 11px; font-weight: 700; color: #FF7B2C; background: rgba(255,123,44,0.16); padding: 2px 8px; border-radius: 10px; }
+.ic-ev-bar { flex: 1; height: 6px; background: rgba(0,0,0,0.30); border-radius: 3px; overflow: hidden; }
+.ic-ev-fill { height: 100%; background: linear-gradient(90deg, rgba(0,0,0,0.35), rgba(255,255,255,0.55)); border-radius: 3px; }
+.ic-ev-txt { font-size: 11px; color: rgba(255,255,255,0.85); white-space: nowrap; text-shadow: 0 1px 1px rgba(0,0,0,.3); }
+.ic-ev-badge { position: absolute; top: 10px; right: 10px; font-size: 11px; font-weight: 700; color: #fff; background: rgba(0,0,0,0.30); padding: 2px 8px; border-radius: 10px; }
 
-.ic-my-club { display: flex; align-items: center; gap: 12px; background: #161618; border: 1px solid rgba(255,255,255,0.10); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
-.ic-my-emoji { font-size: 28px; flex-shrink: 0; }
-.ic-my-name { font-size: 14px; font-weight: 700; }
-.ic-my-tag { font-size: 11px; color: #FF7B2C; }
-.ic-my-intro { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
-.ic-my-ev { display: flex; align-items: center; justify-content: space-between; background: #161618; border: 1px solid rgba(255,255,255,0.10); border-radius: 12px; padding: 12px; margin-bottom: 10px; cursor: pointer; }
-.ic-my-ev-title { font-size: 14px; font-weight: 700; }
-.ic-my-ev-meta { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 3px; }
+.ic-my-info { flex: 1; min-width: 0; }
+.ic-my-name { font-size: 14px; font-weight: 700; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
+.ic-my-tag { font-size: 11px; color: rgba(255,255,255,0.85); }
+.ic-my-intro { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+.ic-my-ev-title { font-size: 14px; font-weight: 700; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
+.ic-my-ev-meta { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 3px; }
 .ic-my-ev-status { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
-.ic-my-ev-status.open { background: rgba(255,123,44,0.16); color: #FF7B2C; }
-.ic-my-ev-status.closed { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.5); }
+.ic-my-ev-status.open { background: rgba(255,255,255,0.25); color: #fff; }
+.ic-my-ev-status.closed { background: rgba(0,0,0,0.30); color: rgba(255,255,255,0.7); }
 
-.ic-tip { font-size: 12px; color: rgba(255,255,255,0.45); margin: 16px; line-height: 1.6; text-align: center; }
+.ic-tip { font-size: 12px; color: rgba(255,255,255,0.5); margin: 16px; line-height: 1.6; text-align: center; }
 .ic-loading, .ic-empty { text-align: center; color: rgba(255,255,255,0.5); padding: 30px 0; font-size: 14px; }
 
 /* 弹层 */
 .ic-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; display: flex; align-items: flex-end; }
 .ic-sheet { width: 100%; max-height: 86vh; background: #161618; border-radius: 20px 20px 0 0; display: flex; flex-direction: column; overflow: hidden; }
 .ic-sheet-hd { display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-.ic-sheet-emoji { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
 .ic-sheet-hd-main { flex: 1; min-width: 0; }
-.ic-sheet-club { font-size: 12px; color: #FF7B2C; font-weight: 700; }
-.ic-sheet-title { font-size: 16px; font-weight: 800; margin-top: 2px; }
+.ic-sheet-club { font-size: 12px; color: #C4923A; font-weight: 700; }
+.ic-sheet-title { font-size: 16px; font-weight: 800; margin-top: 2px; color: #fff; }
 .ic-sheet-close { width: 30px; height: 30px; border: none; background: rgba(255,255,255,0.08); color: #fff; font-size: 20px; border-radius: 50%; cursor: pointer; flex-shrink: 0; }
 .ic-sheet-body { flex: 1; overflow-y: auto; padding: 16px; }
 .ic-sheet-row { display: flex; gap: 12px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
@@ -352,18 +370,19 @@ async function sendMsg(d) {
 .ic-sheet-row b { color: #fff; font-weight: 600; }
 .ic-sheet-sub { font-size: 13px; font-weight: 700; color: #fff; margin: 16px 0 8px; }
 .ic-members { display: flex; flex-wrap: wrap; gap: 8px; }
-.ic-member { font-size: 12px; color: #fff; background: linear-gradient(135deg,#E85D04,#FF7B2C); padding: 4px 12px; border-radius: 14px; }
-.ic-member.ghost { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.5); }
+.ic-member { font-size: 12px; color: #fff; background: #9A7425; padding: 4px 12px; border-radius: 14px; border: 1px solid #8A5E12; }
+.ic-member.ghost { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.5); border-color: transparent; }
 .ic-msgs { display: flex; flex-direction: column; gap: 8px; }
 .ic-msg { background: #0F0F11; border-radius: 10px; padding: 8px 12px; font-size: 13px; }
 .ic-msg.ghost { color: rgba(255,255,255,0.4); text-align: center; }
-.ic-msg-name { color: #FF7B2C; font-weight: 700; margin-right: 8px; }
+.ic-msg-name { color: #C4923A; font-weight: 700; margin-right: 8px; }
 .ic-msg-content { color: #fff; }
 .ic-msg-time { color: rgba(255,255,255,0.4); font-size: 11px; margin-left: 8px; }
 .ic-sheet-ft { padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 10px; background: #161618; }
-.ic-join-btn { flex: 1; height: 46px; border: none; border-radius: 12px; background: linear-gradient(135deg,#E85D04,#FF7B2C); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(232,93,4,0.35); }
+.ic-join-btn { flex: 1; height: 46px; border: 1px solid #8A5E12; border-radius: 12px; background: #9A7425; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
+.ic-join-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(196,146,58,.35); }
 .ic-msg-input { flex: 1; height: 44px; border: 1px solid rgba(255,255,255,0.15); background: #0F0F11; color: #fff; border-radius: 12px; padding: 0 14px; font-size: 14px; }
-.ic-send-btn { height: 44px; padding: 0 18px; border: none; border-radius: 12px; background: linear-gradient(135deg,#E85D04,#FF7B2C); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
+.ic-send-btn { height: 44px; padding: 0 18px; border: 1px solid #8A5E12; border-radius: 12px; background: #9A7425; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
 
 .ic-slide-enter-active, .ic-slide-leave-active { transition: opacity 0.25s; }
 .ic-slide-enter-from, .ic-slide-leave-to { opacity: 0; }
