@@ -2,7 +2,7 @@
   <div class="community-page">
     <van-nav-bar title="邻里圈" left-text="返回" left-arrow @click-left="$router.back()" fixed placeholder>
       <template #right>
-        <span class="nav-link" @click="$router.push('/points')">激励中心</span>
+        <span class="nav-link" @click="$router.push('/?tab=profile')">会员权益</span>
       </template>
     </van-nav-bar>
 

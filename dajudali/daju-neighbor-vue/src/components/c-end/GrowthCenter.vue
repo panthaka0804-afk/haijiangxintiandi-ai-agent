@@ -1,12 +1,9 @@
 <template>
-  <div class="points-page">
-    <van-nav-bar title="激励中心" left-text="返回" left-arrow @click-left="$router.back()" fixed placeholder />
-
-    <!-- 未登录提示 -->
-    <div v-if="!phone" class="points-empty">
+  <div class="gc-wrap">
+    <div v-if="!phone" class="gc-empty">
       <div class="empty-title">请先登录会员</div>
       <div class="empty-hint">登录后可签到、攒成长值、领徽章</div>
-      <van-button round block type="primary" style="margin-top:16px" @click="$router.push('/member')">去登录</van-button>
+      <van-button round block type="primary" class="gc-login-btn" @click="goLogin">去登录</van-button>
     </div>
 
     <template v-else>
@@ -84,10 +81,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useMemberStore } from '@/stores/member'
 import { showToast, showSuccessToast, showFailToast } from 'vant'
 import { getCheckinStatus, doCheckin, getMemberDayStatus, claimMemberDay } from '@/api'
 
+const router = useRouter()
 const memberStore = useMemberStore()
 
 const phone = ref('')
@@ -190,6 +189,10 @@ async function claimMd() {
   }
 }
 
+function goLogin() {
+  router.push('/member')
+}
+
 onMounted(() => {
   const m = memberStore.member
   if (m && m.phone) {
@@ -202,14 +205,16 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.points-page { min-height: 100vh; background: #000; padding-bottom: 24px; }
-.points-empty { padding: 40px 24px; text-align: center; color: #999; }
-.empty-title { font-size: 18px; color: #eee; margin-bottom: 8px; }
-.empty-hint { font-size: 14px; }
-.points-empty .van-button { background: #9A7425; border-color: #9A7425; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); }
+.gc-wrap { margin: 0; }
+
+/* 登录提示 */
+.gc-empty { padding: 28px 16px; text-align: center; color: #999; }
+.gc-empty .empty-title { font-size: 18px; color: #eee; margin-bottom: 8px; }
+.gc-empty .empty-hint { font-size: 14px; }
+.gc-login-btn { background: #9A7425; border-color: #9A7425; margin-top: 16px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); }
 
 /* 成长值卡片 — 银灰多彩卡（渐变实色底 + 深边框 + 内高光） */
-.growth-card { margin: 16px; padding: 18px 16px; background: linear-gradient(135deg, #9CA1A8 0%, #7A7E84 100%); border: 3px solid #6A6E74; border-radius: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px rgba(0,0,0,0.35); }
+.growth-card { margin: 0 0 12px; padding: 18px 16px; background: linear-gradient(135deg, #9CA1A8 0%, #7A7E84 100%); border: 3px solid #6A6E74; border-radius: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px rgba(0,0,0,0.35); }
 .growth-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .growth-level { padding: 4px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.55); font-size: 13px; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.30); }
 .growth-points { font-size: 26px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
@@ -219,7 +224,7 @@ onMounted(() => {
 .growth-hint { font-size: 12px; color: rgba(255,255,255,0.92); text-shadow: 0 1px 1px rgba(0,0,0,0.25); }
 
 /* 签到抽奖卡 — 金黄多彩卡 */
-.sign-card { margin: 0 16px 16px; padding: 16px; background: linear-gradient(135deg, #C4923A 0%, #A8761F 100%); border: 3px solid #7E5413; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px rgba(196,146,58,0.35); }
+.sign-card { margin: 0 0 12px; padding: 16px; background: linear-gradient(135deg, #C4923A 0%, #A8761F 100%); border: 3px solid #7E5413; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px rgba(196,146,58,0.35); }
 .sign-title { font-size: 16px; color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
 .sign-days { font-size: 12px; color: rgba(255,255,255,0.92); margin-top: 4px; }
 .sign-days b { color: #FFF3D6; }
@@ -228,7 +233,7 @@ onMounted(() => {
 .sign-coupon { font-size: 12px; color: #FFF3D6; margin-top: 6px; }
 
 /* 周三会员日卡 — 深红棕多彩卡 */
-.memberday-card { margin: 0 16px 16px; padding: 16px; background: linear-gradient(135deg, #9B4A3E 0%, #7A342B 100%); border: 3px solid #5C241D; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,0.20), 0 4px 14px rgba(155,74,62,0.35); }
+.memberday-card { margin: 0 0 12px; padding: 16px; background: linear-gradient(135deg, #9B4A3E 0%, #7A342B 100%); border: 3px solid #5C241D; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,0.20), 0 4px 14px rgba(155,74,62,0.35); }
 .md-title { font-size: 16px; color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
 .md-sub { font-size: 12px; color: rgba(255,255,255,0.92); margin-top: 4px; }
 .md-sub b { color: #FFF3D6; }
@@ -238,7 +243,7 @@ onMounted(() => {
 .md-btn.off { background: #5C241D; border-color: #5C241D; color: rgba(255,255,255,0.85); box-shadow: inset 3px 3px 7px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(155,74,62,0.45); }
 
 /* 徽章墙 — 玻璃容器 + 多彩徽章 */
-.badge-section { margin: 0 16px 16px; }
+.badge-section { margin: 0 0 12px; }
 .section-title { font-size: 16px; color: #fff; font-weight: 600; margin-bottom: 12px; }
 .section-sub { font-size: 12px; color: #999; font-weight: 400; }
 .badge-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
@@ -250,7 +255,7 @@ onMounted(() => {
 .badge-desc { font-size: 10px; color: #777; margin-top: 3px; line-height: 1.3; }
 
 /* 成长值明细 — 深灰绿多彩卡 */
-.log-section { margin: 0 16px; }
+.log-section { margin: 0; }
 .log-list { background: linear-gradient(135deg, #6B6E64 0%, #565952 100%); border: 3px solid #44463F; border-radius: 14px; overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 4px 12px rgba(0,0,0,0.30); }
 .log-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid rgba(0,0,0,0.22); }
 .log-item:last-child { border-bottom: none; }

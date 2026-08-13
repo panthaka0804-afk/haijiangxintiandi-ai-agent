@@ -40,12 +40,14 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import HomeTab from './HomeTab.vue'
 import OffersTab from './OffersTab.vue'
 import ChatTab from './ChatTab.vue'
 import ProfileTab from './ProfileTab.vue'
 
+const route = useRoute()
 const activeTab = ref('home')
 const tabs = [
   { key: 'home', label: '首页', icon: 'home' },
@@ -53,6 +55,14 @@ const tabs = [
   { key: 'chat', label: '客服', icon: 'chat' },
   { key: 'profile', label: '更多', icon: 'person' },
 ]
+
+// 支持深链：/?tab=profile 直接进入“会员权益”页（成长值已合并至此）
+function syncTabFromRoute() {
+  const t = route.query.tab
+  if (t && tabs.some(tab => tab.key === t)) activeTab.value = t
+}
+onMounted(syncTabFromRoute)
+watch(() => route.query.tab, syncTabFromRoute)
 
 function onQuickSend(msg) {
   if (typeof msg === 'string' && msg.startsWith('?')) {

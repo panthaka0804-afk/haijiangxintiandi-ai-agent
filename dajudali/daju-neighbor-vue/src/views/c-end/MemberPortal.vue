@@ -65,17 +65,6 @@
         </div>
       </div>
 
-      <!-- 激励中心入口 -->
-      <div class="mp-card mp-gift-send" @click="$router.push('/points')">
-        <div class="mp-icon-box">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
-        </div>
-        <div class="mp-left">
-          <div class="mp-title">激励中心</div>
-          <div class="mp-desc">每日签到 · 成长值 · 成就徽章</div>
-        </div>
-        <span class="mp-arrow">›</span>
-      </div>
 
       <!-- 邻里特权：会员互赠 + 人脉引荐 -->
       <div class="mp-section">

@@ -83,7 +83,7 @@
       <span class="section-cn">会员权益</span>
     </div>
 
-    <!-- ── 会员权益卡片：海江之友(可切换等级) + 成长值(深红棕) ── -->
+    <!-- ── 会员权益卡片：海江之友(可切换等级) + 成长值(完整成长中心) ── -->
     <div class="benefit-cards">
       <div class="tier-carousel">
         <div class="tier-viewport" ref="tierViewport" @scroll="onTierScroll">
@@ -104,14 +104,7 @@
           </div>
         </div>
     </div>
-      <div class="benefit-card benefit-red">
-        <div class="bc-header">
-          <div class="bc-title">成长值</div>
-          <div class="bc-level">查看明细</div>
-        </div>
-        <div class="bc-big-num">3,250</div>
-        <div class="bc-status">距离 Lv.2 还差 6,750 成长值</div>
-      </div>
+      <GrowthCenter />
     </div>
 
     <!-- ── 功能快捷入口（9 宫格，每格一色，与首页统一） ── -->
@@ -150,6 +143,7 @@
 import { ref, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMemberStore } from '@/stores/member'
+import GrowthCenter from '@/components/c-end/GrowthCenter.vue'
 import mtnPu from '@/assets/mountain-pu.png'
 import mtnYin from '@/assets/mountain-yin.png'
 const emit = defineEmits(['switchTab'])
