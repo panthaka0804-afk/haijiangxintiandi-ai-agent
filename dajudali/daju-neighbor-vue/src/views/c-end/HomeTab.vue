@@ -732,7 +732,7 @@ function go(route) {
   background-color: transparent !important;
   background-image:
     linear-gradient(150deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%),
-    linear-gradient(160deg, var(--mc-tint, rgba(201, 149, 108, 1)) 0%, var(--mc-tint2, rgba(154, 106, 56, 1)) 100%);
+    linear-gradient(160deg, var(--mc-tint, rgba(139, 139, 144, 1)) 0%, var(--mc-tint2, rgba(106, 106, 110, 1)) 100%);
   background-origin: padding-box, border-box;
   background-clip: padding-box, border-box;
   border: 3px solid transparent;
@@ -740,7 +740,7 @@ function go(route) {
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   box-shadow:
-    0 0 16px var(--mc-glow, rgba(201, 149, 108, 0.35)),
+    0 0 16px var(--mc-glow, rgba(139, 139, 144, 0.35)),
     0 8px 30px rgba(0, 0, 0, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }

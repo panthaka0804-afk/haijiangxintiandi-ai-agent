@@ -64,7 +64,7 @@ export const useMemberStore = defineStore('member', () => {
   // bg: 实色底；bd: 深边框色；accent: 高光/强调色
   function levelTheme(level) {
     const map = {
-      '普卡':   { bg: '#C9956C', bd: '#9A6A38', accent: '#E6C39A' },
+      '普卡':   { bg: '#8B8B90', bd: '#6A6A6E', accent: '#A9A9AE' },
       '银卡':   { bg: '#9CA1A8', bd: '#7A7E84', accent: '#C2C6CC' },
       '金卡':   { bg: '#C4923A', bd: '#9A7425', accent: '#DDB873' },
       '铂金卡': { bg: '#9DA7B5', bd: '#7C8593', accent: '#C3CBD6' },
