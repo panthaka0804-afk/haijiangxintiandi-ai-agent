@@ -656,7 +656,7 @@ function go(route) {
 <style scoped>
 @font-face { font-family: 'Gayathri'; src: url('@/assets/fonts/Gayathri-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
 .home-tab { padding-bottom: 80px; }
-.hero-banner { width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; }
+.hero-banner { width: 100%; aspect-ratio: 3/4; position: relative; overflow: hidden; }
 .hero-bg { width: calc(100% + 200px); height: 100%; margin-left: -100px; object-fit: cover; display: block; transform: translateX(40px); }
 .hero-gradient { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0.8) 100%); }
 .hero-slogan { position: absolute; top: 14px; left: 8px; z-index: 2; }
