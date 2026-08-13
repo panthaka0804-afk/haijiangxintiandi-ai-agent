@@ -80,7 +80,7 @@
 
       <div class="ic-sec-title">我的活动群</div>
       <div v-if="!myEvents.length" class="ic-empty">还没有参与任何活动群</div>
-      <div v-for="e in myEvents" :key="e.id" class="ic-my-ev" @click="openEventById(e.id)">
+      <div v-for="(e, i) in myEvents" :key="e.id" class="ic-my-ev" :class="'ic-c-' + (i % 5)" @click="openEventById(e.id)">
         <div class="ic-my-ev-title">{{ e.title }}</div>
         <div class="ic-my-ev-meta"><span class="ic-ev-k">时间</span> {{ e.meet_time }}　<span class="ic-ev-k">地点</span> {{ e.place }}</div>
         <span class="ic-my-ev-status" :class="e.status">{{ e.status === 'open' ? '进行中' : '已结束' }}</span>
@@ -363,6 +363,12 @@ async function sendMsg(d) {
 .ic-my-ev-status { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
 .ic-my-ev-status.open { background: rgba(255,255,255,0.25); color: #fff; }
 .ic-my-ev-status.closed { background: rgba(0,0,0,0.30); color: rgba(255,255,255,0.7); }
+/* 我的活动群卡片跟随五色 + 已结束徽标同色系暗变体（去死黑，与整体一致） */
+.ic-c-0 .ic-my-ev-status.closed { background: #6E4A0E; }
+.ic-c-1 .ic-my-ev-status.closed { background: #87613A; }
+.ic-c-2 .ic-my-ev-status.closed { background: #451B16; }
+.ic-c-3 .ic-my-ev-status.closed { background: #3F3F44; }
+.ic-c-4 .ic-my-ev-status.closed { background: #2C2E28; }
 
 .ic-tip { font-size: 12px; color: rgba(255,255,255,0.5); margin: 16px; line-height: 1.6; text-align: center; }
 .ic-loading, .ic-empty { text-align: center; color: rgba(255,255,255,0.5); padding: 30px 0; font-size: 14px; }
