@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <div class="member-card" :class="{ 'mc-light': loggedIn }">
+    <div class="member-card" :class="{ 'mc-light': loggedIn }" :style="cardTierStyle">
       <template v-if="!loggedIn">
         <div class="mc-top">
           <div class="mc-logo-circle">
@@ -395,6 +395,25 @@ const arcDot = computed(() => {
 const arcDotX = computed(() => arcDot.value.x)
 const arcDotY = computed(() => arcDot.value.y)
 
+// 会员卡按档变色：读 levelTheme，输出 CSS 变量（--mc-tint 主色 / --mc-tint2 深一档 / --mc-glow 发光）
+function hexToRgb(hex) {
+  const h = (hex || '').replace('#', '')
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
+  const n = parseInt(full, 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+const cardTierStyle = computed(() => {
+  if (!loggedIn.value) return {}
+  const lv = (memberInfo.value && memberInfo.value.membership_level) || '普卡'
+  const t = memberStore.levelTheme(lv)
+  const [r, g, b] = hexToRgb(t.bg)
+  return {
+    '--mc-tint': t.bg,
+    '--mc-tint2': t.bd,
+    '--mc-glow': `rgba(${r}, ${g}, ${b}, 0.35)`,
+  }
+})
+
 onMounted(async () => {
   const urlParams = new URLSearchParams(window.location.search)
   const wxCode = urlParams.get('code')
@@ -713,7 +732,7 @@ function go(route) {
   background-color: transparent !important;
   background-image:
     linear-gradient(150deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%),
-    linear-gradient(160deg, rgba(201, 149, 108, 1) 0%, rgba(154, 106, 56, 1) 100%);
+    linear-gradient(160deg, var(--mc-tint, rgba(201, 149, 108, 1)) 0%, var(--mc-tint2, rgba(154, 106, 56, 1)) 100%);
   background-origin: padding-box, border-box;
   background-clip: padding-box, border-box;
   border: 3px solid transparent;
@@ -721,7 +740,7 @@ function go(route) {
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   box-shadow:
-    0 0 16px rgba(201, 149, 108, 0.35),
+    0 0 16px var(--mc-glow, rgba(201, 149, 108, 0.35)),
     0 8px 30px rgba(0, 0, 0, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
