@@ -205,8 +205,6 @@ function onTierScroll(e) {
 }
 
 const functions = [
-  { label: '积分兑换', route: '/redeem', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
-  { label: '我的优惠券', route: '/offers', icon: '<path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="M22 7H2v5h20z"/>' },
   { label: '室内导航', route: '/nav', icon: '<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>' },
   { label: '会员中心', route: '/member', icon: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' },
   { label: '关于我们', route: '/about', icon: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>' },

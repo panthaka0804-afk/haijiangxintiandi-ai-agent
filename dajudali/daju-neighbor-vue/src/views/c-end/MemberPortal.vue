@@ -140,9 +140,12 @@
       </div>
 
       <!-- 积分兑换 -->
-      <div class="mp-section">
-        <span class="mp-section-en">redeem</span>
-        <span class="mp-section-cn">积分兑换</span>
+      <div class="mp-section mp-section-link" @click="$router.push('/redeem')">
+        <span class="mp-section-titles">
+          <span class="mp-section-en">redeem</span>
+          <span class="mp-section-cn">积分兑换</span>
+        </span>
+        <span class="mp-section-more">进入 ›</span>
       </div>
       <div class="mp-grid">
         <div v-for="(item, i) in redeemList" :key="item.id" class="mp-card mp-redeem" :class="'mp-redeem-' + (i % 5)"
@@ -154,9 +157,12 @@
       </div>
 
       <!-- 我的券 -->
-      <div class="mp-section" v-if="coupons && coupons.length">
-        <span class="mp-section-en">my coupons</span>
-        <span class="mp-section-cn">我的券</span>
+      <div class="mp-section mp-section-link" v-if="coupons && coupons.length" @click="$router.push('/offers')">
+        <span class="mp-section-titles">
+          <span class="mp-section-en">my coupons</span>
+          <span class="mp-section-cn">我的券</span>
+        </span>
+        <span class="mp-section-more">查看全部 ›</span>
       </div>
       <div class="mp-grid" v-if="coupons && coupons.length">
         <div v-for="(c, i) in coupons" :key="(c.code || 'c') + '-' + i" class="mp-card mp-coupon" :class="'mp-coupon-' + (i % 5)">
@@ -496,6 +502,15 @@ async function showRedeemConfirm(item) {
   font-weight: 400;
   color: #FFFFFF;
   margin-top: 8px;
+  text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.18);
+}
+
+/* 专区标题可点击进入完整页（更多页已收口，此处提供出口，功能不丢） */
+.mp-section-link { flex-direction: row; align-items: center; justify-content: space-between; cursor: pointer; }
+.mp-section-titles { display: flex; flex-direction: column; }
+.mp-section-more {
+  flex-shrink: 0; margin-left: 12px;
+  font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.78);
   text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.18);
 }
 
