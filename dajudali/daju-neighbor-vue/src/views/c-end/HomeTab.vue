@@ -146,24 +146,6 @@
       </div>
     </div>
 
-    <!-- 激励中心 banner（首页直接引流，深橙红突出） -->
-    <div class="points-entry" @click="$router.push('/points')">
-      <svg class="pc-illus" viewBox="0 0 120 60" fill="none" preserveAspectRatio="xMinYMid slice"><path d="M64 12 l3.6 7.3 8 1.2 -5.8 5.6 1.4 8 -7.2 -3.8 -7.2 3.8 1.4 -8 -5.8 -5.6 8 -1.2 z" opacity="0.5"/><circle cx="30" cy="40" r="6" opacity="0.4"/></svg>
-      <div class="pc-icon-box">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/>
-          <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>
-        </svg>
-      </div>
-      <div class="pc-left">
-        <div class="pc-title">激励中心</div>
-        <div class="pc-desc">每日签到 · 成长值 · 成就徽章</div>
-      </div>
-      <div class="pc-right">
-        <span class="pc-btn">去签到</span>
-      </div>
-    </div>
-
     <div class="section-label">
       <span class="section-en">service</span>
       <span class="section-cn">服务</span>
@@ -790,19 +772,6 @@ function go(route) {
 .daily-deal, .biz-hero, .biz-card, .shop-card, .organizer-entry, .bizcoop-entry, .property-entry, .community-entry { position: relative; overflow: hidden; }
 .dd-illus, .biz-hero-illus, .biz-card-illus, .shop-illus, .oe-illus, .bce-illus, .pe-illus, .cm-illus { position: absolute; right: 0; top: 0; width: 64%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.28; stroke: #FFFFFF; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .dd-icon-box, .dd-left, .dd-right, .biz-card-content, .shop-logo, .shop-info, .shop-arrow, .oe-icon-box, .oe-left, .oe-right, .bce-icon-box, .bce-left, .bce-right, .pe-icon-box, .pe-left, .pe-right, .cm-icon-box, .cm-left, .cm-right { position: relative; z-index: 2; }
-
-/* 激励中心 — 多彩卡片（金黄，对齐首页多彩卡配色） */
-.points-entry { display: flex; align-items: center; gap: 12px; margin: 4px 16px 20px; padding: 14px 16px; min-height: 82px; box-sizing: border-box; background-color: #C4923A; border: 3px solid #9A7425; border-radius: 18px; box-shadow: 0 0 0 3px rgba(196,146,58,0.22), 0 6px 16px rgba(196,146,58,0.45), inset 0 1px 0 rgba(255,255,255,0.22); cursor: pointer; -webkit-tap-highlight-color: transparent; animation: pcGlow 2.6s ease-in-out infinite; }
-@keyframes pcGlow { 0%,100% { box-shadow: 0 0 0 3px rgba(196,146,58,0.18), 0 6px 16px rgba(196,146,58,0.40), inset 0 1px 0 rgba(255,255,255,0.22); } 50% { box-shadow: 0 0 0 6px rgba(196,146,58,0.10), 0 8px 22px rgba(196,146,58,0.60), inset 0 1px 0 rgba(255,255,255,0.22); } }
-.points-entry:active { opacity: 0.82; }
-.pc-illus { position: absolute; right: 0; top: 0; width: 64%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.30; fill: #FFFFFF; stroke: #FFFFFF; stroke-width: 1; }
-.pc-icon-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 2; }
-.pc-icon-box svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
-.pc-left { flex: 1; min-width: 0; position: relative; z-index: 2; }
-.pc-title { font-size: var(--fs-body); font-weight: 700; color: #FFFFFF; margin-bottom: 2px; text-shadow: 0 -1px 1px rgba(0,0,0,0.45), 0 1px 1px rgba(255,255,255,0.25); }
-.pc-desc { font-size: var(--fs-secondary); color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 -1px 1px rgba(0,0,0,0.45), 0 1px 1px rgba(255,255,255,0.25); }
-.pc-right { flex-shrink: 0; position: relative; z-index: 2; }
-.pc-btn { display: inline-block; padding: 8px 20px; background-color: #9A7425; border: 3px solid #9A7425; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
 
 /* 邻里圈栏目 — 2×2 多彩网格（复用 .biz-card 卡片样式） */
 .neighbor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; margin-bottom: 20px; }
