@@ -322,9 +322,9 @@ async function sendMsg(d) {
 .ic-club-tag { font-size: 11px; color: #fff; background: rgba(0,0,0,0.22); padding: 2px 8px; border-radius: 10px; }
 .ic-club-intro { font-size: 12px; color: rgba(255,255,255,0.85); margin: 4px 0; line-height: 1.5; }
 .ic-club-meta { font-size: 11px; color: rgba(255,255,255,0.75); }
-.ic-club-btn { flex-shrink: 0; height: 34px; padding: 0 16px; border: 1px solid #8A5E12; background: #9A7425; color: #fff; font-size: 13px; font-weight: 700; border-radius: 18px; cursor: pointer; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
+.ic-club-btn { flex-shrink: 0; padding: 8px 20px; background-color: #9A7425; border: 3px solid #9A7425; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; cursor: pointer; filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4)); }
 .ic-club-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(196,146,58,.35); }
-.ic-club-btn.joined { background: rgba(0,0,0,0.30); border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.85); box-shadow: inset 3px 3px 7px rgba(0,0,0,.5), inset -2px -2px 5px rgba(255,255,255,.08); }
+.ic-club-btn.joined { background-color: rgba(0,0,0,0.35); border: 3px solid rgba(255,255,255,0.30); color: rgba(255,255,255,0.85); box-shadow: inset 3px 3px 7px rgba(0,0,0,.5), inset -2px -2px 5px rgba(255,255,255,.08); filter: none; }
 
 .ic-filter { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px; }
 .ic-chip { flex-shrink: 0; height: 32px; padding: 0 14px; border: 1px solid rgba(255,255,255,0.12); background: #161618; color: rgba(255,255,255,0.6); font-size: 13px; border-radius: 16px; cursor: pointer; white-space: nowrap; }
@@ -379,10 +379,10 @@ async function sendMsg(d) {
 .ic-msg-content { color: #fff; }
 .ic-msg-time { color: rgba(255,255,255,0.4); font-size: 11px; margin-left: 8px; }
 .ic-sheet-ft { padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 10px; background: #161618; }
-.ic-join-btn { flex: 1; height: 46px; border: 1px solid #8A5E12; border-radius: 12px; background: #9A7425; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
+.ic-join-btn { flex: 1; padding: 8px 20px; background-color: #9A7425; border: 3px solid #9A7425; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; cursor: pointer; filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4)); }
 .ic-join-btn:active { box-shadow: inset 5px 5px 10px rgba(0,0,0,.55), inset -2px -2px 5px rgba(196,146,58,.35); }
 .ic-msg-input { flex: 1; height: 44px; border: 1px solid rgba(255,255,255,0.15); background: #0F0F11; color: #fff; border-radius: 12px; padding: 0 14px; font-size: 14px; }
-.ic-send-btn { height: 44px; padding: 0 18px; border: 1px solid #8A5E12; border-radius: 12px; background: #9A7425; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 3px 3px 7px rgba(0,0,0,.45), inset -2px -2px 5px rgba(196,146,58,.45); }
+.ic-send-btn { padding: 8px 20px; background-color: #9A7425; border: 3px solid #9A7425; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; cursor: pointer; filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4)); }
 
 .ic-slide-enter-active, .ic-slide-leave-active { transition: opacity 0.25s; }
 .ic-slide-enter-from, .ic-slide-leave-to { opacity: 0; }
