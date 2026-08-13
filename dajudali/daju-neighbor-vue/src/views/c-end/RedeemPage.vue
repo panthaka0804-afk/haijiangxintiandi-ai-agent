@@ -8,26 +8,47 @@
       <div class="rp-pts-label">可用积分</div>
     </div>
 
-    <div class="rp-cats">
-      <button v-for="c in cats" :key="c" class="rp-cat-btn" :class="{ active: activeCat === c }" @click="activeCat = c">{{ c }}</button>
+    <div class="rp-tabs">
+      <button class="rp-tab-btn" :class="{ active: viewTab === 'mall' }" @click="viewTab = 'mall'">积分商城</button>
+      <button class="rp-tab-btn" :class="{ active: viewTab === 'records' }" @click="openRecords">兑换记录</button>
     </div>
 
-    <!-- 加载状态 -->
-    <div v-if="loading" class="loading-state">加载中...</div>
-
-    <div class="rp-grid" v-else>
-      <div v-for="(g, i) in decorated" :key="g.id" class="rp-item" :style="{ '--ac-bg': g.bg, '--ac-bd': g.bd }" @click="$router.push(`/redeem/${g.id}`)">
-        <div class="rp-item-img" :style="{ background: g.grad }">
-          <span class="rp-item-cat">{{ g.category || '好礼' }}</span>
-          <div class="rp-img-text">{{ g.name }}</div>
-        </div>
-        <div class="rp-item-info">
-          <div class="rp-item-name">{{ g.name }}</div>
-          <div class="rp-item-pts">{{ g.points }} 积分</div>
-        </div>
-        <button class="rp-item-btn">立即兑换</button>
+    <!-- 积分商城 -->
+    <template v-if="viewTab === 'mall'">
+      <div class="rp-cats">
+        <button v-for="c in cats" :key="c" class="rp-cat-btn" :class="{ active: activeCat === c }" @click="activeCat = c">{{ c }}</button>
       </div>
-      <div v-if="!decorated.length" class="empty-state">暂无商品</div>
+
+      <!-- 加载状态 -->
+      <div v-if="loading" class="loading-state">加载中...</div>
+
+      <div class="rp-grid" v-else>
+        <div v-for="(g, i) in decorated" :key="g.id" class="rp-item" :style="{ '--ac-bg': g.bg, '--ac-bd': g.bd }" @click="$router.push(`/redeem/${g.id}`)">
+          <div class="rp-item-img" :style="{ background: g.grad }">
+            <span class="rp-item-cat">{{ g.category || '好礼' }}</span>
+            <div class="rp-img-text">{{ g.name }}</div>
+          </div>
+          <div class="rp-item-info">
+            <div class="rp-item-name">{{ g.name }}</div>
+            <div class="rp-item-pts">{{ g.points }} 积分</div>
+          </div>
+          <button class="rp-item-btn">立即兑换</button>
+        </div>
+        <div v-if="!decorated.length" class="empty-state">暂无商品</div>
+      </div>
+    </template>
+
+    <!-- 兑换记录 -->
+    <div v-else class="rp-records">
+      <div v-if="recordsLoading" class="loading-state">加载中...</div>
+      <template v-else>
+        <div v-for="(r, i) in records" :key="(r.code || 'r') + '-' + i" class="rp-rec-card" :style="{ '--ac-bg': PALETTE[i % PALETTE.length].bg, '--ac-bd': PALETTE[i % PALETTE.length].bd }">
+          <div class="rp-rec-name">{{ r.item || '优惠券' }}</div>
+          <div class="rp-rec-code">券码 {{ r.code || '—' }}</div>
+          <div class="rp-rec-time" v-if="r.time">{{ r.time }}</div>
+        </div>
+        <div v-if="!records.length" class="empty-state">暂无兑换记录</div>
+      </template>
     </div>
     <div class="spacer"></div>
   </div>
@@ -35,10 +56,27 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getRedeemGoods } from '@/api'
+import { getRedeemGoods, getMemberCoupons } from '@/api'
 import { useMemberStore } from '@/stores/member'
 
 const activeCat = ref('全部')
+// 顶部切换：积分商城 / 兑换记录（“兑换记录”原是更多页坏链入口，现并入本页作为标签页）
+const viewTab = ref('mall')
+const records = ref([])
+const recordsLoading = ref(false)
+function loadRecords() {
+  if (records.value.length || recordsLoading.value) return
+  recordsLoading.value = true
+  const phone = memberStore.member && memberStore.member.phone
+  getMemberCoupons(phone)
+    .then(res => { if (res && res.ok) records.value = res.coupons || [] })
+    .catch(() => { records.value = [] })
+    .finally(() => { recordsLoading.value = false })
+}
+function openRecords() {
+  viewTab.value = 'records'
+  loadRecords()
+}
 const cats = ['全部', '餐饮', '购物', '娱乐', '亲子', '生活服务', '停车']
 const loading = ref(true)
 const goods = ref([])
@@ -166,4 +204,29 @@ const decorated = computed(() => {
 }
 .rp-item-btn:active { transform: scale(0.99); }
 .spacer { height: 24px; }
+
+/* 顶部主标签：积分商城 / 兑换记录 */
+.rp-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.rp-tab-btn {
+  flex: 1; padding: 11px 0; border: 3px solid #4E5049; border-radius: 12px;
+  font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+  background: #6B6E64; color: #fff;
+  transition: all 0.15s;
+}
+.rp-tab-btn.active {
+  background: #8B8B90; border-color: #6A6A6E;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
+}
+
+/* 兑换记录卡（复用五色板，实色底 + 深边框，与商城卡视觉统一） */
+.rp-records { display: flex; flex-direction: column; gap: 10px; }
+.rp-rec-card {
+  background-color: var(--ac-bg, #8B8B90);
+  border: 3px solid var(--ac-bd, #6A6A6E);
+  border-radius: 14px; padding: 14px 16px; box-sizing: border-box;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
+}
+.rp-rec-name { font-size: 15px; font-weight: 700; color: #fff; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.rp-rec-code { font-size: 12px; color: #fff; font-weight: 600; margin-top: 6px; opacity: 0.92; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.rp-rec-time { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 4px; }
 </style>
