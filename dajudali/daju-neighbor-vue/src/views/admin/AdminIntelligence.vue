@@ -42,15 +42,33 @@
 
       <!-- 一键召回名单 -->
       <section class="panel">
-        <div class="panel-head"><h2><span class="dot" style="background:#9B4A3E"></span>一键召回名单（沉睡 / 流失风险）</h2></div>
-        <div class="tbl">
-          <div class="tr th"><span>会员</span><span>分层</span><span>流失</span><span>建议券</span><span>建议文案</span></div>
+        <div class="panel-head">
+          <h2><span class="dot" style="background:#9B4A3E"></span>一键召回名单（沉睡 / 流失风险）</h2>
+          <span class="panel-sub">共 {{ recall.list.length }} 人待召回</span>
+          <button class="refresh" v-if="recall.list.length" :disabled="pushingAll" @click="pushAllRecall">
+            {{ pushingAll ? '推送中…' : '一键推送全部' }}
+          </button>
+        </div>
+        <div class="tbl recall-tbl">
+          <div class="tr th">
+            <span>会员</span><span>分层</span><span>流失风险</span><span>召回方案</span><span class="op">操作</span>
+          </div>
           <div class="tr" v-for="(m, i) in recall.list" :key="i">
-            <span class="cell-member">{{ maskPhone(m.phone) }} <i>{{ m.name }}</i></span>
+            <span class="cell-member">
+              <em class="ava">{{ (m.name || '会')[0] }}</em>
+              <span class="mm-text"><b>{{ m.name }}</b><i>{{ maskPhone(m.phone) }}</i></span>
+            </span>
             <span class="tag" :style="{ '--c': segColor(m.segment) }">{{ m.segment }}</span>
-            <span class="tag" :style="{ '--c': churnColor(m.churn) }">{{ churnLabel(m.churn) }}</span>
-            <span class="coupon">{{ m.suggest_coupon }}</span>
-            <span class="copy">{{ m.suggest_copy }}</span>
+            <span class="risk" :class="m.churn">{{ churnLabel(m.churn) }}风险</span>
+            <span class="plan">
+              <em class="cp">{{ m.suggest_coupon }}</em>
+              <i class="cp-copy">{{ m.suggest_copy }}</i>
+            </span>
+            <span class="op">
+              <button class="push-btn" :class="{ done: recallPushed[m.phone] }" :disabled="recallPushed[m.phone]" @click="pushOneRecall(m)">
+                {{ recallPushed[m.phone] ? '已推送' : '推送召回' }}
+              </button>
+            </span>
           </div>
           <div v-if="!recall.list.length" class="empty">暂无待召回会员 🎉</div>
         </div>
@@ -346,9 +364,10 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import {
   getAdminRfm, getFeedbackSentiment, getDailyReport,
-  getRecallCandidates, getRepurchase, getHighValue, getTierSprint,
+  getRecallCandidates, getRepurchase, getHighValue, getTierSprint, pushRecall,
   getFeedbackAlerts, followFeedbackAlert, getFeedbackPainpoints, getMerchantSentiment, getFeedbackTrend,
   getReportPeriod, getAnomaly, getKpi, updateKpi, getActivityRoi,
   getPushCopy, getAdvisor, getLeasing, getMarketingCalendar, getTimeslotHeat
@@ -369,6 +388,8 @@ const rfm = ref({ total: 0, churn_high: 0, churn_mid: 0, segments: {}, list: [] 
 const sent = ref({ engine: 'heuristic', total: 0, by_sentiment: {}, by_topic: {}, negatives: [] })
 const report = ref({ engine: 'heuristic', report: '', metrics: {} })
 const recall = ref({ list: [] })
+const recallPushed = ref({})
+const pushingAll = ref(false)
 const repurchase = ref({ list: [] })
 const highValue = ref({ list: [] })
 const tierSprint = ref({ list: [] })
@@ -459,6 +480,38 @@ function maskPhone(p) { if (!p || p.length < 7) return p || '—'; return p.slic
 function segColor(s) { return { '高价值': '#C4923A', '潜力客户': '#D4A59A', '新客活跃': '#C9956C', '稳定常客': '#6B6E64', '沉睡/流失风险': '#9B4A3E' }[s] || '#888' }
 function churnColor(c) { return { high: '#F56C6C', mid: '#E6A23C', low: '#67C23A' }[c] || '#888' }
 function churnLabel(c) { return { high: '高', mid: '中', low: '低' }[c] || c }
+
+async function pushOneRecall(m) {
+  const d = await pushRecall(m.phone, m.suggest_copy)
+  if (d.ok && d.sent) {
+    recallPushed.value = { ...recallPushed.value, [m.phone]: true }
+    ElMessage.success('已推送召回：' + maskPhone(m.phone))
+  } else if (d.ok && !d.sent) {
+    recallPushed.value = { ...recallPushed.value, [m.phone]: true }
+    ElMessage.info(maskPhone(m.phone) + ' 今日已推送，无需重复')
+  } else {
+    ElMessage.error(d.error || '推送失败')
+  }
+}
+
+async function pushAllRecall() {
+  pushingAll.value = true
+  let ok = 0
+  try {
+    for (const m of recall.list) {
+      const d = await pushRecall(m.phone, m.suggest_copy)
+      if (d.ok && d.sent) {
+        ok++
+        recallPushed.value = { ...recallPushed.value, [m.phone]: true }
+      }
+    }
+    ElMessage.success('已批量推送召回 ' + ok + ' 人')
+  } catch (e) {
+    ElMessage.error('批量推送中断')
+  } finally {
+    pushingAll.value = false
+  }
+}
 function sentColor(s) { return { '正面': '#67C23A', '中性': '#909399', '负面': '#E6A23C', '投诉': '#F56C6C' }[s] || '#888' }
 function scoreCls(v) { return v >= 4 ? 's-good' : v >= 3 ? 's-mid' : 's-low' }
 function calColor(t) {
@@ -517,7 +570,28 @@ function fmtDate(s) { if (!s) return ''; return String(s).slice(0, 16) }
 .score { text-align: center; font-weight: 700; } .score.s-good { color: #67C23A; } .score.s-mid { color: #E6A23C; } .score.s-low { color: #F56C6C; }
 .tag { font-size: 11px; padding: 2px 9px; border-radius: 999px; color: #EEE; background: color-mix(in srgb, var(--c) 22%, #111); border: 1px solid color-mix(in srgb, var(--c) 50%, #1A1A1A); justify-self: start; }
 .tag.gray { --c: #8B8B90; }
-.coupon { color: #D4A59A; font-size: 12px; } .copy { color: #AAA; font-size: 12px; line-height: 1.4; }
+
+/* 一键召回名单：独立 5 列网格，修正原 7 列错位 + 视觉美化 */
+.recall-tbl .tr { grid-template-columns: 2.1fr 1fr 1fr 2.8fr 1fr; padding: 11px 6px; }
+.recall-tbl .tr + .tr { border-top: 1px solid #161616; }
+.recall-tbl .tr:hover:not(.th) { background: rgba(255,123,44,.05); }
+.recall-tbl .op { text-align: center; }
+.cell-member { display: flex; align-items: center; gap: 9px; }
+.cell-member .ava { flex: 0 0 30px; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#C9956C,#9B4A3E); color: #fff; font-style: normal; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+.cell-member .mm-text { display: flex; flex-direction: column; line-height: 1.25; }
+.cell-member .mm-text b { color: #F2F2F2; font-size: 13px; font-weight: 600; }
+.cell-member .mm-text i { color: #999; font-style: normal; font-size: 11px; }
+.risk { font-size: 12px; padding: 3px 10px; border-radius: 999px; justify-self: start; font-weight: 600; }
+.risk.high { color: #F56C6C; background: rgba(245,108,108,.14); border: 1px solid rgba(245,108,108,.45); }
+.risk.mid { color: #E6A23C; background: rgba(230,162,60,.14); border: 1px solid rgba(230,162,60,.45); }
+.plan { display: flex; flex-direction: column; gap: 3px; }
+.plan .cp { color: #D4A59A; font-size: 12px; font-style: normal; font-weight: 600; }
+.plan .cp-copy { color: #AAA; font-size: 12px; line-height: 1.4; }
+.push-btn { padding: 6px 14px; border-radius: 8px; cursor: pointer; border: none; font-size: 12px; font-weight: 600; color: #fff; background: linear-gradient(135deg,#FF7B2C,#E85D04); transition: .15s; }
+.push-btn:hover { box-shadow: 0 3px 10px rgba(232,93,4,.35); }
+.push-btn:disabled { cursor: not-allowed; }
+.push-btn.done { background: rgba(107,110,100,.22); color: #9BBF98; border: 1px solid rgba(107,110,100,.5); box-shadow: none; }
+.panel-sub { font-size: 12px; color: #888; margin-left: 4px; }
 .prog { position: relative; height: 16px; background: #1A1A1A; border-radius: 8px; overflow: hidden; }
 .prog i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #C4923A, #FF7B2C); }
 .prog b { position: absolute; right: 6px; top: 0; font-size: 10px; color: #FFF; line-height: 16px; }

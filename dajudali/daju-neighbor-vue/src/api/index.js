@@ -67,6 +67,9 @@ export function getRecallList() {
 export function getRecallCandidates() {
   return request('/api/admin/recall-candidates')
 }
+export function pushRecall(phone, content) {
+  return request('/api/admin/recall-push', { method: 'POST', body: JSON.stringify({ phone, content }) })
+}
 export function getRepurchase() {
   return request('/api/admin/repurchase')
 }

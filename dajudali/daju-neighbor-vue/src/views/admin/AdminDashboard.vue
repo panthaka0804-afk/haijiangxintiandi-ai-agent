@@ -2,13 +2,21 @@
   <div class="admin-dashboard">
     <h3>数据看板</h3>
 
-    <!-- 工具栏：演示数据 + 导出 -->
+    <!-- 工具栏：导出常显；演示数据维护收进折叠面板，降低误触风险 -->
     <div class="db-toolbar">
-      <button class="tb-btn" :disabled="seeding" @click="runSeed">{{ seeding ? '种入中…' : '种入演示数据' }}</button>
-      <button class="tb-btn tb-ghost" :disabled="clearing" @click="runClear">{{ clearing ? '清空中…' : '清空演示数据' }}</button>
-      <span class="tb-sep"></span>
       <button class="tb-btn tb-ghost" @click="exportBoard">导出看板 CSV</button>
       <button class="tb-btn tb-ghost" @click="printBoard">打印日报 PDF</button>
+      <span class="tb-demo" v-if="stats?.demo_active">● 当前为演示数据</span>
+      <details class="db-debug">
+        <summary class="db-debug-sum">调试工具（演示数据）</summary>
+        <div class="db-debug-body">
+          <p class="db-debug-warn">⚠ 仅用于演示环境。种入/清空仅影响 demo 标记数据，真实数据不受影响，但请谨慎操作。</p>
+          <div class="db-debug-btns">
+            <button class="tb-btn" :disabled="seeding" @click="runSeed">{{ seeding ? '种入中…' : '种入演示数据' }}</button>
+            <button class="tb-btn tb-ghost" :disabled="clearing" @click="runClear">{{ clearing ? '清空中…' : '清空演示数据' }}</button>
+          </div>
+        </div>
+      </details>
     </div>
 
     <!-- 周报一句话（亮点 / 最大风险） -->
@@ -75,12 +83,13 @@
           服务效率
         </div>
         <div class="kpi-list">
-          <div class="kpi-item"><span>AI 自助解决率</span><strong>{{ fmtPct(stats?.ai_rate) }}</strong></div>
-          <div class="kpi-item"><span>工单办结率</span><strong>{{ fmtPct(stats?.order_done_rate) }}</strong></div>
+          <div class="kpi-item"><span>AI 自助解决率<em class="kpi-unit">近7日</em></span><strong>{{ fmtPct(stats?.ai_rate) }}</strong></div>
+          <div class="kpi-item"><span>工单办结率<em class="kpi-unit">累计</em></span><strong>{{ fmtPct(stats?.order_done_rate) }}</strong></div>
           <div class="kpi-item"><span>用户满意度</span><strong>{{ stats?.satisfaction ?? '—' }}</strong></div>
           <div class="kpi-item"><span>待处理工单</span><strong :class="{ danger: (stats?.pending_orders||0) > 0 }">{{ stats?.pending_orders || 0 }}</strong></div>
           <div class="kpi-item"><span>知识库待优化</span><strong :class="{ danger: (stats?.pending_kb||0) > 0 }">{{ stats?.pending_kb || 0 }}</strong></div>
         </div>
+        <p class="hint">口径说明：AI 自助解决率按近 7 日窗口统计（转人工外的对话占比）；工单办结率为累计口径=（全部工单−待处理）/全部工单。两者统计周期不同，不宜直接对比。</p>
       </div>
 
       <!-- 营销转化漏斗 -->
@@ -91,20 +100,21 @@
         </div>
         <div class="funnel" v-if="stats?.funnel">
           <div class="funnel-row">
-            <span class="funnel-label">发放</span>
+            <span class="funnel-label">发放(张)</span>
             <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:100%;background:#C4923A">{{ stats.funnel.issued }}</div></div>
           </div>
           <div class="funnel-row">
-            <span class="funnel-label">领取</span>
+            <span class="funnel-label">领券会员(人)</span>
             <div class="funnel-bar-wrap"><div class="funnel-bar" :style="{ width: Math.max(stats.funnel.claim_rate,4)+'%', background:'#D4A59A' }">{{ stats.funnel.claimed }}</div></div>
-            <span class="funnel-rate">领券率 {{ stats.funnel.claim_rate }}%</span>
+            <span class="funnel-rate">会员渗透率 {{ stats.funnel.claim_rate }}%</span>
           </div>
           <div class="funnel-row">
-            <span class="funnel-label">核销</span>
+            <span class="funnel-label">核销(张)</span>
             <div class="funnel-bar-wrap"><div class="funnel-bar" :style="{ width: Math.max(stats.funnel.redeem_rate,4)+'%', background:'#3E8E41' }">{{ stats.funnel.redeemed }}</div></div>
             <span class="funnel-rate">核销率 {{ stats.funnel.redeem_rate }}%</span>
           </div>
         </div>
+        <p class="hint" v-if="stats?.funnel">口径：发放=已发券张数；领券会员=去重领券人数（≤发放）；核销=已核销张数。会员渗透率=领券会员/发放，核销率=核销/发放，均≤100%。</p>
         <div v-else class="hot-empty">暂无数据</div>
       </div>
 
@@ -337,6 +347,17 @@ onMounted(loadDashboard)
 .tb-ghost { background: #262626; color: #cfcfcf; }
 .tb-ghost:hover { background: #333; }
 .tb-sep { width: 1px; height: 22px; background: #2a2a2a; margin: 0 2px; }
+.tb-demo { font-size: 12px; color: #E8A33D; background: rgba(232,163,61,.14); border: 1px solid rgba(232,163,61,.45); padding: 4px 10px; border-radius: 999px; margin-left: auto; }
+
+/* 调试工具折叠面板（演示数据维护，默认折叠） */
+.db-debug { margin-left: 8px; border: 1px solid #2a2a2a; border-radius: 9px; background: #1A1A1A; overflow: hidden; }
+.db-debug-sum { cursor: pointer; padding: 7px 14px; font-size: 13px; font-weight: 600; color: #cfcfcf; user-select: none; list-style: none; }
+.db-debug-sum::-webkit-details-marker { display: none; }
+.db-debug-sum::before { content: '▸ '; color: #888; }
+.db-debug[open] .db-debug-sum::before { content: '▾ '; }
+.db-debug-body { padding: 4px 14px 14px; }
+.db-debug-warn { font-size: 12px; color: #E8A33D; line-height: 1.6; margin: 0 0 10px; }
+.db-debug-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* 周报一句话 */
 .weekly-headline { display: flex; align-items: center; gap: 8px; background: linear-gradient(90deg, rgba(255,123,44,.14), rgba(255,123,44,0)); border: 1px solid rgba(255,123,44,.3); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; color: #f0e6dd; }
@@ -377,6 +398,7 @@ onMounted(loadDashboard)
 .kpi-item:last-child { border-bottom: none; }
 .kpi-item strong { color: #F0F0F0; font-size: 16px; }
 .kpi-item strong.danger { color: #E8503A; }
+.kpi-unit { font-size: 10px; font-weight: 600; color: #E8A33D; background: rgba(232,163,61,.14); border: 1px solid rgba(232,163,61,.4); border-radius: 5px; padding: 1px 5px; margin-left: 6px; font-style: normal; vertical-align: middle; }
 
 /* funnel */
 .funnel { padding: 16px; display: flex; flex-direction: column; gap: 14px; }

@@ -3254,9 +3254,13 @@ def api_dashboard():
     # ---- 真实满意度 / 办结率 / AI 自助率 ----
     sat = conn.execute("SELECT AVG(rating) FROM feedbacks").fetchone()[0]
     satisfaction = round(sat, 1) if sat else '—'
+    # 工单办结率：累计口径（全部工单 - 待处理）/ 全部工单
     order_done_rate = round((total_orders - pending_orders) / total_orders * 100, 1) if total_orders else '—'
-    escalated_today = conn.execute("SELECT COUNT(*) FROM human_chat_messages WHERE work_order_id IS NOT NULL AND created_at >= ?", (today_start,)).fetchone()[0] or 0
-    ai_rate = round((today_chats - escalated_today) / today_chats * 100, 1) if today_chats else '—'
+    # AI 自助解决率：统一用近 7 日窗口，避免"今日恰巧 0 转人工→100%"的脆弱假象
+    w7_start = (now - timedelta(days=7)).strftime('%Y-%m-%d') + ' 00:00:00'
+    chats_7 = conn.execute("SELECT COUNT(*) FROM conversations WHERE tenant_id=? AND role='user' AND created_at >= ?", (tid, w7_start)).fetchone()[0] or 0
+    esc_7 = conn.execute("SELECT COUNT(*) FROM human_chat_messages WHERE work_order_id IS NOT NULL AND created_at >= ?", (w7_start,)).fetchone()[0] or 0
+    ai_rate = round((chats_7 - esc_7) / chats_7 * 100, 1) if chats_7 else '—'
 
     # ---- GMV / 核销 / 积分 ----
     gmv_today = conn.execute("SELECT COALESCE(SUM(amount),0) FROM member_consumptions WHERE created_at >= ?", (today_start,)).fetchone()[0] or 0
@@ -3287,6 +3291,9 @@ def api_dashboard():
     silent_members = silent
     silent_ratio = round(silent / len(members) * 100, 1) if members else 0
     member_segments = {'total': len(members), 'new_30': new_30, 'active_30': active_30, 'silent': silent}
+    # 演示数据标记：存在 demo 行时返回 demo_active，前端给出"演示数据"提示，避免运营误读暴跌/占比
+    demo_rows = conn.execute("SELECT COUNT(*) FROM member_consumptions WHERE demo=1").fetchone()[0] or 0
+    demo_active = bool(demo_rows)
     level_rows = conn.execute("SELECT COALESCE(NULLIF(membership_level,''),'普卡') level, COUNT(*) c FROM users WHERE role='user' GROUP BY level").fetchall()
     member_levels = [{'level': r['level'], 'count': r['c']} for r in level_rows]
 
@@ -3310,12 +3317,17 @@ def api_dashboard():
                 active_map.setdefault(d0, set()).add(r[pcol])
     series_active = [{'date': d, 'value': len(active_map.get(d, set()))} for d in dates]
 
-    # ---- 营销转化漏斗 ----
-    issued = conn.execute("SELECT COUNT(*) FROM offers WHERE status='active'").fetchone()[0] or 0
-    claimed = conn.execute("SELECT COUNT(*) FROM coupon_claims").fetchone()[0] or 0
+    # ---- 营销转化漏斗（统一口径：全部以"券实例/会员"为度量，保证 发放≥领取≥核销）----
+    # 发放 = 已发券张数（coupon_claims 每条 = 1 张已发给会员的券）
+    # 领取 = 领券会员数（去重手机号，必然 ≤ 已发券张数）
+    # 核销 = 已核销张数（redeemed=1，必然 ≤ 已发券张数）
+    issued = conn.execute("SELECT COUNT(*) FROM coupon_claims").fetchone()[0] or 0
+    claimed = conn.execute("SELECT COUNT(DISTINCT user_phone) FROM coupon_claims").fetchone()[0] or 0
     redeemed = redeemed_total
+    # 领券会员渗透率 = 领券会员 / 已发券张数（≤100）
     claim_rate = round(claimed / issued * 100, 1) if issued else 0
-    redeem_rate = round(redeemed / claimed * 100, 1) if claimed else 0
+    # 核销率 = 已核销 / 已发券（≤100）
+    redeem_rate = round(redeemed / issued * 100, 1) if issued else 0
     funnel = {'issued': issued, 'claimed': claimed, 'redeemed': redeemed, 'claim_rate': claim_rate, 'redeem_rate': redeem_rate}
 
     # ---- 运营预警 ----
@@ -3325,48 +3337,54 @@ def api_dashboard():
     if pending_kb > 0:
         alerts.append({'level': 'danger' if pending_kb >= 10 else 'warn', 'text': f'知识库待优化 {pending_kb} 条', 'key': 'kb'})
     if silent_ratio >= 40:
-        alerts.append({'level': 'danger', 'text': f'沉默会员占比 {silent_ratio}%', 'key': 'silent'})
+        txt = f'沉默会员占比 {silent_ratio}%' + ('（演示样本）' if demo_active else '')
+        alerts.append({'level': 'danger', 'text': txt, 'key': 'silent'})
     if issued > 0 and redeem_rate < 5:
         alerts.append({'level': 'warn', 'text': f'券核销率偏低 {redeem_rate}%', 'key': 'redeem'})
     neg_today = conn.execute("SELECT COUNT(*) FROM feedbacks WHERE rating<=3 AND created_at >= ?", (today_start,)).fetchone()[0] or 0
     if neg_today > 0:
         alerts.append({'level': 'warn', 'text': f'今日差评/投诉 {neg_today} 条', 'key': 'neg'})
 
-    # ---- KPI 环比(昨日)/同比(上周) + 本周亮点风险 ----
-    y_start = (now - timedelta(days=1)).strftime('%Y-%m-%d') + ' 00:00:00'
-    w_start = (now - timedelta(days=7)).strftime('%Y-%m-%d') + ' 00:00:00'
-    p7_start = (now - timedelta(days=14)).strftime('%Y-%m-%d') + ' 00:00:00'
-    def _day_gmv(s, e):
-        return conn.execute("SELECT COALESCE(SUM(amount),0) FROM member_consumptions WHERE created_at >= ? AND created_at < ?", (s, e)).fetchone()[0] or 0
-    def _day_redeem(s, e):
-        return conn.execute("SELECT COUNT(*) FROM coupon_claims WHERE redeemed=1 AND redeem_at >= ? AND redeem_at < ?", (s, e)).fetchone()[0] or 0
-    def _day_chats(s, e):
-        return conn.execute("SELECT COUNT(*) FROM conversations WHERE role='user' AND created_at >= ? AND created_at < ?", (s, e)).fetchone()[0] or 0
-    def _day_pts(s, e):
-        return conn.execute("SELECT COALESCE(SUM(points),0) FROM points_log WHERE points>0 AND created_at >= ? AND created_at < ?", (s, e)).fetchone()[0] or 0
+    # ---- KPI 环比（等比滑动窗口：近 24h vs 前 24h / 近 7d vs 前 7d）----
+    # 旧逻辑用"今日片段 vs 昨日/上周全天"导致周环比假暴跌，这里统一等长时间窗。
+    def _win_gmv(a, b):
+        return conn.execute("SELECT COALESCE(SUM(amount),0) FROM member_consumptions WHERE created_at >= ? AND created_at < ?", (a, b)).fetchone()[0] or 0
+    def _win_redeem(a, b):
+        return conn.execute("SELECT COUNT(*) FROM coupon_claims WHERE redeemed=1 AND redeem_at >= ? AND redeem_at < ?", (a, b)).fetchone()[0] or 0
+    def _win_chats(a, b):
+        return conn.execute("SELECT COUNT(*) FROM conversations WHERE role='user' AND created_at >= ? AND created_at < ?", (a, b)).fetchone()[0] or 0
+    def _win_pts(a, b):
+        return conn.execute("SELECT COALESCE(SUM(points),0) FROM points_log WHERE points>0 AND created_at >= ? AND created_at < ?", (a, b)).fetchone()[0] or 0
     def _chg(cur, base):
         return round((cur - base)/base*100, 1) if base else None
-    gmv_dod = _chg(gmv_today, _day_gmv(y_start, today_start))
-    gmv_wow = _chg(gmv_today, _day_gmv(w_start, y_start))
-    redeemed_dod = _chg(redeemed_today, _day_redeem(y_start, today_start))
-    redeemed_wow = _chg(redeemed_today, _day_redeem(w_start, y_start))
-    chats_dod = _chg(today_chats, _day_chats(y_start, today_start))
-    chats_wow = _chg(today_chats, _day_chats(w_start, y_start))
-    pts_dod = _chg(points_issued_today, _day_pts(y_start, today_start))
-    pts_wow = _chg(points_issued_today, _day_pts(w_start, y_start))
-    this7_gmv = _day_gmv(w_start, today_start); prev7_gmv = _day_gmv(p7_start, w_start)
-    this7_chats = _day_chats(w_start, today_start); prev7_chats = _day_chats(p7_start, w_start)
-    this7_redeem = _day_redeem(w_start, today_start); prev7_redeem = _day_redeem(p7_start, w_start)
+    now_iso = now.strftime('%Y-%m-%d %H:%M:%S')
+    d24 = (now - timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')
+    d48 = (now - timedelta(hours=48)).strftime('%Y-%m-%d %H:%M:%S')
+    d7 = (now - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+    d14 = (now - timedelta(days=14)).strftime('%Y-%m-%d %H:%M:%S')
+    gmv_dod = _chg(_win_gmv(d24, now_iso), _win_gmv(d48, d24))
+    gmv_wow = _chg(_win_gmv(d7, now_iso), _win_gmv(d14, d7))
+    redeemed_dod = _chg(_win_redeem(d24, now_iso), _win_redeem(d48, d24))
+    redeemed_wow = _chg(_win_redeem(d7, now_iso), _win_redeem(d14, d7))
+    chats_dod = _chg(_win_chats(d24, now_iso), _win_chats(d48, d24))
+    chats_wow = _chg(_win_chats(d7, now_iso), _win_chats(d14, d7))
+    pts_dod = _chg(_win_pts(d24, now_iso), _win_pts(d48, d24))
+    pts_wow = _chg(_win_pts(d7, now_iso), _win_pts(d14, d7))
+    this7_gmv = _win_gmv(d7, now_iso); prev7_gmv = _win_gmv(d14, d7)
+    this7_chats = _win_chats(d7, now_iso); prev7_chats = _win_chats(d14, d7)
+    this7_redeem = _win_redeem(d7, now_iso); prev7_redeem = _win_redeem(d14, d7)
     cands = [('GMV', _chg(this7_gmv, prev7_gmv)), ('咨询量', _chg(this7_chats, prev7_chats)), ('核销量', _chg(this7_redeem, prev7_redeem))]
     pos = sorted([c for c in cands if c[1] is not None and c[1] > 0], key=lambda x: x[1], reverse=True)
     neg = sorted([c for c in cands if c[1] is not None and c[1] < 0], key=lambda x: x[1])
     weekly_headline = ''
     if pos:
-        weekly_headline += f"本周亮点：{pos[0][0]}环比+{pos[0][1]}%"
+        weekly_headline += f"近7日亮点：{pos[0][0]}环比+{pos[0][1]}%"
     if neg:
         weekly_headline += ('；' if weekly_headline else '') + f"最大风险：{neg[0][0]}环比{neg[0][1]}%"
     if not weekly_headline:
-        weekly_headline = '本周各项指标平稳，暂无显著波动'
+        weekly_headline = '近7日各项指标平稳，暂无显著波动'
+    if demo_active:
+        weekly_headline = '【演示数据】' + weekly_headline
 
     acts = conn.execute("SELECT id,title,enrolled FROM activities WHERE status='open' ORDER BY enrolled DESC LIMIT 5").fetchall()
     payload = dict(
@@ -3383,7 +3401,7 @@ def api_dashboard():
         alerts=alerts, hot_activities=[dict(r) for r in acts],
         gmv_dod=gmv_dod, gmv_wow=gmv_wow, redeemed_dod=redeemed_dod, redeemed_wow=redeemed_wow,
         chats_dod=chats_dod, chats_wow=chats_wow, points_dod=pts_dod, points_wow=pts_wow,
-        weekly_headline=weekly_headline
+        weekly_headline=weekly_headline, demo_active=demo_active
     )
     _DASHBOARD_CACHE['data'] = payload
     _DASHBOARD_CACHE['ts'] = time.time()
@@ -7716,6 +7734,28 @@ def api_admin_recall_candidates():
     rows.sort(key=lambda x: (0 if x['churn'] == 'high' else 1, x['R']))
     conn.close()
     return jsonify(ok=True, data={'total': len(rows), 'list': rows[:200]})
+
+# 1.5) 单会员一键召回推送
+@app.route('/api/admin/recall-push', methods=['POST'])
+@login_required
+def api_admin_recall_push():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    try:
+        data = request.get_json(force=True) or {}
+    except Exception:
+        data = {}
+    phone = (data.get('phone') or '').strip()
+    content = (data.get('content') or '').strip()
+    if not phone:
+        return jsonify(ok=False, error='缺少手机号')
+    if not content:
+        content = '好久不见！海江新天地为您准备了专属回归礼，点击立即领取>>'
+    cycle = datetime.now().strftime('%Y-%m-%d')
+    conn = get_db(); _ensure_tables(conn)
+    sent = _push_sms(phone, 'recall', content, cycle=cycle)
+    conn.close()
+    return jsonify(ok=True, sent=bool(sent), phone=phone)
 
 # 2) 复购 / 到店预测
 @app.route('/api/admin/repurchase', methods=['GET'])
