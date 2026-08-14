@@ -165,6 +165,48 @@ export function getMemberCoupons(phone) {
   })
 }
 
+// ========== 我的优惠券（领取券 + 积分兑换券，含核销） ==========
+export function getMyCoupons(phone) {
+  return request('/api/member/my-coupons', {
+    method: 'POST',
+    body: JSON.stringify({ phone })
+  })
+}
+export function redeemMyCoupon(phone, claimId, amount = 0) {
+  return request('/api/member/coupon/redeem', {
+    method: 'POST',
+    body: JSON.stringify({ phone, claim_id: claimId, amount })
+  })
+}
+
+// ========== 站内消息（上架自动推送） ==========
+export function getMemberMessages(phone) {
+  return request('/api/member/messages', {
+    method: 'POST',
+    body: JSON.stringify({ phone })
+  })
+}
+export function readMemberMessage(phone, id) {
+  return request('/api/member/message/read', {
+    method: 'POST',
+    body: JSON.stringify({ phone, id })
+  })
+}
+
+// ========== 运营洞察：预警处置 / 建议执行 ==========
+export function handleInsightAlert(key) {
+  return request('/api/admin/insight-alert/handle', {
+    method: 'POST',
+    body: JSON.stringify({ key })
+  })
+}
+export function execInsightSuggestion(key) {
+  return request('/api/admin/insight-suggestion/exec', {
+    method: 'POST',
+    body: JSON.stringify({ key })
+  })
+}
+
 // ========== 知识库 ==========
 export function getKnowledgeBase(params = {}) {
   const query = new URLSearchParams(params).toString()

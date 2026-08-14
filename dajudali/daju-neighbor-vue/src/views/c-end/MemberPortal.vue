@@ -2,6 +2,10 @@
   <div class="member-page">
     <van-nav-bar title="会员中心" left-text="返回" left-arrow @click-left="$router.back()" fixed placeholder>
       <template #right>
+        <div class="bell" @click="$router.push('/messages')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span v-if="unread" class="bell-dot"></span>
+        </div>
         <van-button size="small" round plain @click="userStore.largeFont = !userStore.largeFont" :style="{ color: userStore.largeFont ? '#FFB877' : '#777', borderColor: userStore.largeFont ? '#FFB877' : '#444', fontWeight: '700' }">关怀模式</van-button>
       </template>
     </van-nav-bar>
@@ -146,13 +150,24 @@
       </div>
 
       <!-- 我的券 -->
-      <div class="mp-section mp-section-link" v-if="coupons && coupons.length" @click="$router.push('/offers')">
+      <div class="mp-section mp-section-link" v-if="hasCoupons" @click="$router.push('/my-coupons')">
         <span class="mp-section-titles">
           <span class="mp-section-en">my coupons</span>
           <span class="mp-section-cn">我的券</span>
         </span>
-        <span class="mp-section-more">查看全部 ›</span>
+        <span class="mp-section-more">{{ pendingRedeem ? pendingRedeem + ' 张待核销 ›' : '查看全部 ›' }}</span>
       </div>
+      <!-- 已领取优惠券（可去核销） -->
+      <div class="mp-grid" v-if="claimedCoupons.length">
+        <div v-for="(c, i) in claimedCoupons" :key="'cl' + c.claim_id" class="mp-card mp-coupon" :class="'mp-coupon-' + (i % 5)">
+          <div class="mp-title">{{ c.shop_name || '海江新天地' }}</div>
+          <div class="mp-desc">{{ c.label }}</div>
+          <div class="mp-coupon-code">¥{{ c.amount }} · 领取于 {{ c.time }}</div>
+          <button v-if="!c.redeemed" class="mp-redeem-btn" @click.stop="doCouponRedeem(c)">去核销</button>
+          <div v-else class="mp-redeem-done">已核销 ¥{{ c.redeem_amount || c.amount }}</div>
+        </div>
+      </div>
+      <!-- 积分兑换券 -->
       <div class="mp-grid" v-if="coupons && coupons.length">
         <div v-for="(c, i) in coupons" :key="(c.code || 'c') + '-' + i" class="mp-card mp-coupon" :class="'mp-coupon-' + (i % 5)">
           <div class="mp-title">{{ c.item || '优惠券' }}</div>
@@ -205,7 +220,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useMemberStore } from '@/stores/member'
 import { showToast, showConfirmDialog, showDialog } from 'vant'
-import { getMemberCoupons, getGiftQuota, sendGift, redeemGift, bindReferrer } from '@/api'
+import { getMemberCoupons, getMyCoupons, redeemMyCoupon, getMemberMessages, getGiftQuota, sendGift, redeemGift, bindReferrer } from '@/api'
 
 const userStore = useUserStore()
 const memberStore = useMemberStore()
@@ -213,6 +228,10 @@ const memberStore = useMemberStore()
 const phone = ref('')
 const loading = ref(false)
 const coupons = ref([])
+const claimedCoupons = ref([])
+const unread = ref(0)
+const hasCoupons = computed(() => (coupons.value && coupons.value.length) || claimedCoupons.value.length)
+const pendingRedeem = computed(() => claimedCoupons.value.filter(c => !c.redeemed).length)
 
 // 邻里特权状态
 const gift = ref({ is_high_tier: false, gift_quota: 0, referral_code: '', sent_cards: [], received_cards: [] })
@@ -246,6 +265,8 @@ const member = computed(() => {
 memberStore.restore()
 if (memberStore.member && memberStore.member.phone) {
   loadCoupons(memberStore.member.phone)
+  loadClaimed(memberStore.member.phone)
+  loadMessages(memberStore.member.phone)
   loadGift(memberStore.member.phone)
 }
 
@@ -330,6 +351,8 @@ async function queryMember() {
     if (res.ok) {
       if (memberStore.member && memberStore.member.phone) {
         await loadCoupons(memberStore.member.phone)
+        await loadClaimed(memberStore.member.phone)
+        await loadMessages(memberStore.member.phone)
         await loadGift(memberStore.member.phone)
       }
     } else {
@@ -347,6 +370,42 @@ async function loadCoupons(p) {
     const res = await getMemberCoupons(p)
     if (res.ok) coupons.value = res.coupons || []
   } catch {}
+}
+
+async function loadClaimed(p) {
+  if (!p) return
+  try {
+    const res = await getMyCoupons(p)
+    if (res.ok) claimedCoupons.value = (res.coupons || []).filter(c => c.type === 'claim')
+  } catch {}
+}
+
+async function loadMessages(p) {
+  if (!p) return
+  try {
+    const res = await getMemberMessages(p)
+    if (res.ok) unread.value = res.unread || 0
+  } catch {}
+}
+
+async function doCouponRedeem(c) {
+  try {
+    await showConfirmDialog({
+      title: '确认核销',
+      message: `确认到店核销「${c.shop_name} - ${c.label}」？核销后该券即作废。`,
+      confirmButtonText: '确认核销',
+      cancelButtonText: '取消'
+    })
+  } catch { return }
+  try {
+    const res = await redeemMyCoupon(phone.value, c.claim_id, c.amount || 0)
+    if (res.ok) {
+      showToast('核销成功')
+      await loadClaimed(phone.value)
+    } else {
+      showDialog({ title: '核销失败', message: res.error || '请稍后重试' })
+    }
+  } catch { showToast('网络错误') }
 }
 
 async function showRedeemConfirm(item) {
@@ -502,6 +561,20 @@ async function showRedeemConfirm(item) {
   font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.78);
   text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.18);
 }
+
+/* 消息铃铛 */
+.bell { position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; margin-right: 10px; cursor: pointer; }
+.bell svg { filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.5)); }
+.bell-dot { position: absolute; top: 2px; right: 2px; width: 9px; height: 9px; border-radius: 50%; background: #FF7B2C; box-shadow: 0 0 0 2px #000; }
+
+/* 我的券 - 去核销按钮 */
+.mp-redeem-btn {
+  margin-top: 8px; padding: 6px 16px; border: 3px solid rgba(0,0,0,0.18); border-radius: 18px;
+  font-size: 12px; font-weight: 700; color: #fff; cursor: pointer; font-family: inherit;
+  background: rgba(0,0,0,0.28); box-shadow: inset 2px 2px 5px rgba(0,0,0,0.35), inset -2px -2px 4px rgba(255,255,255,0.18);
+}
+.mp-redeem-btn:active { opacity: 0.82; }
+.mp-redeem-done { margin-top: 8px; font-size: 12px; font-weight: 700; color: #fff; background: rgba(0,0,0,0.22); padding: 5px 12px; border-radius: 14px; }
 
 .mp-card {
   position: relative;

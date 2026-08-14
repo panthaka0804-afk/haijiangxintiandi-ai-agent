@@ -26,9 +26,10 @@
         <div v-for="(a, i) in insights.alerts" :key="i" class="alert-item" :class="a.level">
           <span class="alert-badge">{{ a.level === 'high' ? '高' : a.level === 'mid' ? '中' : '低' }}</span>
           <div class="alert-body">
-            <div class="alert-title">{{ a.title }}</div>
+            <div class="alert-title">{{ a.title }} <span v-if="isAlertHandled(a.title)" class="handled-tag">已处理</span></div>
             <div class="alert-detail">{{ a.detail }}</div>
           </div>
+          <button v-if="!isAlertHandled(a.title)" class="alert-handle" @click="handleAlert(a)">一键处置</button>
         </div>
       </div>
     </section>
@@ -41,7 +42,11 @@
         <div v-for="(s, i) in insights.suggestions" :key="i" class="suggest-card" @click="runSuggestion(s)">
           <div class="suggest-ico">💡</div>
           <div class="suggest-text">{{ s.text }}</div>
-          <div class="suggest-act">{{ s.target ? '前往处理 →' : '在此补充 ↓' }}</div>
+          <div class="suggest-act" v-if="s.action === 'send-coupon'">
+            <span v-if="isSugExecuted(s.key)" class="done-tag">已执行 ✓</span>
+            <span v-else>群发定向券 →</span>
+          </div>
+          <div class="suggest-act" v-else>{{ s.target ? '前往处理 →' : '在此补充 ↓' }}</div>
         </div>
       </div>
     </section>
@@ -186,6 +191,66 @@
       </div>
     </section>
 
+    <!-- I. 商户情感榜（真实商户维度） -->
+    <section class="mc-card mc-card-pink panel">
+      <div class="panel-head">
+        <h2><span class="dot" style="background:#D4A59A"></span>商户情感榜（差评风险排序）</h2>
+        <span class="engine ok" v-if="merchantSentiment.real">真实数据</span>
+        <span class="engine" v-else>暂无</span>
+      </div>
+      <div v-if="!merchantSentiment.list.length" class="empty">暂无评价数据</div>
+      <div v-else class="sent-list">
+        <div v-for="(m, i) in merchantSentiment.list.slice(0, 8)" :key="m.shop_id || i" class="sent-item">
+          <div class="sent-rank">{{ i + 1 }}</div>
+          <div class="sent-body">
+            <div class="sent-name">{{ m.shop_name }} <span class="sent-cat" v-if="m.category">{{ m.category }}</span></div>
+            <div class="sent-sub">评价 {{ m.cnt }} 条 · 差评率 {{ m.neg_rate }}%</div>
+          </div>
+          <div class="sent-score" :class="scoreCls(m.avg_rating)">{{ m.avg_rating }}</div>
+        </div>
+      </div>
+      <div class="cat-row" v-if="merchantSentiment.by_category.length">
+        <span class="cat-chip" v-for="c in merchantSentiment.by_category.slice(0, 6)" :key="c.category">{{ c.category }} 差评{{ c.neg_rate }}%</span>
+      </div>
+    </section>
+
+    <!-- J. 活动 ROI（真实核销金额） -->
+    <section class="mc-card mc-card-gold panel">
+      <div class="panel-head"><h2><span class="dot" style="background:#C4923A"></span>活动 ROI（真实核销金额）</h2></div>
+      <div v-if="!activityRoi.list.length" class="empty">暂无活动数据</div>
+      <div v-else class="roi-list">
+        <div v-for="(a, i) in activityRoi.list" :key="a.id" class="roi-item">
+          <div class="roi-body">
+            <div class="roi-name">{{ a.title }} <span class="roi-status" v-if="a.status">{{ a.status }}</span></div>
+            <div class="roi-sub">报名 {{ a.enrolled }} 人 · 核销 {{ a.redeem_count }} 次 · 核销金额 ¥{{ a.redeem_amount }}</div>
+          </div>
+          <div class="roi-roi" :class="a.real ? 'good' : 'flat'">{{ a.real ? 'ROI ' + a.roi : 'ROI —' }}</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 群发定向券弹窗（从建议直接发起动作） -->
+    <el-dialog v-model="showCouponDialog" title="群发定向券" width="440px">
+      <div class="coupon-form">
+        <label>券说明</label>
+        <el-input v-model="couponForm.label" placeholder="如：回来看看·满50减10" />
+        <label>面额（元）</label>
+        <el-input v-model="couponForm.amount" type="number" placeholder="30" />
+        <label>有效期至</label>
+        <el-input v-model="couponForm.expire" placeholder="2026-12-31" />
+        <label>目标人群</label>
+        <el-select v-model="couponForm.target_level" placeholder="全部会员" style="width: 100%;">
+          <el-option label="全部会员" value="" />
+          <el-option label="普通会员" value="普通会员" />
+          <el-option label="高级会员（金卡/钻石）" value="高级会员" />
+        </el-select>
+      </div>
+      <template #footer>
+        <el-button @click="showCouponDialog = false">取消</el-button>
+        <el-button type="primary" :loading="submittingCoupon" @click="submitCoupon">创建并推送</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 知识库待优化列表（保留） -->
     <el-card ref="kbRef" shadow="never" class="kb-card">
       <template #header>
@@ -225,6 +290,7 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { getMerchantSentiment, getActivityRoi, handleInsightAlert, execInsightSuggestion, createOffer } from '@/api'
 
 const router = useRouter()
 const days = ref(30)
@@ -240,6 +306,15 @@ const insights = reactive({
   gmv_trend: [], aov_trend: [], percap_trend: [], gmv_cur: 0, gmv_prev: 0, aov_cur: 0, percap_cur: 0,
   alerts: [], suggestions: [], d: 30
 })
+
+const merchantSentiment = reactive({ list: [], by_category: [], real: false })
+const activityRoi = reactive({ list: [] })
+const handledAlerts = ref([])
+const executedSuggestions = ref([])
+const showCouponDialog = ref(false)
+const couponKey = ref('')
+const couponForm = reactive({ label: '', amount: 30, expire: '2026-12-31', target_level: '' })
+const submittingCoupon = ref(false)
 
 const pending = ref([])
 const pendingTotal = ref(0)
@@ -301,7 +376,15 @@ function delta(cur, prev, invert) {
   return { txt: (up ? '↑' : '↓') + Math.abs(pct).toFixed(0) + '%', cls: good ? 'good' : 'bad' }
 }
 
+function scoreCls(v) {
+  if (v == null) return 'flat'
+  if (v >= 4) return 'good'
+  if (v <= 3) return 'bad'
+  return 'flat'
+}
+
 function runSuggestion(s) {
+  if (s.action === 'send-coupon') { openSendCoupon(s); return }
   if (s.target) {
     router.push(s.target)
   } else if (s.action === 'scroll-kb') {
@@ -314,9 +397,70 @@ async function loadInsights() {
   try {
     const resp = await fetch(`/api/admin/insights?days=${days.value}`)
     const d = await resp.json()
-    if (d.ok) Object.assign(insights, d.data)
+    if (d.ok) {
+      Object.assign(insights, d.data)
+      handledAlerts.value = d.data.handled_alerts || []
+      executedSuggestions.value = d.data.executed_suggestions || []
+    }
   } catch {}
   loading.value = false
+}
+
+async function loadSentiment() {
+  try {
+    const d = await getMerchantSentiment()
+    if (d.ok) {
+      merchantSentiment.list = d.data.list || []
+      merchantSentiment.by_category = d.data.by_category || []
+      merchantSentiment.real = !!d.data.real
+    }
+  } catch {}
+}
+
+async function loadRoi() {
+  try {
+    const d = await getActivityRoi()
+    if (d.ok) activityRoi.list = d.data.list || []
+  } catch {}
+}
+
+async function handleAlert(a) {
+  try {
+    const d = await handleInsightAlert(a.title)
+    if (d.ok) { handledAlerts.value.push(a.title); ElMessage.success('已标记为处理') }
+    else ElMessage.error(d.error || '操作失败')
+  } catch { ElMessage.error('操作失败') }
+}
+
+function openSendCoupon(s) {
+  couponKey.value = s.key || ''
+  couponForm.label = ''
+  couponForm.amount = 30
+  couponForm.expire = '2026-12-31'
+  couponForm.target_level = ''
+  showCouponDialog.value = true
+}
+
+async function submitCoupon() {
+  if (!couponForm.label.trim()) return ElMessage.warning('请填写券说明')
+  if (!couponForm.amount || Number(couponForm.amount) <= 0) return ElMessage.warning('请填写有效面额')
+  submittingCoupon.value = true
+  try {
+    const d = await createOffer({
+      shop_name: '海江新天地', label: couponForm.label.trim(), amount: Number(couponForm.amount),
+      expire: couponForm.expire, category: 'food', color: '#FF7B2C', status: 'active',
+      target_level: couponForm.target_level
+    })
+    if (d.ok) {
+      ElMessage.success('定向券已创建并上架，已推送会员')
+      if (couponKey.value) {
+        const ex = await execInsightSuggestion(couponKey.value)
+        if (ex.ok) executedSuggestions.value.push(couponKey.value)
+      }
+      showCouponDialog.value = false
+    } else ElMessage.error(d.error || '创建失败')
+  } catch { ElMessage.error('操作失败') }
+  submittingCoupon.value = false
 }
 
 async function loadPending() {
@@ -333,6 +477,8 @@ async function loadPending() {
 function loadAll() {
   loadInsights()
   loadPending()
+  loadSentiment()
+  loadRoi()
 }
 
 function startEdit(p) {
@@ -363,6 +509,9 @@ async function dismiss(id) {
     loadPending()
   } catch { ElMessage.error('操作失败') }
 }
+
+function isAlertHandled(t) { return handledAlerts.value.includes(t) }
+function isSugExecuted(k) { return executedSuggestions.value.includes(k) }
 
 onMounted(loadAll)
 </script>
@@ -468,4 +617,42 @@ onMounted(loadAll)
 .in-p-question { font-size: 14px; color: #e0e0e0; flex: 1; }
 .in-p-actions { margin-top: 8px; }
 .in-edit { display: flex; gap: 8px; align-items: center; }
+
+/* 预警一键处置 */
+.alert-item { align-items: center; }
+.alert-handle { flex: none; margin-left: 8px; padding: 5px 12px; border: 1px solid #3a3a3a; border-radius: 16px; font-size: 12px; font-weight: 600; color: #E3BB6A; background: #202020; cursor: pointer; transition: .15s; }
+.alert-handle:active { opacity: 0.8; }
+.handled-tag { font-size: 11px; color: #A9BBA0; background: rgba(107,110,100,0.22); padding: 1px 8px; border-radius: 10px; margin-left: 6px; }
+.done-tag { color: #A9BBA0; }
+
+/* 商户情感榜 */
+.sent-list { display: flex; flex-direction: column; gap: 8px; }
+.sent-item { display: flex; align-items: center; gap: 12px; background: #1d1d1d; border-radius: 10px; padding: 10px 12px; }
+.sent-rank { width: 22px; height: 22px; border-radius: 6px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; background: #6b6b6b; }
+.sent-body { flex: 1; min-width: 0; }
+.sent-name { font-size: 13px; color: #f0f0f0; font-weight: 600; }
+.sent-cat { font-size: 11px; color: #999; background: #2a2a2a; padding: 1px 8px; border-radius: 10px; margin-left: 6px; }
+.sent-sub { font-size: 12px; color: #aaa; margin-top: 2px; }
+.sent-score { flex: none; width: 38px; text-align: center; font-size: 16px; font-weight: 700; border-radius: 8px; padding: 4px 0; }
+.sent-score.good { color: #A9BBA0; background: rgba(107,110,100,0.18); }
+.sent-score.bad { color: #DD8E7C; background: rgba(155,74,62,0.2); }
+.sent-score.flat { color: #ccc; background: #262626; }
+.cat-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cat-chip { font-size: 11px; color: #ddd; background: #222; border: 1px solid #333; border-radius: 12px; padding: 3px 10px; }
+
+/* 活动 ROI */
+.roi-list { display: flex; flex-direction: column; gap: 8px; }
+.roi-item { display: flex; align-items: center; gap: 12px; background: #1d1d1d; border-radius: 10px; padding: 10px 12px; }
+.roi-body { flex: 1; min-width: 0; }
+.roi-name { font-size: 13px; color: #f0f0f0; font-weight: 600; }
+.roi-status { font-size: 11px; color: #999; background: #2a2a2a; padding: 1px 8px; border-radius: 10px; margin-left: 6px; }
+.roi-sub { font-size: 12px; color: #aaa; margin-top: 2px; }
+.roi-roi { flex: none; font-size: 14px; font-weight: 700; padding: 4px 10px; border-radius: 8px; }
+.roi-roi.good { color: #A9BBA0; background: rgba(107,110,100,0.18); }
+.roi-roi.flat { color: #bbb; background: #262626; }
+
+/* 群发定向券弹窗 */
+.coupon-form { display: flex; flex-direction: column; gap: 6px; }
+.coupon-form label { font-size: 12px; color: #aaa; margin-top: 8px; }
+.coupon-form label:first-child { margin-top: 0; }
 </style>

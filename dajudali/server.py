@@ -2021,8 +2021,9 @@ def api_member_my_coupons():
     for c in claimed:
         claimed_ids.add(c['offer_id'])
         coupons.append({
-            'offer_id': c['offer_id'], 'shop_name': c['shop_name'],
+            'claim_id': c['id'], 'offer_id': c['offer_id'], 'shop_name': c['shop_name'],
             'label': c['label'], 'amount': c['amount'],
+            'redeemed': c['redeemed'], 'redeem_amount': c['redeem_amount'],
             'time': str(c['claimed_at'])[:10], 'type': 'claim'
         })
     for r in orders:
@@ -2032,6 +2033,37 @@ def api_member_my_coupons():
         except:
             pass
     return jsonify(ok=True, coupons=coupons, claimed_ids=list(claimed_ids))
+
+
+@app.route('/api/member/messages', methods=['POST'])
+def api_member_messages():
+    """会员站内消息（当前为全员广播消息，user_id=0）"""
+    phone = (request.json or {}).get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=False, error='请输入手机号')
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute("SELECT id,type,title,body,ref_type,ref_id,created_at,read FROM messages WHERE user_id=0 ORDER BY id DESC LIMIT 50").fetchall()
+    unread = conn.execute("SELECT COUNT(*) FROM messages WHERE user_id=0 AND read=0").fetchone()[0]
+    conn.close()
+    return jsonify(ok=True, messages=[dict(r) for r in rows], unread=unread)
+
+
+@app.route('/api/member/message/read', methods=['POST'])
+def api_member_message_read():
+    """标记消息已读（id=all 或省略则全部已读）"""
+    data = request.get_json() or {}
+    mid = data.get('id')
+    conn = get_db()
+    _ensure_tables(conn)
+    if mid == 'all' or mid is None:
+        conn.execute("UPDATE messages SET read=1 WHERE user_id=0")
+    else:
+        conn.execute("UPDATE messages SET read=1 WHERE id=? AND user_id=0", (mid,))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True)
+
 
 # ========== API - 会员专属内容（新品试吃 / 内测名额 / 专属体验） ==========
 # 演示用种子数据（内存态，服务重启会重置名额/领取记录；生产可迁 DB）
@@ -4030,6 +4062,28 @@ def _migrate_schema(conn):
             cycle TEXT NOT NULL, claimed INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(phone, kind, cycle))''')
+        # 上架自动推送：站内消息（user_id=0 表示全员广播）
+        _col_add(conn, 'offers', 'target_level', "TEXT DEFAULT ''")  # 定向人群(空=全部)
+        conn.execute('''CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER DEFAULT 0,
+            type TEXT DEFAULT 'system', title TEXT DEFAULT '', body TEXT DEFAULT '',
+            ref_type TEXT DEFAULT '', ref_id INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT '', read INTEGER DEFAULT 0)''')
+        # 运营洞察：预警/建议处置留痕（一键处置 / 群发定向券）
+        conn.execute('''CREATE TABLE IF NOT EXISTS insight_actions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, action_type TEXT NOT NULL,
+            ref_key TEXT DEFAULT '', created_at TEXT DEFAULT '', note TEXT DEFAULT '')''')
+        conn.commit()
+    except Exception:
+        pass
+
+def _push_message(conn, title, body, mtype='system', user_id=0, ref_type='', ref_id=0):
+    """向站内消息表写入一条消息（user_id=0 表示全员广播）。失败静默。"""
+    try:
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        conn.execute(
+            "INSERT INTO messages (user_id,type,title,body,ref_type,ref_id,created_at,read) VALUES (?,?,?,?,?,?,?,0)",
+            (user_id, mtype, title, body, ref_type, ref_id, now))
         conn.commit()
     except Exception:
         pass
@@ -5135,6 +5189,8 @@ def api_admin_redeem_goods_create():
     conn.execute(
         "INSERT INTO redeem_goods (id,name,points,category,gradient,status,stock) VALUES (?,?,?,?,?,?,?)",
         (nid, name, points, category, gradient, status, stock))
+    if status == 'active':
+        _push_message(conn, '积分商城上新', f"「{name}」已上架积分商城，快去用积分兑换吧～", 'redeem', 0, 'redeem', 0)
     conn.commit(); conn.close()
     return jsonify(ok=True, data={'id': nid, 'message': '已上架' if status == 'active' else '已添加（下架）'})
 
@@ -5189,11 +5245,13 @@ def api_admin_redeem_goods_toggle(gid):
     if not _admin_role_ok():
         return jsonify(ok=False, error='权限不足')
     conn = get_db(); _ensure_tables(conn)
-    row = conn.execute("SELECT status FROM redeem_goods WHERE id=?", (gid,)).fetchone()
+    row = conn.execute("SELECT status, name FROM redeem_goods WHERE id=?", (gid,)).fetchone()
     if not row:
         conn.close(); return jsonify(ok=False, error='商品不存在')
     new_status = 'inactive' if row['status'] == 'active' else 'active'
     conn.execute("UPDATE redeem_goods SET status=? WHERE id=?", (new_status, gid))
+    if new_status == 'active':
+        _push_message(conn, '积分商城上新', f"「{row['name']}」已上架积分商城，快去用积分兑换吧～", 'redeem', 0, 'redeem', 0)
     conn.commit(); conn.close()
     return jsonify(ok=True, data={'status': new_status, 'message': '已上架' if new_status == 'active' else '已下架'})
 
@@ -5246,11 +5304,14 @@ def api_admin_offers_create():
     color = (data.get('color') or '#FF7B2C').strip() or '#FF7B2C'
     expire = (data.get('expire') or '').strip()
     status = 'active' if data.get('status') == 'active' else 'inactive'
+    target_level = (data.get('target_level') or '').strip()
     conn = get_db(); _ensure_tables(conn)
     conn.execute(
-        "INSERT INTO offers (shop_name,label,expire,amount,category,color,status) VALUES (?,?,?,?,?,?,?)",
-        (shop_name, label, expire, amount, category, color, status))
+        "INSERT INTO offers (shop_name,label,expire,amount,category,color,status,target_level) VALUES (?,?,?,?,?,?,?,?)",
+        (shop_name, label, expire, amount, category, color, status, target_level))
     oid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    if status == 'active':
+        _push_message(conn, '新优惠券上架', f"{shop_name} 的「{label}」已上架，打开 App 即可领取～", 'offer', 0, 'offer', oid)
     conn.commit(); conn.close()
     return jsonify(ok=True, data={'id': oid, 'message': '已上架' if status == 'active' else '已添加（下架）'})
 
@@ -5303,11 +5364,13 @@ def api_admin_offers_toggle(oid):
     if not _admin_role_ok():
         return jsonify(ok=False, error='权限不足')
     conn = get_db(); _ensure_tables(conn)
-    row = conn.execute("SELECT status FROM offers WHERE id=?", (oid,)).fetchone()
+    row = conn.execute("SELECT status, shop_name, label FROM offers WHERE id=?", (oid,)).fetchone()
     if not row:
         conn.close(); return jsonify(ok=False, error='优惠券不存在')
     new_status = 'inactive' if row['status'] == 'active' else 'active'
     conn.execute("UPDATE offers SET status=? WHERE id=?", (new_status, oid))
+    if new_status == 'active':
+        _push_message(conn, '新优惠券上架', f"{row['shop_name']} 的「{row['label']}」已上架，打开 App 即可领取～", 'offer', 0, 'offer', oid)
     conn.commit(); conn.close()
     return jsonify(ok=True, data={'status': new_status, 'message': '已上架' if new_status == 'active' else '已下架'})
 
@@ -6785,10 +6848,14 @@ def api_admin_insights():
     if low_feedback:
         suggestions.append({'text': f'近期有 {len(low_feedback)} 条低分评价（均分 {avg_low}），建议复盘服务卡点', 'target': '/admin/intelligence', 'tab': '口碑运营'})
     if silent_ratio >= 40:
-        suggestions.append({'text': f'{silent} 位会员已超 90 天未到店，建议发起「回来看看」定向召回', 'target': '/admin/intelligence', 'tab': '会员运营'})
+        suggestions.append({'text': f'{silent} 位会员已超 90 天未到店，建议发起「回来看看」定向召回', 'action': 'send-coupon', 'key': 'silent_recall'})
     if claimed > 0 and redeem_rate < 20:
-        suggestions.append({'text': f'券核销率仅 {redeem_rate}%，建议优化核销引导或在「优惠券」中调整策略', 'target': '/admin/offers'})
+        suggestions.append({'text': f'券核销率仅 {redeem_rate}%，建议群发「核销提醒」定向券拉动到店', 'action': 'send-coupon', 'key': 'redeem_boost'})
 
+    handled_rows = conn.execute("SELECT ref_key FROM insight_actions WHERE action_type='alert'").fetchall()
+    handled_alerts = [r['ref_key'] for r in handled_rows]
+    exec_rows = conn.execute("SELECT ref_key FROM insight_actions WHERE action_type='suggestion'").fetchall()
+    executed_suggestions = [r['ref_key'] for r in exec_rows]
     conn.close()
     return jsonify(ok=True, data={
         'complaint_total': complaints,
@@ -6819,7 +6886,41 @@ def api_admin_insights():
         'suggestions': suggestions,
         # H 时间范围
         'days': days,
+        # 处置留痕（预警一键已处理 / 建议已执行）
+        'handled_alerts': handled_alerts,
+        'executed_suggestions': executed_suggestions,
     })
+
+
+# ========== 运营洞察：预警一键处置 / 建议直接执行（动作闭环） ==========
+@app.route('/api/admin/insight-alert/handle', methods=['POST'])
+@login_required
+def api_admin_insight_alert_handle():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    key = (request.get_json() or {}).get('key') or ''
+    if not key:
+        return jsonify(ok=False, error='缺少 key')
+    conn = get_db(); _ensure_tables(conn)
+    conn.execute("INSERT INTO insight_actions (action_type, ref_key, created_at) VALUES ('alert',?,?)",
+                 (key, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit(); conn.close()
+    return jsonify(ok=True)
+
+
+@app.route('/api/admin/insight-suggestion/exec', methods=['POST'])
+@login_required
+def api_admin_insight_suggestion_exec():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    key = (request.get_json() or {}).get('key') or ''
+    if not key:
+        return jsonify(ok=False, error='缺少 key')
+    conn = get_db(); _ensure_tables(conn)
+    conn.execute("INSERT INTO insight_actions (action_type, ref_key, created_at) VALUES ('suggestion',?,?)",
+                 (key, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit(); conn.close()
+    return jsonify(ok=True)
 
 
 # ========== 会员智能分层（RFM）+ 流失预警 ==========
