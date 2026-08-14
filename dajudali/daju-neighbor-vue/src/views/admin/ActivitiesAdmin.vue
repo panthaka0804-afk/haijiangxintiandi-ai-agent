@@ -1,39 +1,55 @@
 <template>
-  <div class="activities-admin">
-    <div class="aa-header">
-      <h2>活动管理</h2>
-      <button class="aa-add-btn" @click="showForm = true; editId = null; resetForm()">+ 新建活动</button>
+  <div class="in-page">
+    <div class="page-header">
+      <h3>活动管理</h3>
+      <button class="primary-btn" @click="openCreate">+ 新建活动</button>
+    </div>
+    <div class="hint-bar">数据来源：活动主表 / 报名记录 / 绑定券核销，真实链路实时汇总</div>
+
+    <!-- 统计卡片 -->
+    <div class="stat-row">
+      <div class="mc-card mc-card-gold stat"><div class="stat-num">{{ activities.length }}</div><div class="stat-label">活动总数</div></div>
+      <div class="mc-card mc-card-green stat"><div class="stat-num">{{ openCount }}</div><div class="stat-label">开放中</div></div>
+      <div class="mc-card mc-card-orange stat"><div class="stat-num">{{ totalEnrolled }}</div><div class="stat-label">累计报名</div></div>
+      <div class="mc-card mc-card-purple stat"><div class="stat-num">{{ budgetSum }}</div><div class="stat-label">预算合计(元)</div></div>
     </div>
 
-    <div class="aa-table-wrap">
-      <table class="aa-table">
-        <thead>
-          <tr><th>ID</th><th>标题</th><th>日期</th><th>状态</th><th>报名</th><th>操作</th></tr>
-        </thead>
-        <tbody>
-          <tr v-for="a in activities" :key="a.id">
-            <td>{{ a.id }}</td>
-            <td>{{ a.title }}</td>
-            <td>{{ a.start_date }} ~ {{ a.end_date }}</td>
-            <td><span class="aa-tag" :class="a.status">{{ statusMap[a.status] }}</span></td>
-            <td>{{ a.enrolled || 0 }}/{{ a.max_people || '-' }}</td>
-            <td>
-              <button class="aa-btn-sm" @click="editActivity(a)">编辑</button>
-              <button class="aa-btn-sm aa-btn-warn" @click="toggleStatus(a)">{{ a.status === 'open' ? '关闭' : '开启' }}</button>
-              <button class="aa-btn-sm aa-btn-danger" @click="deleteActivity(a.id)">删除</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div v-if="!activities.length" class="aa-empty">暂无活动数据</div>
-    </div>
+    <section class="mc-card mc-card-blue panel">
+      <div class="panel-head">
+        <h2><span class="dot" style="background:#4A90D9"></span>活动列表</h2>
+        <span class="engine" v-if="activities.length">共 {{ activities.length }} 个</span>
+        <span class="engine" v-else>暂无</span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="mc-table">
+          <thead>
+            <tr><th>ID</th><th>标题</th><th>日期</th><th>状态</th><th>报名</th><th>操作</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in activities" :key="a.id">
+              <td class="muted">{{ a.id }}</td>
+              <td class="title">{{ a.title }}</td>
+              <td class="muted">{{ a.start_date }} ~ {{ a.end_date }}</td>
+              <td><span class="pill" :class="statusClass(a.status)">{{ statusMap[a.status] }}</span></td>
+              <td>{{ a.enrolled || 0 }}/{{ a.max_people || '-' }}</td>
+              <td class="ops">
+                <button class="op" @click="editActivity(a)">编辑</button>
+                <button class="op warn" @click="toggleStatus(a)">{{ a.status === 'open' ? '关闭' : '开启' }}</button>
+                <button class="op danger" @click="deleteActivity(a.id)">删除</button>
+              </td>
+            </tr>
+            <tr v-if="!activities.length"><td colspan="6" class="empty">暂无活动数据</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
     <!-- 编辑弹窗 -->
-    <div class="aa-modal" v-if="showForm">
-      <div class="aa-modal-mask" @click="showForm = false"></div>
-      <div class="aa-modal-body">
+    <div class="modal" v-if="showForm">
+      <div class="modal-mask" @click="showForm = false"></div>
+      <div class="modal-body">
         <h3>{{ editId ? '编辑活动' : '新建活动' }}</h3>
-        <div class="aa-form">
+        <div class="form">
           <label>标题</label><input v-model="form.title" />
           <label>描述</label><textarea v-model="form.desc" rows="2"></textarea>
           <label>地点</label><input v-model="form.venue" />
@@ -43,8 +59,8 @@
           <label>积分兑换</label><input type="number" v-model="form.points_price" />
           <label>总名额</label><input type="number" v-model="form.max_people" />
           <label>绑定优惠券（活动 ROI 真实核销链路）</label>
-          <div class="aa-offers">
-            <label v-for="o in offers" :key="o.id" class="aa-offer">
+          <div class="offers">
+            <label v-for="o in offers" :key="o.id" class="offer">
               <input type="checkbox" :value="o.id" v-model="form.offer_ids" /> {{ o.shop_name }} · {{ o.label }}
             </label>
           </div>
@@ -59,20 +75,20 @@
           </select>
 
           <!-- 场次管理 -->
-          <div class="aa-sessions">
-            <label>场次 <button type="button" class="aa-btn-sm" @click="addSession">+ 添加</button></label>
-            <div v-for="(s, i) in form.sessions" :key="i" class="aa-session-item">
+          <div class="sessions">
+            <label class="sess-head">场次 <button type="button" class="op" @click="addSession">+ 添加</button></label>
+            <div v-for="(s, i) in form.sessions" :key="i" class="session-item">
               <input type="date" v-model="s.session_date" />
-              <input v-model="s.session_time" placeholder="时间" style="width:80px" />
-              <input v-model="s.venue" placeholder="地点" style="flex:1" />
-              <input type="number" v-model="s.max_people" placeholder="名额" style="width:60px" />
-              <button type="button" class="aa-btn-sm aa-btn-danger" @click="form.sessions.splice(i,1)">x</button>
+              <input v-model="s.session_time" placeholder="时间" class="t" />
+              <input v-model="s.venue" placeholder="地点" class="loc" />
+              <input type="number" v-model="s.max_people" placeholder="名额" class="cap" />
+              <button type="button" class="op danger" @click="form.sessions.splice(i,1)">x</button>
             </div>
           </div>
         </div>
-        <div class="aa-modal-actions">
-          <button class="aa-btn" @click="showForm = false">取消</button>
-          <button class="aa-btn aa-btn-primary" @click="saveActivity">保存</button>
+        <div class="modal-actions">
+          <button class="ghost-btn" @click="showForm = false">取消</button>
+          <button class="primary-btn" @click="saveActivity">保存</button>
         </div>
       </div>
     </div>
@@ -80,7 +96,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 
 const activities = ref([])
 const offers = ref([])
@@ -88,6 +104,13 @@ const showForm = ref(false)
 const editId = ref(null)
 const form = ref({})
 const statusMap = { open: '开放', closed: '关闭', draft: '草稿' }
+
+const openCount = computed(() => activities.value.filter(a => a.status === 'open').length)
+const totalEnrolled = computed(() => activities.value.reduce((s, a) => s + (a.enrolled || 0), 0))
+const budgetSum = computed(() => activities.value.reduce((s, a) => s + (Number(a.budget) || 0), 0))
+function statusClass(s) {
+  return { open: 'green', closed: 'gray', draft: 'gold' }[s] || 'gray'
+}
 
 function resetForm() {
   form.value = {
@@ -98,6 +121,12 @@ function resetForm() {
   }
 }
 resetForm()
+
+function openCreate() {
+  showForm.value = true
+  editId.value = null
+  resetForm()
+}
 
 async function loadActivities() {
   try {
@@ -180,47 +209,40 @@ onMounted(loadActivities)
 </script>
 
 <style scoped>
-.activities-admin { padding: 0; }
-.aa-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.aa-header h2 { margin: 0; color: #F0F0F0; font-size: 18px; }
-.aa-add-btn { padding: 8px 20px; background: #1A1A1A; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
-
-.aa-table-wrap { background: #1A1A1A; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.aa-table { width: 100%; border-collapse: collapse; }
-.aa-table th { text-align: left; padding: 12px 16px; background: #1A1A1A; color: #BBBBBB; font-size: 13px; font-weight: 600; border-bottom: 1px solid #eee; }
-.aa-table td { padding: 10px 16px; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #F0F0F0; }
-.aa-table tr:last-child td { border-bottom: none; }
-.aa-tag { padding: 2px 10px; border-radius: 10px; font-size: 12px; }
-.aa-tag.open { background: #1A1A1A; color: #BBBBBB; }
-.aa-tag.closed { background: #1A1A1A; color: #BBBBBB; }
-.aa-tag.draft { background: #1A1A1A; color: #BBBBBB; }
-.aa-empty { padding: 40px; text-align: center; color: #999; font-size: 14px; }
-
-.aa-offers { display: flex; flex-direction: column; gap: 4px; max-height: 132px; overflow-y: auto; padding: 6px 8px; border: 1px solid #333; border-radius: 8px; background: #151515; }
-.aa-offer { font-size: 13px; color: #DDDDDD; display: flex; align-items: center; gap: 6px; cursor: pointer; }
-.aa-offer input { accent-color: #FF7B2C; }
-
-.aa-btn-sm { padding: 4px 12px; border: 1px solid #e0e0e0; background: #1A1A1A; border-radius: 6px; cursor: pointer; font-size: 12px; color: #BBBBBB; margin-right: 4px; }
-.aa-btn-sm:hover { border-color: #999999; color: #999999; }
-.aa-btn-warn { color: #ABABAB; border-color: #DDDDDD; }
-.aa-btn-danger { color: #BBBBBB; border-color: #D4D4D4; }
+.stat-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.primary-btn { padding: 8px 20px; background: linear-gradient(135deg,#FF7B2C,#E85D04); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(232,93,4,.28); transition: .15s; }
+.primary-btn:hover { box-shadow: 0 6px 18px rgba(232,93,4,.42); }
+.title { color: #f0f0f0; font-weight: 600; }
+.ops { white-space: nowrap; }
+.op { padding: 4px 12px; border: 1px solid #3a3a3a; background: #202020; border-radius: 6px; cursor: pointer; font-size: 12px; color: #cfcfcf; margin-right: 4px; transition: .15s; }
+.op:hover { border-color: #FF7B2C; color: #fff; }
+.op.warn { color: #E3BB6A; border-color: #5a4f33; }
+.op.danger { color: #DD8E7C; border-color: #5a3a36; }
+.op.danger:hover { border-color: #DD8E7C; }
 
 /* Modal */
-.aa-modal { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; }
-.aa-modal-mask { position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
-.aa-modal-body { position: relative; background: #1A1A1A; border-radius: 16px; padding: 24px; width: 90%; max-width: 560px; max-height: 85vh; overflow-y: auto; }
-.aa-modal-body h3 { margin: 0 0 16px; color: #F0F0F0; }
+.modal { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; }
+.modal-mask { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
+.modal-body { position: relative; background: #161616; border: 1px solid #2a2a2a; border-radius: 16px; padding: 22px 24px; width: 90%; max-width: 560px; max-height: 85vh; overflow-y: auto; }
+.modal-body h3 { margin: 0 0 16px; color: #f0f0f0; border-left: 4px solid #FF7B2C; padding-left: 12px; line-height: 1.2; }
 
-.aa-form { display: flex; flex-direction: column; gap: 8px; }
-.aa-form label { font-size: 13px; color: #BBBBBB; font-weight: 600; margin-top: 4px; }
-.aa-form input, .aa-form textarea, .aa-form select { padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; color: #F0F0F0; background: #1A1A1A; }
-.aa-form input:focus, .aa-form textarea:focus, .aa-form select:focus { outline: none; border-color: #999999; }
+.form { display: flex; flex-direction: column; gap: 6px; }
+.form label { font-size: 13px; color: #bbb; font-weight: 600; margin-top: 6px; }
+.form input, .form textarea, .form select { padding: 8px 12px; border: 1px solid #333; border-radius: 8px; font-size: 14px; color: #e8e8e8; background: #1d1d1d; }
+.form input:focus, .form textarea:focus, .form select:focus { outline: none; border-color: #FF7B2C; box-shadow: 0 0 0 3px rgba(255,123,44,.15); }
 
-.aa-sessions { border-top: 1px solid #eee; padding-top: 8px; margin-top: 4px; }
-.aa-session-item { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
-.aa-session-item input { flex: 1; }
+.offers { display: flex; flex-direction: column; gap: 4px; max-height: 132px; overflow-y: auto; padding: 6px 8px; border: 1px solid #333; border-radius: 8px; background: #1d1d1d; }
+.offer { font-size: 13px; color: #ddd; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.offer input { accent-color: #FF7B2C; }
 
-.aa-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
-.aa-btn { padding: 8px 24px; border: 1px solid #e0e0e0; background: #1A1A1A; border-radius: 8px; cursor: pointer; font-size: 14px; color: #BBBBBB; }
-.aa-btn-primary { background: #1A1A1A; color: #fff; border-color: #999999; }
+.sessions { border-top: 1px solid #2a2a2a; padding-top: 8px; margin-top: 6px; }
+.sess-head { display: flex; align-items: center; gap: 10px; }
+.session-item { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+.session-item .t { width: 80px; }
+.session-item .loc { flex: 1; }
+.session-item .cap { width: 60px; }
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.ghost-btn { padding: 8px 24px; border: 1px solid #3a3a3a; background: #202020; border-radius: 8px; cursor: pointer; font-size: 14px; color: #cfcfcf; transition: .15s; }
+.ghost-btn:hover { border-color: #777; color: #fff; }
 </style>

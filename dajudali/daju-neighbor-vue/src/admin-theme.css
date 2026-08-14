@@ -70,3 +70,45 @@
 .mc-card-orange::before { --mc-bar: #C9956C; }
 .mc-card-purple::before { --mc-bar: #8B8B90; }
 .mc-card-green::before { --mc-bar: #6B6E64; }
+.mc-card-blue::before { --mc-bar: #4A90D9; }
+
+/* ========== 后台子页通用工具类（与智能中心 InsightsAdmin 同款，供所有子页复用） ========== */
+.in-page { padding: 4px 2px 40px; color: #e8e8e8; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.hint-bar { font-size: 12px; color: #8a8a8a; background: #161616; border: 1px solid #2a2a2a; border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; }
+
+.panel { background: #161616; border: 1px solid #2a2a2a; border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; position: relative; overflow: hidden; }
+.panel::before { content: ''; position: absolute; left: 0; top: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--mc-bar, #FF7B2C), transparent); }
+
+.panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.panel-head h2 { margin: 0; font-size: 15px; color: #f0f0f0; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.engine { margin-left: auto; font-size: 12px; color: #BABABA; background: #222; padding: 3px 10px; border-radius: 20px; }
+.engine.ok { color: #A9BBA0; background: rgba(107,110,100,0.2); }
+.engine.warn { color: #E3BB6A; background: rgba(196,146,58,0.18); }
+.empty { color: #777; font-size: 13px; padding: 16px 0; text-align: center; }
+
+/* 统计迷你卡（多彩顶栏；数字跟随顶栏色） */
+.mc-card.stat { padding: 14px 18px; min-width: 110px; }
+.stat-num { font-size: 24px; font-weight: 700; color: var(--mc-bar, #FF7B2C); line-height: 1.1; }
+.stat-label { font-size: 12px; color: #999; margin-top: 6px; }
+
+/* 暗色表格 */
+.tbl-wrap { background: #161616; border: 1px solid #2a2a2a; border-radius: 12px; overflow: hidden; }
+.mc-table { width: 100%; border-collapse: collapse; }
+.mc-table th { text-align: left; padding: 11px 14px; background: #1d1d1d; color: #9aa0a6; font-size: 12px; font-weight: 600; border-bottom: 1px solid #2a2a2a; }
+.mc-table td { padding: 10px 14px; border-bottom: 1px solid #232323; font-size: 13px; color: #e0e0e0; vertical-align: middle; }
+.mc-table tr:last-child td { border-bottom: none; }
+.mc-table tbody tr:hover td { background: #1d1d1d; }
+.mc-table .muted { color: #888; }
+.mc-table .empty { color: #777; text-align: center; padding: 28px 0; }
+
+/* 彩色 pill（状态/类型标签） */
+.pill { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.pill.green { color: #A9BBA0; background: rgba(107,110,100,0.20); }
+.pill.gold { color: #E3BB6A; background: rgba(196,146,58,0.18); }
+.pill.red { color: #DD8E7C; background: rgba(155,74,62,0.22); }
+.pill.orange { color: #E7C3A6; background: rgba(201,149,108,0.16); }
+.pill.purple { color: #BABABA; background: rgba(139,139,144,0.18); }
+.pill.blue { color: #9ec5ec; background: rgba(74,144,217,0.18); }
+.pill.gray { color: #BABABA; background: rgba(139,139,144,0.18); }
