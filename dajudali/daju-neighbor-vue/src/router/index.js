@@ -51,14 +51,13 @@ const routes = [
     path: '/admin', name: 'admin', component: () => import('@/views/admin/Dashboard.vue'),
     meta: { title: '管理后台 - 海江新天地', requiresAdmin: true },
     children: [
-      { path: '', redirect: { name: 'admin-dashboard' } },
+      { path: '', redirect: { name: 'admin-intelligence' } },
       { path: 'dashboard', name: 'admin-dashboard', component: () => import('@/views/admin/AdminDashboard.vue'), meta: { title: '数据看板' } },
       { path: 'kb', name: 'admin-kb', component: () => import('@/views/admin/KnowledgeBase.vue'), meta: { title: '知识库管理' } },
       { path: 'orders', name: 'admin-orders', component: () => import('@/views/admin/WorkOrders.vue'), meta: { title: '工单管理' } },
       { path: 'members', name: 'admin-members', component: () => import('@/views/admin/Members.vue'), meta: { title: '会员管理' } },
       { path: 'users', name: 'admin-users', component: () => import('@/views/admin/Users.vue'), meta: { title: '用户管理' } },
       { path: 'settings', name: 'admin-settings', component: () => import('@/views/admin/Settings.vue'), meta: { title: '系统设置' } },
-      { path: 'figma', name: 'admin-figma', component: () => import('@/views/admin/FigmaDesign.vue'), meta: { title: 'Figma协作' } },
       { path: 'activities', name: 'admin-activities', component: () => import('@/views/admin/ActivitiesAdmin.vue'), meta: { title: '活动管理' } },
       { path: 'shops', name: 'admin-shops', component: () => import('@/views/admin/ShopsAdmin.vue'), meta: { title: '商户管理' } },
       { path: 'offers', name: 'admin-offers', component: () => import('@/views/admin/OffersAdmin.vue'), meta: { title: '优惠券管理' } },
@@ -68,9 +67,13 @@ const routes = [
       { path: 'insights', name: 'admin-insights', component: () => import('@/views/admin/InsightsAdmin.vue'), meta: { title: '运营洞察' } },
       { path: 'intelligence', name: 'admin-intelligence', component: () => import('@/views/admin/AdminIntelligence.vue'), meta: { title: '智能运营中心' } },
       { path: 'notify', name: 'admin-notify', component: () => import('@/views/admin/NotifyAdmin.vue'), meta: { title: '触达中心' } },
+      // 后台未知子路径兜底：避免「点进去白屏」，统一暗色 404
+      { path: ':pathMatch(.*)*', name: 'admin-not-found', component: () => import('@/views/admin/AdminNotFound.vue'), meta: { title: '页面不存在' } },
     ],
   },
   { path: '/platform', name: 'platform', component: () => import('@/views/admin/Platform.vue'), meta: { title: '平台管理 - 海江新天地', requiresSuperAdmin: true } },
+  // 全局兜底：任何未知顶层路径统一回 C 端首页，杜绝白屏
+  { path: '/:pathMatch(.*)*', redirect: { name: 'chat' } },
 ]
 
 const router = createRouter({
@@ -78,8 +81,19 @@ const router = createRouter({
   routes,
 })
 
+function isAdminContext(to) {
+  return to.meta.requiresAdmin || to.meta.requiresSuperAdmin ||
+    to.path.startsWith('/admin') || to.path.startsWith('/platform')
+}
+
 router.beforeEach(async (to, from, next) => {
-  document.title = to.meta.title || '海江新天地'
+  // 后台页面标题统一收敛为「… · 海江新天地管理后台」，杜绝 C 端「小江AI」串台
+  if (isAdminContext(to)) {
+    const t = to.meta.title
+    document.title = (t ? t + ' · ' : '') + '海江新天地管理后台'
+  } else {
+    document.title = to.meta.title || '海江新天地'
+  }
   if (to.meta.requiresAdmin || to.meta.requiresSuperAdmin || to.path.startsWith('/admin')) {
     try {
       const resp = await fetch('/api/session')

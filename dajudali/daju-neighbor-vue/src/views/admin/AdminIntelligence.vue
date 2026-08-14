@@ -9,6 +9,11 @@
 
     <div v-if="loading" class="loading">智能运营数据加载中…</div>
 
+    <!-- ============ 实时看板（内嵌 AdminDashboard） ============ -->
+    <div v-if="tab === 'board'">
+      <AdminDashboard />
+    </div>
+
     <!-- ============ 会员运营 ============ -->
     <div v-show="tab === 'member' && !loading">
       <!-- RFM -->
@@ -359,6 +364,11 @@
         <p class="hint">数据来源：会员签到、每日打卡、消费记录（真实到店行为），共 {{ heat.total }} 条。</p>
       </section>
     </div>
+
+    <!-- ============ 运营洞察（内嵌 InsightsAdmin） ============ -->
+    <div v-if="tab === 'insight'">
+      <InsightsAdmin />
+    </div>
   </div>
 </template>
 
@@ -372,13 +382,17 @@ import {
   getReportPeriod, getAnomaly, getKpi, updateKpi, getActivityRoi,
   getPushCopy, getAdvisor, getLeasing, getMarketingCalendar, getTimeslotHeat
 } from '@/api'
+import AdminDashboard from '@/views/admin/AdminDashboard.vue'
+import InsightsAdmin from '@/views/admin/InsightsAdmin.vue'
 
-const tab = ref('member')
+const tab = ref('board')
 const tabs = [
+  { key: 'board', label: '实时看板', color: '#FF7B2C' },
   { key: 'member', label: '会员运营', color: '#FF7B2C' },
   { key: 'reput', label: '口碑运营', color: '#C9956C' },
   { key: 'biz', label: '经营分析', color: '#C4923A' },
-  { key: 'assist', label: '智能助手', color: '#8B8B90' }
+  { key: 'assist', label: '智能助手', color: '#8B8B90' },
+  { key: 'insight', label: '运营洞察', color: '#8B8B90' }
 ]
 const loading = ref(true)
 const period = ref('weekly')
