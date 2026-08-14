@@ -113,6 +113,10 @@
       <GrowthCenter />
     </div>
 
+    <!-- ── 会员专属内容（新品试吃 / 内测名额 / 专属体验） ── -->
+    <MemberExclusive />
+
+
     <!-- ── 功能快捷入口（9 宫格，每格一色，与首页统一） ── -->
     <div class="fn-grid">
       <div v-for="fn in functions" :key="fn.label" class="fn-item" @click="go(fn.route)">
@@ -152,6 +156,7 @@ import { useMemberStore } from '@/stores/member'
 import { showSuccessToast, showFailToast } from 'vant'
 import { getCheckinStatus, doCheckin } from '@/api'
 import GrowthCenter from '@/components/c-end/GrowthCenter.vue'
+import MemberExclusive from '@/components/c-end/MemberExclusive.vue'
 import mtnPu from '@/assets/mountain-pu.png'
 import mtnYin from '@/assets/mountain-yin.png'
 const emit = defineEmits(['switchTab'])

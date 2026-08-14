@@ -2007,6 +2007,88 @@ def api_member_my_coupons():
             pass
     return jsonify(ok=True, coupons=coupons, claimed_ids=list(claimed_ids))
 
+# ========== API - 会员专属内容（新品试吃 / 内测名额 / 专属体验） ==========
+# 演示用种子数据（内存态，服务重启会重置名额/领取记录；生产可迁 DB）
+MEMBER_EXCLUSIVES = [
+    {'id': 'taste_zgzy', 'type': '新品试吃', 'title': '朱光玉火锅·秋季新品内测试吃', 'shop': '朱光玉火锅',
+     'cover': 'linear-gradient(135deg,#E2574C,#B83227)', 'summary': '新锅底+限定蘸料，试吃席位先到先得',
+     'detail': '秋日暖锅内测：牛油番茄双拼锅底、手打虾滑新品，到场即赠限定蘸料瓶。每场限20人，体验后填写问卷再赠50元券。',
+     'level_required': '普卡', 'quota_total': 60, 'quota_left': 52, 'deadline': '2026-08-31', 'location': '海江新天地 3F 朱光玉'},
+    {'id': 'taste_mstand', 'type': '新品试吃', 'title': 'M Stand×海江限定特调品鉴', 'shop': 'M Stand',
+     'cover': 'linear-gradient(135deg,#6B4F3A,#3E2D20)', 'summary': '银卡及以上专享，咖啡×中式茶底限定特调',
+     'detail': '仅向银卡及以上会员开放：桂花酒酿冷萃、陈皮美式两款限定特调，配手作茶点。每场限15人，由主理人讲解拼配思路。',
+     'level_required': '银卡', 'quota_total': 40, 'quota_left': 33, 'deadline': '2026-09-15', 'location': '海江新天地 1F M Stand'},
+    {'id': 'beta_food', 'type': '内测名额', 'title': '海江食集·新店开业内测官', 'shop': '海江食集',
+     'cover': 'linear-gradient(135deg,#C4923A,#9A7425)', 'summary': '新档口开业前内测，所有会员可报名',
+     'detail': '新入驻档口开业前 3 天邀请会员内测，免费试吃招牌单品并提建议。名额充足，登录即可报名。',
+     'level_required': '普卡', 'quota_total': 120, 'quota_left': 98, 'deadline': '2026-09-10', 'location': '海江新天地 B1 海江食集'},
+    {'id': 'beta_nelbo', 'type': '内测名额', 'title': '奈尔宝亲子乐园·新设施体验官', 'shop': '奈尔宝',
+     'cover': 'linear-gradient(135deg,#4F9CC9,#3A7BA0)', 'summary': '金卡及以上专享，新滑梯/新剧场首发体验',
+     'detail': '新扩建区（攀爬网+沉浸剧场）向金卡及以上会员首发体验，每名会员可携 1 名儿童，含专属引导员。每场限25组家庭。',
+     'level_required': '金卡', 'quota_total': 25, 'quota_left': 19, 'deadline': '2026-09-20', 'location': '海江新天地 2F 奈尔宝'},
+    {'id': 'vip_lounge', 'type': '专属体验', 'title': 'VIP休息室·私享品鉴日', 'shop': '海江新天地',
+     'cover': 'linear-gradient(135deg,#9B4A3E,#6E332A)', 'summary': '钻石卡专享，月度私享品鉴+主理人面对面',
+     'detail': '钻石卡会员专属：每月一场 VIP 休息室私享品鉴，含精选茶歇、品牌主理人分享、限定伴手礼。每场限15人。',
+     'level_required': '钻石卡', 'quota_total': 15, 'quota_left': 11, 'deadline': '2026-09-30', 'location': '海江新天地 L4 VIP休息室'},
+    {'id': 'black_gala', 'type': '专属体验', 'title': '黑钻会员·年度私享晚宴', 'shop': '海江新天地',
+     'cover': 'linear-gradient(135deg,#6B6E64,#3C3E36)', 'summary': '黑钻卡专属，年度高定晚宴席位',
+     'detail': '仅黑钻卡会员：年度私享晚宴，主厨定制菜单、专属管家服务、限量纪念礼。每场限8席，需审核资格。',
+     'level_required': '黑钻卡', 'quota_total': 8, 'quota_left': 6, 'deadline': '2026-12-31', 'location': '海江新天地 顶楼宴会厅'},
+    {'id': 'md_blindbox', 'type': '会员日', 'title': '周三会员日·专属试吃盲盒', 'shop': '海江新天地',
+     'cover': 'linear-gradient(135deg,#C9956C,#A87C48)', 'summary': '所有会员可报名，会员日随机试吃盲盒',
+     'detail': '每周三会员日开放报名，随机抽取 3 家商户试吃盲盒（价值约 60 元），名额充足，先到先得。',
+     'level_required': '普卡', 'quota_total': 200, 'quota_left': 176, 'deadline': '长期有效', 'location': '海江新天地 各楼层'},
+]
+EXCLUSIVE_CLAIMS = {}  # key: f'{phone}|{id}' -> {'claimed_at': ...}
+
+LEVEL_RANK = {'普卡': 1, '银卡': 2, '金卡': 3, '铂金卡': 4, '钻石卡': 5, '黑钻卡': 6}
+
+def _member_level(phone):
+    conn = get_db()
+    row = conn.execute('SELECT membership_level FROM users WHERE phone=?', (phone,)).fetchone()
+    conn.close()
+    return (row['membership_level'] if row else None) or '普卡'
+
+@app.route('/api/member/exclusives', methods=['POST'])
+def api_member_exclusives():
+    phone = (request.json or {}).get('phone', '').strip()
+    level = _member_level(phone) if phone else None
+    items = []
+    for it in MEMBER_EXCLUSIVES:
+        req_rank = LEVEL_RANK.get(it['level_required'], 1)
+        cur_rank = LEVEL_RANK.get(level, 0) if level else 0
+        # 登录后校验资格；未登录不锁定（点击报名时再校验）
+        eligible = (cur_rank >= req_rank) if level else True
+        claimed = bool(phone and EXCLUSIVE_CLAIMS.get(f'{phone}|{it["id"]}'))
+        items.append({**it, 'eligible': eligible, 'claimed': claimed})
+    return jsonify(ok=True, level=level, items=items)
+
+@app.route('/api/member/exclusive/claim', methods=['POST'])
+def api_member_exclusive_claim():
+    data = request.get_json(force=True)
+    phone = (data.get('phone') or '').strip()
+    eid = data.get('id')
+    if not phone:
+        return jsonify(ok=False, error='请先登录会员')
+    if not eid:
+        return jsonify(ok=False, error='参数不完整'), 400
+    it = next((x for x in MEMBER_EXCLUSIVES if x['id'] == eid), None)
+    if not it:
+        return jsonify(ok=False, error='专属内容不存在'), 404
+    level = _member_level(phone)
+    req_rank = LEVEL_RANK.get(it['level_required'], 1)
+    cur_rank = LEVEL_RANK.get(level, 0)
+    if cur_rank < req_rank:
+        return jsonify(ok=False, error=f'需「{it["level_required"]}」及以上会员参与')
+    key = f'{phone}|{eid}'
+    if EXCLUSIVE_CLAIMS.get(key):
+        return jsonify(ok=False, error='您已报名该专属内容')
+    if it['quota_left'] <= 0:
+        return jsonify(ok=False, error='名额已抢光，下次早点来~')
+    it['quota_left'] -= 1
+    EXCLUSIVE_CLAIMS[key] = {'claimed_at': datetime.now().strftime('%Y-%m-%d %H:%M')}
+    return jsonify(ok=True, item={**it, 'eligible': True, 'claimed': True}, message='报名成功！详情见会员消息')
+
 @app.route('/api/member/bind-phone', methods=['POST'])
 def api_member_bind_phone():
     """微信用户绑定手机号（更新当前 session 用户的 phone 字段，不切换账号）"""

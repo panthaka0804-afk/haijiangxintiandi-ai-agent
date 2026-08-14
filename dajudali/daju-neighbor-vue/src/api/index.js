@@ -394,6 +394,20 @@ export function claimMemberDay(phone) {
   return request('/api/life/member-day/claim', { method: 'POST', body: JSON.stringify({ phone }) })
 }
 
+// ========== 会员专属内容（新品试吃 / 内测名额 / 专属体验） ==========
+export function getMemberExclusives(phone) {
+  return request('/api/member/exclusives', {
+    method: 'POST',
+    body: JSON.stringify({ phone: phone || '' })
+  })
+}
+export function claimExclusive(phone, id) {
+  return request('/api/member/exclusive/claim', {
+    method: 'POST',
+    body: JSON.stringify({ phone, id })
+  })
+}
+
 // 通用 HTTP 客户端（ActivityDetail 等使用）
 const http = {
   get: (url, opts) => {
