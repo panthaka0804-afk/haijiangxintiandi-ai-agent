@@ -76,9 +76,13 @@
             <div class="tier-card" :class="t.cls">
               <div class="tier-body">
                 <div class="bc-header">
-                  <div class="bc-title">{{ t.name }}</div>
-                  <div class="bc-level">{{ t.tag }}</div>
+                  <div class="bc-hd-left">
+                    <div class="bc-title">{{ t.name }}</div>
+                    <div class="bc-level">{{ t.tag }}</div>
+                  </div>
+                  <button v-if="i === memberLevelIndex" class="bc-sign-btn" :class="{ signed: signedToday }" :disabled="signedToday" @click="doSignCard">{{ signedToday ? '今日已签' : '签到' }}</button>
                 </div>
+                <div class="bc-sign-line" v-if="i === memberLevelIndex">已连续签到 <b>{{ consecutiveDays }}</b> 天 · 累计 {{ totalCheckin }} 天</div>
                 <div class="tier-concepts">
                   <div class="tier-line" v-for="(c, ci) in t.concepts" :key="ci">{{ c }}</div>
                 </div>
@@ -89,6 +93,17 @@
                   <div class="gib-hint" v-if="growth.nextName">距离「{{ growth.nextName }}」还差 {{ growth.gap }} 成长值</div>
                   <div class="gib-hint" v-else>已是最高等级，尊享全部权益</div>
                 </div>
+                <!-- 成就徽章（镶嵌进当前等级卡，仅显示已解锁，横向滑动） -->
+                <div class="card-badges" v-if="i === memberLevelIndex && earnedBadges.length">
+                  <div class="cb-title">成就徽章 <span class="cb-sub">已点亮 {{ earnedBadges.length }} 枚</span></div>
+                  <div class="cb-strip">
+                    <div v-for="b in earnedBadges" :key="b.code" class="cb-item">
+                      <div class="cb-icon">{{ b.name.slice(0, 1) }}</div>
+                      <div class="cb-name">{{ b.name }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-badges-empty" v-else-if="i === memberLevelIndex">还没有成就徽章，去签到解锁吧~</div>
                 <div class="tier-current" v-if="i === tierCurrent">● 当前等级</div>
               </div>
             </div>
@@ -134,6 +149,8 @@
 import { ref, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMemberStore } from '@/stores/member'
+import { showSuccessToast, showFailToast } from 'vant'
+import { getCheckinStatus, doCheckin } from '@/api'
 import GrowthCenter from '@/components/c-end/GrowthCenter.vue'
 import mtnPu from '@/assets/mountain-pu.png'
 import mtnYin from '@/assets/mountain-yin.png'
@@ -153,6 +170,16 @@ function syncMemberTier() {
   if (lv && levelToIndex[lv] != null) {
     tierCurrent.value = levelToIndex[lv]
     requestAnimationFrame(() => goTier(tierCurrent.value))
+  }
+  const phone = member.value && member.value.phone
+  if (phone) {
+    fetch(`/api/community/badges?phone=${encodeURIComponent(phone)}`)
+      .then(r => r.json())
+      .then(res => { if (res.ok) badges.value = res.data })
+      .catch(() => {})
+    getCheckinStatus(phone)
+      .then(res => { if (res.ok) { signedToday.value = res.data.today_checked; consecutiveDays.value = res.data.streak; totalCheckin.value = res.data.total } })
+      .catch(() => {})
   }
 }
 onMounted(syncMemberTier)
@@ -197,6 +224,11 @@ const growth = computed(() => {
 
 const tierCurrent = ref(0)
 const tierViewport = ref(null)
+const badges = ref([])
+const earnedBadges = computed(() => badges.value.filter(b => b.earned))
+const signedToday = ref(false)
+const consecutiveDays = ref(0)
+const totalCheckin = ref(0)
 function goTier(i) {
   tierCurrent.value = i
   const v = tierViewport.value
@@ -219,6 +251,25 @@ const functions = [
 ]
 
 function go(route) { if (route) router.push(route) }
+
+async function doSignCard() {
+  if (signedToday.value) return
+  const phone = member.value && member.value.phone
+  if (!phone) { router.push('/member'); return }
+  try {
+    const res = await doCheckin(phone)
+    if (res.ok) {
+      signedToday.value = true
+      consecutiveDays.value = (consecutiveDays.value || 0) + 1
+      totalCheckin.value = (totalCheckin.value || 0) + 1
+      showSuccessToast(`签到 +${res.data.points_gained || 0}分`)
+    } else {
+      showFailToast(res.error || '签到失败')
+    }
+  } catch (e) {
+    showFailToast('网络错误')
+  }
+}
 </script>
 
 <style scoped>
@@ -408,19 +459,45 @@ function go(route) { if (route) router.push(route) }
 .tier-bo   { background-color: #9DA7B5; border-color: #7C8593; }
 .tier-zuan { background-color: #4F9CC9; border-color: #3A7BA0; }
 .tier-hei  { background-color: #6B6E64; border-color: #3C3E36; }
-.tier-concepts { margin-top: 6px; }
+.tier-concepts { margin-top: 4px; }
+
+/* ── 等级卡头部：标题 + 签到钮 ── */
+.bc-hd-left { display: flex; align-items: center; gap: 10px; }
+.bc-sign-btn {
+  flex-shrink: 0; padding: 9px 20px; border-radius: 18px;
+  border: 2px solid rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.20); color: #fff;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.30);
+}
+.bc-sign-btn:active { transform: scale(0.97); }
+.bc-sign-btn.signed { background: rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.30); color: rgba(255,255,255,0.85); cursor: default; }
+.bc-sign-line { font-size: 12px; color: rgba(255,255,255,0.90); margin-top: 8px; text-shadow: 0 1px 1px rgba(0,0,0,0.25); }
+.bc-sign-line b { color: #FFF3D6; }
 
 /* ── 成长值进度（合并进当前等级卡） ── */
-.growth-in-card { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.18); }
-.gib-points { font-size: 24px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
+.growth-in-card { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.18); }
+.gib-points { font-size: 22px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
 .gib-points em { font-style: normal; font-size: 12px; color: rgba(255,255,255,0.85); font-weight: 400; margin-left: 4px; }
-.gib-bar { height: 8px; background: rgba(0,0,0,0.22); border-radius: 4px; overflow: hidden; margin: 8px 0; }
+.gib-bar { height: 7px; background: rgba(0,0,0,0.22); border-radius: 4px; overflow: hidden; margin: 6px 0; }
 .gib-fill { height: 100%; border-radius: 4px; transition: width 0.4s; }
 .gib-hint { font-size: 12px; color: rgba(255,255,255,0.92); text-shadow: 0 1px 1px rgba(0,0,0,0.25); }
-.tier-line { font-size: 15px; font-weight: 600; line-height: 1.8; opacity: 0.96;
+
+/* ── 镶嵌进等级卡的成就徽章：横向滑动，仅显示已解锁 ── */
+.card-badges { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.18); }
+.cb-title { font-size: 14px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.35); margin-bottom: 10px; }
+.cb-sub { font-size: 11px; color: rgba(255,255,255,0.72); font-weight: 400; margin-left: 4px; }
+.cb-strip { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding-bottom: 4px; scrollbar-width: none; }
+.cb-strip::-webkit-scrollbar { display: none; }
+.cb-item { flex: 0 0 auto; width: 76px; box-sizing: border-box; scroll-snap-align: start; text-align: center; }
+.cb-icon { width: 42px; height: 42px; border-radius: 50%; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; background: linear-gradient(135deg, #C4923A, #A8761F); border: 1px solid #7E5413; color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.30), 0 2px 6px rgba(196,146,58,0.40); }
+.cb-name { font-size: 12px; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.35); }
+.card-badges-empty { margin-top: 12px; font-size: 12px; color: rgba(255,255,255,0.75); text-shadow: 0 1px 1px rgba(0,0,0,0.25); }
+.tier-line { font-size: 14px; font-weight: 600; line-height: 1.6; opacity: 0.96;
   text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
 .tier-current { margin-top: 10px; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: #FFE8B0; opacity: 0.95; }
-.bc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.bc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .bc-title { font-size: 20px; font-weight: 800; }
 .bc-level {
   font-size: 12px; font-weight: 600;

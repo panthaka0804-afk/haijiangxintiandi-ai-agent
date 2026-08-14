@@ -7,18 +7,6 @@
     </div>
 
     <template v-else>
-      <!-- 签到抽奖区 -->
-      <div class="sign-card" :style="checkinStyle">
-        <div class="sign-info">
-          <div class="sign-title">每日签到抽奖</div>
-          <div class="sign-days">已连续签到 <b>{{ consecutiveDays }}</b> 天 · 累计 {{ totalCheckin }} 天 · 随机 5–50 分，还有机会抽券</div>
-          <div v-if="lastCoupon" class="sign-coupon">上次抽中：{{ lastCoupon }}</div>
-        </div>
-        <button class="sign-btn" :class="{ signed: signedToday }" :disabled="signedToday" @click="doSign">
-          {{ signedToday ? '今日已签' : '签到抽奖' }}
-        </button>
-      </div>
-
       <!-- 周三会员日 -->
       <div class="memberday-card" :style="memberDayStyle">
         <div class="md-info">
@@ -34,18 +22,6 @@
           :disabled="memberDay.claimed || !isWednesday" @click="claimMd">
           {{ memberDay.claimed ? '已领取' : (isWednesday ? '立即领取' : '周三再来') }}
         </button>
-      </div>
-
-      <!-- 徽章墙：横向滑动，仅显示已解锁成就 -->
-      <div class="badge-section">
-        <div class="section-title">成就徽章 <span class="section-sub">已点亮 {{ earnedCount }} 枚</span></div>
-        <div v-if="earnedBadges.length" class="badge-strip">
-          <div v-for="b in earnedBadges" :key="b.code" class="badge-item">
-            <div class="badge-icon">{{ b.name.slice(0, 1) }}</div>
-            <div class="badge-name">{{ b.name }}</div>
-          </div>
-        </div>
-        <div v-else class="badge-empty">还没有成就徽章，去签到、领会员日券解锁吧~</div>
       </div>
 
       <!-- 成长值明细（默认折叠，点击展开） -->
@@ -75,80 +51,34 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useMemberStore } from '@/stores/member'
-import { showToast, showSuccessToast, showFailToast } from 'vant'
-import { getCheckinStatus, doCheckin, getMemberDayStatus, claimMemberDay } from '@/api'
+import { showSuccessToast, showFailToast } from 'vant'
+import { getMemberDayStatus, claimMemberDay } from '@/api'
 
-const router = useRouter()
 const memberStore = useMemberStore()
 
 const phone = ref('')
-const signedToday = ref(false)
-const consecutiveDays = ref(0)
-const totalCheckin = ref(0)
-const lastCoupon = ref('')
-const badges = ref([])
 const logs = ref([])
 const logsOpen = ref(false)
 
 // 多彩卡片配色（对齐首页）
-const checkinStyle = { background: 'linear-gradient(135deg,#C4923A,#A8761F)', borderColor: '#7E5413' }
 const memberDayStyle = { background: 'linear-gradient(135deg,#9B4A3E,#7A342B)', borderColor: '#5C241D' }
 const isWednesday = computed(() => new Date().getDay() === 3)
 const memberDay = ref({ claimed: false, coupon_label: '' })
-
-const earnedCount = computed(() => badges.value.filter(b => b.earned).length)
-const earnedBadges = computed(() => badges.value.filter(b => b.earned))
 
 function toggleLogs() { logsOpen.value = !logsOpen.value }
 
 async function load() {
   if (!phone.value) return
   try {
-    const [statusRes, badgeRes, logRes, checkinRes, mdRes] = await Promise.all([
-      fetch(`/api/community/sign-status?phone=${phone.value}`).then(r => r.json()),
-      fetch(`/api/community/badges?phone=${phone.value}`).then(r => r.json()),
+    const [logRes, mdRes] = await Promise.all([
       fetch(`/api/community/points/log?phone=${phone.value}`).then(r => r.json()),
-      getCheckinStatus(phone.value),
       getMemberDayStatus(phone.value),
     ])
-    if (statusRes.ok) {
-      signedToday.value = statusRes.data.signed_today
-      consecutiveDays.value = statusRes.data.consecutive_days || 0
-    }
-    if (badgeRes.ok) badges.value = badgeRes.data
     if (logRes.ok) logs.value = logRes.data
-    if (checkinRes.ok) {
-      const d = checkinRes.data
-      signedToday.value = d.today_checked
-      consecutiveDays.value = d.streak
-      totalCheckin.value = d.total
-      lastCoupon.value = d.today_coupon || ''
-    }
     if (mdRes.ok) memberDay.value = { claimed: mdRes.data.claimed, coupon_label: mdRes.data.coupon_label }
   } catch (e) {
     console.error(e)
-  }
-}
-
-async function doSign() {
-  if (signedToday.value) return
-  try {
-    const res = await doCheckin(phone.value)
-    if (res.ok) {
-      const d = res.data
-      signedToday.value = true
-      consecutiveDays.value = (consecutiveDays.value || 0) + 1
-      totalCheckin.value = (totalCheckin.value || 0) + 1
-      lastCoupon.value = d.coupon_won ? d.coupon_label : ''
-      showSuccessToast(d.coupon_won ? (`签到 +${d.points_gained}分，抽中：${d.coupon_label}`) : (`签到 +${d.points_gained}分`))
-      load()
-    } else {
-      showFailToast(res.error || '签到失败')
-    }
-  } catch (e) {
-    showFailToast('网络错误')
   }
 }
 
@@ -189,15 +119,6 @@ onMounted(() => {
 .gc-empty .empty-hint { font-size: 14px; }
 .gc-login-btn { background: #9A7425; border-color: #9A7425; margin-top: 16px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); }
 
-/* 签到抽奖卡 — 金黄多彩卡 */
-.sign-card { margin: 0 0 12px; padding: 16px; background: linear-gradient(135deg, #C4923A 0%, #A8761F 100%); border: 3px solid #7E5413; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px rgba(196,146,58,0.35); }
-.sign-title { font-size: 16px; color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
-.sign-days { font-size: 12px; color: rgba(255,255,255,0.92); margin-top: 4px; }
-.sign-days b { color: #FFF3D6; }
-.sign-btn { padding: 12px 22px; border-radius: 20px; border: 3px solid #9A7425; background-color: #9A7425; color: #FFFFFF; font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
-.sign-btn.signed { background: #7E5413; border-color: #7E5413; color: rgba(255,255,255,0.92); cursor: default; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(196,146,58,0.45); }
-.sign-coupon { font-size: 12px; color: #FFF3D6; margin-top: 6px; }
-
 /* 周三会员日卡 — 深红棕多彩卡 */
 .memberday-card { margin: 0 0 12px; padding: 16px; background: linear-gradient(135deg, #9B4A3E 0%, #7A342B 100%); border: 3px solid #5C241D; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,0.20), 0 4px 14px rgba(155,74,62,0.35); }
 .md-title { font-size: 16px; color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
@@ -208,32 +129,9 @@ onMounted(() => {
 .md-btn.got { background: #5C241D; border-color: #5C241D; color: #fff; cursor: default; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(155,74,62,0.45); }
 .md-btn.off { background: #5C241D; border-color: #5C241D; color: rgba(255,255,255,0.85); box-shadow: inset 3px 3px 7px rgba(0,0,0,0.55), inset -2px -2px 5px rgba(155,74,62,0.45); }
 
-/* 徽章墙 — 横向滑动，仅显示已解锁成就 */
-.badge-section { margin: 0 0 12px; }
+/* 成长值明细标题（沿用 section-title） */
 .section-title { font-size: 16px; color: #fff; font-weight: 600; margin-bottom: 12px; }
 .section-sub { font-size: 12px; color: #999; font-weight: 400; }
-.badge-strip {
-  display: flex; gap: 10px;
-  overflow-x: auto; scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 4px; scrollbar-width: none;
-}
-.badge-strip::-webkit-scrollbar { display: none; }
-.badge-item {
-  flex: 0 0 auto; width: 84px; box-sizing: border-box;
-  scroll-snap-align: start;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 12px; padding: 12px 6px; text-align: center;
-}
-.badge-icon {
-  width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 19px; font-weight: 700;
-  background: linear-gradient(135deg, #C4923A, #A8761F); border: 1px solid #7E5413; color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.30), 0 2px 6px rgba(196,146,58,0.40);
-}
-.badge-name { font-size: 13px; color: #eee; }
-.badge-empty { font-size: 13px; color: rgba(255,255,255,0.70); padding: 16px 4px; }
 
 /* 成长值明细 — 深灰绿多彩卡；标题可点击折叠 */
 .log-section { margin: 0; }
