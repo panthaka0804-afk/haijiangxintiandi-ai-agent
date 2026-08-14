@@ -2089,6 +2089,171 @@ def api_member_exclusive_claim():
     EXCLUSIVE_CLAIMS[key] = {'claimed_at': datetime.now().strftime('%Y-%m-%d %H:%M')}
     return jsonify(ok=True, item={**it, 'eligible': True, 'claimed': True}, message='报名成功！详情见会员消息')
 
+# ========== API - 会员自动化（沉默召回 / 生日·周年庆专属权益日） ==========
+# 打开 App 即检测：3 个月没来的推「回来看看」定向券；生日/周年庆当天发「专属权益日」让他必须来。
+# 发放/领取状态落 DB（member_auto_coupons），跨 gunicorn 多 worker 一致且重启不丢。
+SILENT_DAYS = 90
+AUTO_PREF_CATS = ['美食天地', '亲子乐园', '服饰零售', '数码电器', '健身养生', '咖啡茶饮']
+AUTO_COVER = {
+    'recall': 'linear-gradient(135deg,#E85D04,#B8430A)',       # 橙：回来看看
+    'birthday': 'linear-gradient(135deg,#E8809E,#C95B7E)',      # 粉：生日
+    'anniversary': 'linear-gradient(135deg,#C4923A,#9A7425)',  # 金：周年庆
+}
+
+def _pref_cat(phone, row_pref):
+    """历史消费偏好：有记录用记录，否则按手机号稳定派生，保证每个会员都有定向内容。"""
+    if row_pref:
+        return row_pref
+    p = phone or ''
+    h = 0
+    for ch in p:
+        h = (h * 31 + ord(ch)) & 0xFFFFFFFF
+    return AUTO_PREF_CATS[h % len(AUTO_PREF_CATS)]
+
+def _is_silent(last_visit):
+    """最近一次到店距今 >= 90 天视为沉默会员。"""
+    if not last_visit:
+        return False
+    try:
+        lv = datetime.strptime(last_visit, '%Y-%m-%d %H:%M:%S')
+    except Exception:
+        return False
+    return (datetime.now() - lv).days >= SILENT_DAYS
+
+@app.route('/api/member/auto-coupons', methods=['POST'])
+def api_member_auto_coupons():
+    """打开即检测：返回当前会员适用的自动化定向券（沉默召回 / 生日 / 周年庆）。"""
+    phone = (request.json or {}).get('phone', '').strip()
+    if not phone:
+        return jsonify(ok=True, coupons=[])
+    conn = get_db()
+    _ensure_tables(conn)
+    row = conn.execute(
+        "SELECT last_visit, birthday, anniversary, preferred_category FROM users WHERE phone=?",
+        (phone,)
+    ).fetchone()
+    now = datetime.now()
+    today_md = now.strftime('%m-%d')
+    coupons = []
+    if row:
+        pref = _pref_cat(phone, row['preferred_category'])
+        # 1) 沉默召回：3 个月没来 → 推一张针对历史偏好的「回来看看」定向券（发放一次，领前常驻）
+        recall_row = conn.execute(
+            "SELECT claimed FROM member_auto_coupons WHERE phone=? AND kind='recall' AND cycle='recall'",
+            (phone,)
+        ).fetchone()
+        if recall_row is None and _is_silent(row['last_visit']):
+            conn.execute(
+                "INSERT OR IGNORE INTO member_auto_coupons (phone, kind, cycle, claimed) VALUES (?,?,?,0)",
+                (phone, 'recall', 'recall')
+            )
+            conn.commit()
+            recall_row = {'claimed': 0}
+        if recall_row is not None and not recall_row['claimed']:
+            coupons.append({
+                'id': 'auto_recall', 'kind': 'recall', 'kind_label': '回来看看',
+                'title': f'回来看看·{pref}专属券',
+                'reason': f'您已 {SILENT_DAYS} 天没来啦，{pref}为您留了份心意',
+                'desc': f'针对您常逛的「{pref}」定制：到店即赠专属好礼 / 满减券一张，限 30 天内使用。',
+                'cover': AUTO_COVER['recall'],
+                'validity': (now + timedelta(days=30)).strftime('%Y-%m-%d'),
+                'pref': pref,
+            })
+        # 2) 生日专属权益日（仅生日当天）
+        if row['birthday'] and row['birthday'][:5] == today_md:
+            bcycle = str(now.year)
+            bkey = conn.execute(
+                "SELECT claimed FROM member_auto_coupons WHERE phone=? AND kind='birthday' AND cycle=?",
+                (phone, bcycle)
+            ).fetchone()
+            if bkey is None:
+                conn.execute(
+                    "INSERT OR IGNORE INTO member_auto_coupons (phone, kind, cycle, claimed) VALUES (?,?,?,0)",
+                    (phone, 'birthday', bcycle)
+                )
+                conn.commit()
+                bkey = {'claimed': 0}
+            if not bkey['claimed']:
+                coupons.append({
+                    'id': 'auto_birthday', 'kind': 'birthday', 'kind_label': '生日',
+                    'title': '生日专属权益日',
+                    'reason': '生日快乐！今天专属权益只为您开放',
+                    'desc': '生日当月到店享：双倍积分 + 专属生日礼 + 指定商户满减券，今天不来就亏啦~',
+                    'cover': AUTO_COVER['birthday'],
+                    'validity': today_md,
+                    'pref': pref,
+                })
+        # 3) 周年庆专属权益日（仅入会纪念日当天）
+        if row['anniversary'] and row['anniversary'][:5] == today_md:
+            acycle = str(now.year)
+            akey = conn.execute(
+                "SELECT claimed FROM member_auto_coupons WHERE phone=? AND kind='anniversary' AND cycle=?",
+                (phone, acycle)
+            ).fetchone()
+            if akey is None:
+                conn.execute(
+                    "INSERT OR IGNORE INTO member_auto_coupons (phone, kind, cycle, claimed) VALUES (?,?,?,0)",
+                    (phone, 'anniversary', acycle)
+                )
+                conn.commit()
+                akey = {'claimed': 0}
+            if not akey['claimed']:
+                coupons.append({
+                    'id': 'auto_anniversary', 'kind': 'anniversary', 'kind_label': '周年庆',
+                    'title': '周年庆专属权益日',
+                    'reason': '会员周年庆！今天专属权益只为您开放',
+                    'desc': '入会纪念日专属：到店领周年礼盒 + 全场 95 折券，今天必须来！',
+                    'cover': AUTO_COVER['anniversary'],
+                    'validity': today_md,
+                    'pref': pref,
+                })
+        # 打开即更新 last_visit（沉默召回判定依据）；非沉默会员保持活跃状态
+        conn.execute("UPDATE users SET last_visit=? WHERE phone=?", (now.strftime('%Y-%m-%d %H:%M:%S'), phone))
+        conn.commit()
+    conn.close()
+    return jsonify(ok=True, coupons=coupons)
+
+@app.route('/api/member/auto-coupon/claim', methods=['POST'])
+def api_member_auto_coupon_claim():
+    """领取自动化定向券：标记已领并落地到会员券包（coupon_claims）。"""
+    data = request.get_json(force=True)
+    phone = (data.get('phone') or '').strip()
+    cid = data.get('id')
+    if not phone:
+        return jsonify(ok=False, error='请先登录会员')
+    if cid not in ('auto_recall', 'auto_birthday', 'auto_anniversary'):
+        return jsonify(ok=False, error='自动券不存在'), 404
+    kind_cycle = {
+        'auto_recall': ('recall', 'recall'),
+        'auto_birthday': ('birthday', str(datetime.now().year)),
+        'auto_anniversary': ('anniversary', str(datetime.now().year)),
+    }
+    kind, cycle = kind_cycle[cid]
+    conn = get_db()
+    _ensure_tables(conn)
+    row = conn.execute(
+        "SELECT id, claimed FROM member_auto_coupons WHERE phone=? AND kind=? AND cycle=?",
+        (phone, kind, cycle)
+    ).fetchone()
+    if not row:
+        conn.close()
+        return jsonify(ok=False, error='该自动券暂不可领取')
+    if row['claimed']:
+        conn.close()
+        return jsonify(ok=False, error='您已领取该自动券')
+    conn.execute("UPDATE member_auto_coupons SET claimed=1 WHERE id=?", (row['id'],))
+    # 落地券包：offer_id 用合成负值避免与真实券冲突；按年区分可次年再领
+    year = datetime.now().year
+    offer_id = {'auto_recall': -1, 'auto_birthday': -200 - (year % 100), 'auto_anniversary': -300 - (year % 100)}[cid]
+    label_map = {'auto_recall': '回来看看专属券', 'auto_birthday': '生日专属权益日', 'auto_anniversary': '周年庆专属权益日'}
+    conn.execute(
+        "INSERT OR IGNORE INTO coupon_claims (user_phone, offer_id, shop_name, label, amount) VALUES (?,?,?,?,?)",
+        (phone, offer_id, '海江新天地', label_map[cid], 0)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, message='已存入您的券包，记得今天来用哦~')
+
 @app.route('/api/member/bind-phone', methods=['POST'])
 def api_member_bind_phone():
     """微信用户绑定手机号（更新当前 session 用户的 phone 字段，不切换账号）"""
@@ -3809,6 +3974,11 @@ def _migrate_schema(conn):
         _col_add(conn, 'users', 'gift_month', "TEXT DEFAULT ''")
         _col_add(conn, 'users', 'temp_level', "TEXT DEFAULT ''")
         _col_add(conn, 'users', 'temp_level_expire', "TEXT DEFAULT ''")
+        # 会员自动化：沉默召回 / 生日·周年庆专属权益日
+        _col_add(conn, 'users', 'last_visit', "TEXT DEFAULT ''")        # 最近一次打开 App 时间（ISO）
+        _col_add(conn, 'users', 'birthday', "TEXT DEFAULT ''")          # MM-DD
+        _col_add(conn, 'users', 'anniversary', "TEXT DEFAULT ''")       # MM-DD（入会纪念日）
+        _col_add(conn, 'users', 'preferred_category', "TEXT DEFAULT ''") # 历史消费偏好
         conn.execute('''CREATE TABLE IF NOT EXISTS gift_cards (
             id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE NOT NULL,
             from_phone TEXT NOT NULL, from_level TEXT NOT NULL,
@@ -3821,6 +3991,11 @@ def _migrate_schema(conn):
         conn.execute('''CREATE TABLE IF NOT EXISTS member_consumptions (
             id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT NOT NULL, amount REAL DEFAULT 0,
             source TEXT DEFAULT '', awarded_first_order INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS member_auto_coupons (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT NOT NULL, kind TEXT NOT NULL,
+            cycle TEXT NOT NULL, claimed INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(phone, kind, cycle))''')
         conn.commit()
     except Exception:
         pass
@@ -4515,6 +4690,33 @@ def _ensure_tables(conn):
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(phone, week_key)
     )''')
+
+    # ── 会员自动化演示种子（幂等，仅首次初始化执行） ──
+    today_md = datetime.now().strftime('%m-%d')
+    # 历史会员：无 last_visit 的视为久未到店，置为 120 天前，使「沉默召回」可演示
+    silent_rows = conn.execute(
+        "SELECT phone, preferred_category FROM users WHERE last_visit IS NULL OR last_visit=''"
+    ).fetchall()
+    for r in silent_rows:
+        ph = r['phone']
+        if not ph:
+            continue
+        lv = (datetime.now() - timedelta(days=120)).strftime('%Y-%m-%d %H:%M:%S')
+        pref = _pref_cat(ph, r['preferred_category'])
+        conn.execute("UPDATE users SET last_visit=?, preferred_category=? WHERE phone=?", (lv, pref, ph))
+    # 演示账号：生日/周年庆=今天、久未到店，登录即可一次性看到三种自动化
+    demo_phone = '13800138000'
+    if not conn.execute("SELECT id FROM users WHERE phone=?", (demo_phone,)).fetchone():
+        import hashlib
+        pw = hashlib.sha256(('member' + demo_phone).encode()).hexdigest()
+        conn.execute(
+            "INSERT INTO users (tenant_id, username, password_hash, display_name, role, phone, points, membership_level) VALUES (?,?,?,?,?,?,?,?)",
+            (1, 'm' + demo_phone, pw, '演示会员', 'user', demo_phone, 1200, '金卡')
+        )
+    conn.execute(
+        "UPDATE users SET last_visit=?, birthday=?, anniversary=?, preferred_category=? WHERE phone=?",
+        ((datetime.now() - timedelta(days=120)).strftime('%Y-%m-%d %H:%M:%S'), today_md, today_md, '美食天地', demo_phone)
+    )
 
     conn.commit()
     _init_done = True

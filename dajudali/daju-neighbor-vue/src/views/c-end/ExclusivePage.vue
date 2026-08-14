@@ -6,6 +6,9 @@
       </template>
     </van-nav-bar>
 
+    <!-- 会员自动化：沉默召回 / 生日·周年庆专属权益日（打开即自动检测下发） -->
+    <AutoCoupons :hide-header="true" />
+
     <!-- 会员专属内容（新品试吃 / 内测名额 / 专属体验），独立收纳于此界面 -->
     <MemberExclusive :hide-header="true" />
   </div>
@@ -14,6 +17,7 @@
 <script setup>
 import { useUserStore } from '@/stores/user'
 import { useMemberStore } from '@/stores/member'
+import AutoCoupons from '@/components/c-end/AutoCoupons.vue'
 import MemberExclusive from '@/components/c-end/MemberExclusive.vue'
 
 const userStore = useUserStore()

@@ -408,6 +408,20 @@ export function claimExclusive(phone, id) {
   })
 }
 
+// ========== 会员自动化（沉默召回 / 生日·周年庆专属权益日） ==========
+export function getAutoCoupons(phone) {
+  return request('/api/member/auto-coupons', {
+    method: 'POST',
+    body: JSON.stringify({ phone: phone || '' })
+  })
+}
+export function claimAutoCoupon(phone, id) {
+  return request('/api/member/auto-coupon/claim', {
+    method: 'POST',
+    body: JSON.stringify({ phone, id })
+  })
+}
+
 // 通用 HTTP 客户端（ActivityDetail 等使用）
 const http = {
   get: (url, opts) => {
