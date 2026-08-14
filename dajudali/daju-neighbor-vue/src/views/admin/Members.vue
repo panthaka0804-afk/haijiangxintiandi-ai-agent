@@ -1,32 +1,46 @@
 <template>
   <div class="members-page">
     <div class="page-header">
-      <h3>会员管理</h3>
-      <el-input v-model="searchPhone" placeholder="搜索手机号" clearable @input="loadData" style="width: 200px;" />
+      <div class="ph-left">
+        <div class="ph-title"><span class="ph-bar"></span><h3>会员管理</h3></div>
+        <div class="ph-sub">共 {{ total }} 位会员 · 支持按手机号检索</div>
+      </div>
+      <el-input v-model="searchPhone" placeholder="搜索手机号" clearable @input="onSearch" class="ph-search" />
     </div>
 
-    <el-card shadow="never">
-      <el-table :data="list" stripe v-loading="loading" style="width: 100%;">
-        <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column prop="display_name" label="姓名" width="120" />
+    <el-card shadow="never" class="mem-card">
+      <el-table :data="list" v-loading="loading" class="mem-table" style="width: 100%;">
+        <el-table-column prop="id" label="ID" width="64" />
+        <el-table-column label="姓名" width="150">
+          <template #default="{ row }">
+            <div class="cell-member">
+              <span class="ava" :class="avaClass(row.membership_level)">{{ (row.display_name || '?').charAt(0) }}</span>
+              <span class="m-name">{{ row.display_name || '-' }}</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="phone" label="手机号" width="130">
           <template #default="{ row }">
             {{ row.phone || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="membership_level" label="等级" width="100">
+        <el-table-column prop="membership_level" label="等级" width="110">
           <template #default="{ row }">
-            <el-tag :type="levelColor(row.membership_level)">{{ row.membership_level }}</el-tag>
+            <span class="lv-tag" :class="lvClass(row.membership_level)">{{ row.membership_level }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="points" label="积分" width="100" />
-        <el-table-column prop="created_at" label="注册时间" width="160" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column prop="points" label="积分" width="100">
           <template #default="{ row }">
-            <el-button size="small" @click="editRow(row)">编辑</el-button>
-            <el-popconfirm title="确定删除？" @confirm="deleteRow(row.id)">
+            <span class="pts">{{ row.points }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="created_at" label="注册时间" min-width="160" />
+        <el-table-column label="操作" width="180" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" class="op-edit" @click="editRow(row)">编辑</el-button>
+            <el-popconfirm title="确定删除该会员？" @confirm="deleteRow(row.id)">
               <template #reference>
-                <el-button size="small" type="danger">删除</el-button>
+                <el-button size="small" class="op-del">删除</el-button>
               </template>
             </el-popconfirm>
           </template>
@@ -88,9 +102,18 @@ const editingId = ref(null)
 const formRef = ref(null)
 const form = ref({ membership_level: '普卡', points: 0, remark: '' })
 
-function levelColor(level) {
-  const map = { '普卡': 'info', '银卡': '', '金卡': 'warning', '钻石卡': 'success' }
-  return map[level] || 'info'
+const LV = {
+  '普卡': { tag: 'lv-pu', ava: 'ava-pu' },
+  '银卡': { tag: 'lv-yin', ava: 'ava-yin' },
+  '金卡': { tag: 'lv-jin', ava: 'ava-jin' },
+  '钻石卡': { tag: 'lv-zuan', ava: 'ava-zuan' }
+}
+function lvClass(level) { return (LV[level] || LV['普卡']).tag }
+function avaClass(level) { return (LV[level] || LV['普卡']).ava }
+
+function onSearch() {
+  page.value = 1
+  loadData()
 }
 
 async function loadData() {
@@ -150,16 +173,100 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+.members-page {
+  padding: 22px 24px 30px;
+  background: #f4f6f8;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  align-items: flex-end;
+  margin-bottom: 18px;
 }
-
+.ph-left { display: flex; flex-direction: column; gap: 6px; }
+.ph-title { display: flex; align-items: center; gap: 10px; }
+.ph-bar {
+  width: 4px; height: 20px; border-radius: 3px;
+  background: linear-gradient(180deg, #FF7B2C, #E85D04);
+}
 .page-header h3 {
   margin: 0;
-  color: #303133;
-  font-size: 18px;
+  font-size: 19px;
+  font-weight: 800;
+  color: #1f2329;
+  letter-spacing: 0.5px;
 }
+.ph-sub { font-size: 13px; color: #8a9099; padding-left: 14px; }
+
+.mem-card {
+  border-radius: 14px;
+  border: 1px solid #e9edf1;
+  box-shadow: 0 4px 18px rgba(20, 30, 50, 0.05);
+}
+:deep(.mem-card .el-card__body) { padding: 8px 8px 16px; }
+
+.mem-table {
+  --el-table-border-color: #eef1f4;
+  font-size: 14px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+:deep(.mem-table th.el-table__cell) {
+  background: #FFF6EF;
+  color: #E85D04;
+  font-weight: 700;
+  font-size: 13px;
+}
+:deep(.mem-table td.el-table__cell) {
+  padding: 14px 0;
+  color: #3a3f47;
+}
+:deep(.mem-table .el-table__row:hover > td) { background: #FFF3E9; }
+
+.cell-member { display: flex; align-items: center; gap: 10px; }
+.ava {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 14px; flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+.ava-pu { background: linear-gradient(135deg, #aab0b8, #8b9099); }
+.ava-yin { background: linear-gradient(135deg, #c3c9d1, #a3aab4); color: #4a5057; }
+.ava-jin { background: linear-gradient(135deg, #E8A33D, #C4923A); }
+.ava-zuan { background: linear-gradient(135deg, #8E7CE8, #6C5CE0); }
+.m-name { font-weight: 600; color: #2a2f36; }
+
+.lv-tag {
+  display: inline-flex; align-items: center;
+  padding: 4px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 700; color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.5px;
+}
+.lv-pu { background: linear-gradient(135deg, #aab0b8, #8b9099); }
+.lv-yin { background: linear-gradient(135deg, #c3c9d1, #a3aab4); color: #4a5057; }
+.lv-jin { background: linear-gradient(135deg, #E8A33D, #C4923A); }
+.lv-zuan { background: linear-gradient(135deg, #8E7CE8, #6C5CE0); }
+
+.pts { font-weight: 700; color: #E85D04; }
+
+.op-edit { border-radius: 8px; background: #FF7B2C; border-color: #FF7B2C; color: #fff; }
+.op-edit:hover { background: #ff8c45; border-color: #ff8c45; }
+.op-del { border-radius: 8px; }
+
+:deep(.el-pagination .el-pager li.is-active) {
+  background: #FF7B2C; border-color: #FF7B2C;
+}
+
+:deep(.el-dialog) { border-radius: 14px; }
+:deep(.el-dialog__title) { font-weight: 800; color: #1f2329; }
+:deep(.el-dialog__header) { border-bottom: 1px solid #f0f2f5; margin-right: 0; padding-bottom: 16px; }
+:deep(.el-input__wrapper), :deep(.el-select__wrapper) { border-radius: 8px; }
+:deep(.el-button) { border-radius: 8px; }
+:deep(.ph-search .el-input__wrapper) { border-radius: 20px; }
+:deep(.el-button--primary) { background: #FF7B2C; border-color: #FF7B2C; }
+:deep(.el-button--primary:hover) { background: #ff8c45; border-color: #ff8c45; }
 </style>
