@@ -963,7 +963,9 @@ def api_login():
         _c.commit(); _c.close()
     except Exception:
         pass
-    return jsonify(ok=True, user=dict(user))
+    _u = dict(user)
+    _u['perms'] = sorted(role_perms(_u.get('role')))
+    return jsonify(ok=True, user=_u)
 
 @app.route('/logout', methods=['POST'])
 def api_logout():
