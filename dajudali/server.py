@@ -6549,6 +6549,566 @@ def api_admin_daily_report():
     return jsonify(ok=True, data={'engine': engine, 'report': report, 'metrics': metrics})
 
 
+# ========== 智能运营中心 · 衍生功能（RFM/情感/日报/跨模块，共 17 项） ==========
+def _admin_role_ok():
+    return session.get('role') in ('admin', 'super_admin', 'tenant_admin')
+
+_NEXT_POINTS = {'普卡': 2000, '银卡': 5000, '金卡': 20000, '铂金卡': 40000, '钻石卡': 80000, '黑钻卡': None}
+
+# 1) 一键召回名单（沉睡/流失风险会员 + 建议券）
+@app.route('/api/admin/recall-candidates', methods=['GET'])
+@login_required
+def api_admin_recall_candidates():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    tid = session.get('tenant_id', 1)
+    conn = get_db(); _ensure_tables(conn)
+    members = conn.execute(
+        "SELECT id,phone,display_name,membership_level,last_visit,points,preferred_category FROM users WHERE tenant_id=? AND role='user'",
+        (tid,)).fetchall()
+    cons = conn.execute("SELECT phone, COUNT(*) cnt, COALESCE(SUM(amount),0) amt FROM member_consumptions GROUP BY phone").fetchall()
+    cons_map = {c['phone']: (c['cnt'], c['amt']) for c in cons}
+    rows = []
+    for m in members:
+        freq, mon = cons_map.get(m['phone'], (0, 0))
+        R, F, M, seg, churn = _rfm_scores(m['last_visit'], freq, mon)
+        if churn in ('high', 'mid'):
+            pref = m['preferred_category'] or '专属'
+            name = m['display_name'] or '会员'
+            rows.append({
+                'phone': m['phone'], 'name': name,
+                'level': m['membership_level'] or '普卡',
+                'last_visit': m['last_visit'], 'points': m['points'],
+                'R': R, 'segment': seg, 'churn': churn,
+                'suggest_coupon': '回来看看·' + pref + '专属券',
+                'suggest_copy': '好久不见，' + name + '！特为您准备了「' + pref + '」专属回馈，点击立即领取>>'
+            })
+    rows.sort(key=lambda x: (0 if x['churn'] == 'high' else 1, x['R']))
+    conn.close()
+    return jsonify(ok=True, data={'total': len(rows), 'list': rows[:200]})
+
+# 2) 复购 / 到店预测
+@app.route('/api/admin/repurchase', methods=['GET'])
+@login_required
+def api_admin_repurchase():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    rows = conn.execute("SELECT phone, created_at FROM member_consumptions ORDER BY created_at").fetchall()
+    from collections import defaultdict
+    by_phone = defaultdict(list)
+    for r in rows:
+        if r['created_at']:
+            by_phone[r['phone']].append(r['created_at'])
+    preds = []
+    now = datetime.now()
+    for phone, ts in by_phone.items():
+        ts.sort()
+        if len(ts) < 2:
+            continue
+        deltas = []
+        for i in range(1, len(ts)):
+            try:
+                d1 = datetime.strptime(ts[i-1][:19], '%Y-%m-%d %H:%M:%S')
+                d2 = datetime.strptime(ts[i][:19], '%Y-%m-%d %H:%M:%S')
+                deltas.append((d2 - d1).days)
+            except Exception:
+                pass
+        if not deltas:
+            continue
+        avg = sum(deltas) / len(deltas)
+        try:
+            last = datetime.strptime(ts[-1][:19], '%Y-%m-%d %H:%M:%S')
+        except Exception:
+            continue
+        nxt = last + timedelta(days=avg)
+        due = (nxt - now).days
+        if 0 <= due <= 30:
+            u = conn.execute("SELECT display_name,membership_level FROM users WHERE phone=?", (phone,)).fetchone()
+            preds.append({
+                'phone': phone,
+                'name': u['display_name'] if u else '',
+                'level': (u['membership_level'] if u else '') or '普卡',
+                'last_buy': ts[-1][:10], 'avg_gap': round(avg, 1),
+                'predict_next': nxt.strftime('%Y-%m-%d'), 'due_in': due
+            })
+    preds.sort(key=lambda x: x['due_in'])
+    conn.close()
+    return jsonify(ok=True, data={'total': len(preds), 'list': preds[:200]})
+
+# 3) 高价值会员管家（按消费额 Top N）
+@app.route('/api/admin/high-value', methods=['GET'])
+@login_required
+def api_admin_high_value():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    tid = session.get('tenant_id', 1)
+    conn = get_db(); _ensure_tables(conn)
+    members = conn.execute(
+        "SELECT phone,display_name,membership_level,last_visit,points,birthday,preferred_category FROM users WHERE tenant_id=? AND role='user'",
+        (tid,)).fetchall()
+    cons = conn.execute("SELECT phone, COUNT(*) cnt, COALESCE(SUM(amount),0) amt FROM member_consumptions GROUP BY phone").fetchall()
+    cons_map = {c['phone']: (c['cnt'], c['amt']) for c in cons}
+    rows = []
+    for m in members:
+        freq, mon = cons_map.get(m['phone'], (0, 0))
+        if mon <= 0:
+            continue
+        R, F, M, seg, churn = _rfm_scores(m['last_visit'], freq, mon)
+        rows.append({
+            'phone': m['phone'], 'name': m['display_name'] or '会员',
+            'level': m['membership_level'] or '普卡', 'monetary': round(mon, 2),
+            'freq': freq, 'points': m['points'], 'segment': seg, 'last_visit': m['last_visit'],
+            'pref': m['preferred_category'] or '', 'birthday': m['birthday'] or ''
+        })
+    rows.sort(key=lambda x: x['monetary'], reverse=True)
+    conn.close()
+    return jsonify(ok=True, data={'total': len(rows), 'list': rows[:20]})
+
+# 4) 等级跃迁冲刺（接近下一等级门槛的会员）
+@app.route('/api/admin/tier-sprint', methods=['GET'])
+@login_required
+def api_admin_tier_sprint():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    tid = session.get('tenant_id', 1)
+    conn = get_db(); _ensure_tables(conn)
+    members = conn.execute(
+        "SELECT phone,display_name,membership_level,points FROM users WHERE tenant_id=? AND role='user'",
+        (tid,)).fetchall()
+    rows = []
+    for m in members:
+        lvl = m['membership_level'] or '普卡'
+        np_ = _NEXT_POINTS.get(lvl)
+        if not np_:
+            continue
+        gap = np_ - (m['points'] or 0)
+        if gap <= 0 or gap > np_ * 0.4:
+            continue
+        rows.append({
+            'phone': m['phone'], 'name': m['display_name'] or '会员', 'level': lvl,
+            'points': m['points'] or 0, 'next_level': _next_level_name(lvl),
+            'next_points': np_, 'gap': gap, 'progress': round((m['points'] or 0) / np_ * 100, 1)
+        })
+    rows.sort(key=lambda x: x['progress'], reverse=True)
+    conn.close()
+    return jsonify(ok=True, data={'total': len(rows), 'list': rows[:100]})
+
+def _next_level_name(lvl):
+    order = ['普卡', '银卡', '金卡', '铂金卡', '钻石卡', '黑钻卡']
+    try:
+        i = order.index(lvl)
+        return order[i+1] if i+1 < len(order) else '黑钻卡'
+    except Exception:
+        return '银卡'
+
+# 5) 差评实时告警 + 跟进
+@app.route('/api/admin/feedback/alerts', methods=['GET'])
+@login_required
+def api_admin_feedback_alerts():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    conn.execute('''CREATE TABLE IF NOT EXISTS feedback_followups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, feedback_id INTEGER NOT NULL,
+        note TEXT DEFAULT '', at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    rows = conn.execute(
+        "SELECT id, user_phone, feedback_type, rating, feedback_text, created_at FROM feedbacks ORDER BY id DESC LIMIT 100").fetchall()
+    foll = {r['feedback_id']: r['at'] for r in conn.execute("SELECT feedback_id, at FROM feedback_followups").fetchall()}
+    alerts = []
+    now = datetime.now()
+    for r in rows:
+        if r['rating'] is not None and r['rating'] <= 2:
+            try:
+                age_h = int((now - datetime.strptime(r['created_at'][:19], '%Y-%m-%d %H:%M:%S')).total_seconds() / 3600)
+            except Exception:
+                age_h = -1
+            alerts.append({
+                'id': r['id'], 'phone': r['user_phone'], 'type': r['feedback_type'],
+                'rating': r['rating'], 'text': r['feedback_text'], 'created_at': r['created_at'],
+                'age_hours': age_h, 'followed_at': foll.get(r['id'])
+            })
+    alerts.sort(key=lambda x: x['age_hours'] if x['age_hours'] >= 0 else 9999)
+    conn.close()
+    return jsonify(ok=True, data={'total': len(alerts), 'list': alerts[:50]})
+
+@app.route('/api/admin/feedback/alerts/follow', methods=['POST'])
+@login_required
+def api_admin_feedback_follow():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    data = request.get_json() or {}
+    fid = data.get('feedback_id')
+    note = (data.get('note') or '').strip()
+    if not fid:
+        return jsonify(ok=False, error='缺少 feedback_id')
+    conn = get_db(); _ensure_tables(conn)
+    conn.execute('''CREATE TABLE IF NOT EXISTS feedback_followups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, feedback_id INTEGER NOT NULL,
+        note TEXT DEFAULT '', at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    conn.execute("INSERT INTO feedback_followups(feedback_id, note) VALUES(?,?)", (fid, note))
+    conn.commit(); conn.close()
+    return jsonify(ok=True)
+
+# 6) 痛点根因聚类
+@app.route('/api/admin/feedback/painpoints', methods=['GET'])
+@login_required
+def api_admin_feedback_painpoints():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    rows = conn.execute("SELECT id, feedback_text, rating, created_at FROM feedbacks ORDER BY id DESC LIMIT 200").fetchall()
+    conn.close()
+    from collections import Counter
+    topic_cnt = Counter()
+    items = []
+    for r in rows:
+        s, tp = _sentiment_heuristic(r['feedback_text'], r['rating'])
+        if s in ('负面', '投诉'):
+            for t in (tp if isinstance(tp, list) else [tp]):
+                topic_cnt[t] += 1
+            items.append({'id': r['id'], 'topic': tp, 'text': r['feedback_text']})
+    ranked = [{'topic': t, 'count': c} for t, c in topic_cnt.most_common()]
+    return jsonify(ok=True, data={'total': len(items), 'ranked': ranked, 'list': items[:50]})
+
+# 7) 商户 / 品类情感榜（按 biz_type 维度）
+@app.route('/api/admin/feedback/merchant-sentiment', methods=['GET'])
+@login_required
+def api_admin_feedback_merchant_sentiment():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    rows = conn.execute("SELECT biz_type, rating, feedback_text FROM feedbacks").fetchall()
+    conn.close()
+    agg = {}
+    for r in rows:
+        dim = (r['biz_type'] or '其他').strip() or '其他'
+        a = agg.setdefault(dim, {'dim': dim, 'cnt': 0, 'sum': 0, 'neg': 0})
+        a['cnt'] += 1
+        a['sum'] += (r['rating'] or 0)
+        s, tp = _sentiment_heuristic(r['feedback_text'], r['rating'])
+        if s in ('负面', '投诉'):
+            a['neg'] += 1
+    out = []
+    for a in agg.values():
+        avg = round(a['sum'] / a['cnt'], 2) if a['cnt'] else 0
+        out.append({'dim': a['dim'], 'cnt': a['cnt'], 'avg_rating': avg,
+                    'neg_rate': round(a['neg'] / a['cnt'] * 100, 1) if a['cnt'] else 0,
+                    'neg': a['neg']})
+    out.sort(key=lambda x: x['neg_rate'], reverse=True)
+    return jsonify(ok=True, data={'list': out})
+
+# 8) 口碑周趋势 + NPS
+@app.route('/api/admin/feedback/trend', methods=['GET'])
+@login_required
+def api_admin_feedback_trend():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    rows = conn.execute("SELECT rating, created_at FROM feedbacks WHERE created_at >= date('now','-56 days')").fetchall()
+    conn.close()
+    from collections import defaultdict
+    by_week = defaultdict(lambda: {'cnt': 0, 'sum': 0, 'prom': 0, 'detr': 0})
+    for r in rows:
+        try:
+            wk = datetime.strptime(r['created_at'][:10], '%Y-%m-%d').strftime('%Y-%W')
+        except Exception:
+            continue
+        b = by_week[wk]
+        b['cnt'] += 1
+        b['sum'] += (r['rating'] or 0)
+        if (r['rating'] or 0) >= 4:
+            b['prom'] += 1
+        elif (r['rating'] or 0) <= 2:
+            b['detr'] += 1
+    weeks = []
+    for wk in sorted(by_week.keys()):
+        b = by_week[wk]
+        nps = round((b['prom'] - b['detr']) / b['cnt'] * 100) if b['cnt'] else 0
+        weeks.append({'week': wk, 'cnt': b['cnt'], 'avg_rating': round(b['sum']/b['cnt'], 2) if b['cnt'] else 0, 'nps': nps})
+    return jsonify(ok=True, data={'weeks': weeks})
+
+# 9) 周报 / 月报
+@app.route('/api/admin/report-period', methods=['GET'])
+@login_required
+def api_admin_report_period():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    period = request.args.get('period', 'weekly')
+    tid = session.get('tenant_id', 1)
+    conn = get_db(); _ensure_tables(conn)
+    now = datetime.now()
+    if period == 'monthly':
+        start = (now.replace(day=1)).strftime('%Y-%m-%d %H:%M:%S')
+        label = now.strftime('%Y-%m') + ' 月报'
+    else:
+        start = (now - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        label = '近 7 天周报'
+    total_members = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user'", (tid,)).fetchone()[0]
+    new_m = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND created_at >= ?", (tid, start)).fetchone()[0]
+    active = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND last_visit >= ?", (tid, start)).fetchone()[0]
+    coupons = conn.execute("SELECT COUNT(*) FROM coupon_claims WHERE claimed_at >= ?", (start,)).fetchone()[0]
+    acts = conn.execute("SELECT COUNT(*) FROM activities WHERE status='open'").fetchone()[0]
+    fb_total = conn.execute("SELECT COUNT(*) FROM feedbacks WHERE created_at >= ?", (start,)).fetchone()[0]
+    fb_avg = conn.execute("SELECT AVG(rating) FROM feedbacks WHERE created_at >= ?", (start,)).fetchone()[0]
+    fb_low = conn.execute("SELECT COUNT(*) FROM feedbacks WHERE created_at >= ? AND rating <= 2", (start,)).fetchone()[0]
+    conn.close()
+    metrics = {'period': period, 'total_members': total_members, 'new_members': new_m,
+               'active_members': active, 'coupons': coupons, 'activities_open': acts,
+               'feedback_total': fb_total, 'feedback_avg': round(fb_avg, 2) if fb_avg else 0, 'low_feedback': fb_low}
+    engine = 'heuristic'
+    report = ''
+    if DS_API_KEY:
+        prompt = (f"你是商场运营助手，请基于以下{label}数据写一段 180 字内的中文经营分析：先总评，再 3 条发现与建议（用 • 开头）。只输出正文。\n"
+                  f"会员总数 {total_members}，本期新增 {new_m}、活跃 {active}；券领取 {coupons} 张；进行中活动 {acts} 个；评价 {fb_total} 条、均分 {metrics['feedback_avg']}、差评 {fb_low} 条。")
+        out = ai_text([{'role': 'system', 'content': '你是专业商场运营分析师。'}, {'role': 'user', 'content': prompt}], max_tokens=500)
+        if out:
+            report = out; engine = 'llm'
+    if not report:
+        report = (f"【海江新天地{label}】\n"
+                  f"• 会员总数 {total_members}，本期新增 {new_m}、活跃 {active}。\n"
+                  f"• 券领取 {coupons} 张，进行中活动 {acts} 个，可加大会员日曝光。\n"
+                  f"• 评价 {fb_total} 条、均分 {metrics['feedback_avg']}、差评 {fb_low} 条"
+                  + ("，请跟进差评服务卡点。" if fb_low else "，口碑平稳。"))
+    return jsonify(ok=True, data={'engine': engine, 'label': label, 'report': report, 'metrics': metrics})
+
+# 10) 异常指标自动预警
+@app.route('/api/admin/anomaly', methods=['GET'])
+@login_required
+def api_admin_anomaly():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    tid = session.get('tenant_id', 1)
+    conn = get_db(); _ensure_tables(conn)
+    today = datetime.now().strftime('%Y-%m-%d')
+    yest = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    wk_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+    t_new = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND DATE(created_at)=?", (tid, today)).fetchone()[0]
+    a_new = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND created_at>=?", (tid, wk_ago)).fetchone()[0] / 7.0
+    t_act = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND last_visit>=?", (tid, today + ' 00:00:00')).fetchone()[0]
+    a_act = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND last_visit>=?", (tid, wk_ago)).fetchone()[0] / 7.0
+    t_cou = conn.execute("SELECT COUNT(*) FROM coupon_claims WHERE DATE(claimed_at)=?", (today,)).fetchone()[0]
+    a_cou = conn.execute("SELECT COUNT(*) FROM coupon_claims WHERE claimed_at>=?", (wk_ago,)).fetchone()[0] / 7.0
+    t_fb = conn.execute("SELECT COUNT(*) FROM feedbacks WHERE DATE(created_at)=?", (today,)).fetchone()[0]
+    a_fb = conn.execute("SELECT COUNT(*) FROM feedbacks WHERE created_at>=?", (wk_ago,)).fetchone()[0] / 7.0
+    t_low = conn.execute("SELECT COUNT(*) FROM feedbacks WHERE DATE(created_at)=? AND rating<=2", (today,)).fetchone()[0]
+    a_low = conn.execute("SELECT COUNT(*) FROM feedbacks WHERE created_at>=? AND rating<=2", (wk_ago,)).fetchone()[0] / 7.0
+    conn.close()
+    checks = [
+        ('新增会员', t_new, a_new), ('活跃会员', t_act, a_act),
+        ('券领取', t_cou, a_cou), ('评价数', t_fb, a_fb), ('差评数', t_low, a_low)
+    ]
+    alerts = []
+    for name, t, a in checks:
+        if a and t <= a * 0.6:
+            pct = round((t - a) / a * 100)
+            alerts.append({'metric': name, 'today': t, 'avg': round(a, 1), 'pct': pct,
+                           'level': 'high' if t <= a * 0.4 else 'mid'})
+    return jsonify(ok=True, data={'alerts': alerts, 'checked': [c[0] for c in checks]})
+
+# 11) KPI 目标完成率
+@app.route('/api/admin/kpi', methods=['GET'])
+@login_required
+def api_admin_kpi():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    tid = session.get('tenant_id', 1)
+    conn = get_db(); _ensure_tables(conn)
+    conn.execute('CREATE TABLE IF NOT EXISTS kpi_targets (metric TEXT PRIMARY KEY, target REAL)')
+    defaults = {'new_members_week': 20, 'active_members_week': 8, 'churn_risk_members': 5,
+                'coupons_today': 10, 'feedback_avg': 4.5}
+    for k, v in defaults.items():
+        conn.execute("INSERT OR IGNORE INTO kpi_targets(metric,target) VALUES(?,?)", (k, v))
+    targets = {r['metric']: r['target'] for r in conn.execute("SELECT metric,target FROM kpi_targets").fetchall()}
+    now = datetime.now(); wk_ago = (now - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+    today = now.strftime('%Y-%m-%d')
+    cur = {
+        'new_members_week': conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND created_at>=?", (tid, wk_ago)).fetchone()[0],
+        'active_members_week': conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND last_visit>=?", (tid, wk_ago)).fetchone()[0],
+        'churn_risk_members': conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND (last_visit IS NULL OR last_visit='' OR last_visit<=?)", (tid, (now - timedelta(days=90)).strftime('%Y-%m-%d %H:%M:%S'))).fetchone()[0],
+        'coupons_today': conn.execute("SELECT COUNT(*) FROM coupon_claims WHERE DATE(claimed_at)=?", (today,)).fetchone()[0],
+        'feedback_avg': conn.execute("SELECT AVG(rating) FROM feedbacks").fetchone()[0] or 0
+    }
+    conn.close()
+    out = []
+    for k, target in targets.items():
+        val = cur.get(k, 0)
+        comp = round(val / target * 100) if target else 0
+        out.append({'metric': k, 'current': val, 'target': target, 'completion': comp})
+    return jsonify(ok=True, data={'list': out})
+
+@app.route('/api/admin/kpi', methods=['POST'])
+@login_required
+def api_admin_kpi_update():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    data = request.get_json() or {}
+    metric = data.get('metric'); target = data.get('target')
+    if not metric or target is None:
+        return jsonify(ok=False, error='缺少参数')
+    conn = get_db(); _ensure_tables(conn)
+    conn.execute('CREATE TABLE IF NOT EXISTS kpi_targets (metric TEXT PRIMARY KEY, target REAL)')
+    conn.execute("INSERT OR REPLACE INTO kpi_targets(metric,target) VALUES(?,?)", (metric, float(target)))
+    conn.commit(); conn.close()
+    return jsonify(ok=True)
+
+# 12) 活动 ROI 估算
+@app.route('/api/admin/activity-roi', methods=['GET'])
+@login_required
+def api_admin_activity_roi():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    rows = conn.execute("SELECT id,title,venue,start_date,end_date,price,points_price,max_people,enrolled,status FROM activities").fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        price = r['price'] or 0
+        pp = r['points_price'] or 0
+        enrolled = r['enrolled'] or 0
+        maxp = r['max_people'] or 0
+        est = enrolled * max(price, pp * 0.1)
+        out.append({
+            'id': r['id'], 'title': r['title'], 'venue': r['venue'], 'status': r['status'],
+            'enrolled': enrolled, 'max_people': maxp,
+            'full_rate': round(enrolled / maxp * 100, 1) if maxp else 0,
+            'est_revenue': round(est, 0)
+        })
+    out.sort(key=lambda x: x['est_revenue'], reverse=True)
+    return jsonify(ok=True, data={'list': out})
+
+# 13) AI 推送文案生成
+@app.route('/api/admin/push-copy', methods=['POST'])
+@login_required
+def api_admin_push_copy():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    data = request.get_json() or {}
+    segment = data.get('segment', '会员')
+    theme = data.get('theme', '回馈')
+    channel = data.get('channel', '短信')
+    engine = 'heuristic'
+    copy = ''
+    if DS_API_KEY:
+        prompt = f"你是商场会员运营文案高手。面向「{segment}」会员，渠道「{channel}」，主题「{theme}」。请写一条 60 字内的推送文案，口语化、有钩子、带行动号召，不要标点堆砌。"
+        out = ai_text([{'role': 'system', 'content': '你是资深会员运营文案专家。'}, {'role': 'user', 'content': prompt}], max_tokens=200)
+        if out:
+            copy = out; engine = 'llm'
+    if not copy:
+        copy = f"【海江新天地】亲爱的{segment}会员：{theme}专属福利已就位，戳进来领走你的专属惊喜>>退订回T"
+    return jsonify(ok=True, data={'engine': engine, 'copy': copy, 'segment': segment, 'channel': channel})
+
+# 14) 经营参谋（自然语言问答）
+@app.route('/api/admin/advisor', methods=['POST'])
+@login_required
+def api_admin_advisor():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    data = request.get_json() or {}
+    q = (data.get('question') or '').strip()
+    if not q:
+        return jsonify(ok=False, error='缺少问题')
+    tid = session.get('tenant_id', 1)
+    conn = get_db(); _ensure_tables(conn)
+    total = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user'", (tid,)).fetchone()[0]
+    churn = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND (last_visit IS NULL OR last_visit<=?)", (tid, (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d %H:%M:%S'))).fetchone()[0]
+    fb_low = conn.execute("SELECT COUNT(*) FROM feedbacks WHERE rating<=2").fetchone()[0]
+    fb_avg = conn.execute("SELECT AVG(rating) FROM feedbacks").fetchone()[0] or 0
+    conn.close()
+    ctx = f"会员总数{total}，流失风险{churn}人，差评{fb_low}条，评价均分{round(fb_avg,2)}。"
+    engine = 'heuristic'
+    ans = ''
+    if DS_API_KEY:
+        prompt = f"你是商场经营参谋。已知数据：{ctx}。用户问题：{q}。请基于数据用中文简洁回答（3 句内），不知道就明说。"
+        out = ai_text([{'role': 'system', 'content': '你是严谨的商场经营分析参谋。'}, {'role': 'user', 'content': prompt}], max_tokens=300)
+        if out:
+            ans = out; engine = 'llm'
+    if not ans:
+        if '流失' in q:
+            ans = f"当前流失风险会员约 {churn} 人，建议对沉睡会员推送「回来看看」定向券。"
+        elif '差评' in q or '投诉' in q:
+            ans = f"近期差评 {fb_low} 条，评价均分 {round(fb_avg,2)}，建议查看「差评实时告警」跟进。"
+        else:
+            ans = '暂无可回答的数据维度，可问：流失会员多少？差评情况？会员总规模？'
+    return jsonify(ok=True, data={'engine': engine, 'answer': ans, 'context': ctx})
+
+# 15) 智能招商建议
+@app.route('/api/admin/leasing', methods=['GET'])
+@login_required
+def api_admin_leasing():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    shops = conn.execute("SELECT category FROM shops").fetchall()
+    fbs = conn.execute("SELECT biz_type, feedback_text, rating FROM feedbacks").fetchall()
+    conn.close()
+    from collections import Counter
+    cat_cnt = Counter((s['category'] or '其他') for s in shops)
+    topic_cnt = Counter()
+    for f in fbs:
+        s, tp = _sentiment_heuristic(f['feedback_text'], f['rating'])
+        for t in (tp if isinstance(tp, list) else [tp]):
+            topic_cnt[t] += 1
+    # 好评主题但对应品类门店少 → 招商机会
+    suggest = []
+    for topic, cnt in topic_cnt.most_common():
+        have = cat_cnt.get(topic, 0)
+        if cnt >= 2 and have <= 1:
+            suggest.append({'category': topic, 'demand': cnt, 'shops_now': have, 'advice': '需求高但供给少，建议招商引进'})
+    # 门店多但无评价/低关注的品类提示
+    return jsonify(ok=True, data={'shop_category_dist': dict(cat_cnt), 'topic_demand': dict(topic_cnt), 'suggestions': suggest})
+
+# 16) 营销日历（未来 14 天触达点）
+@app.route('/api/admin/marketing-calendar', methods=['GET'])
+@login_required
+def api_admin_marketing_calendar():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    tid = session.get('tenant_id', 1)
+    conn = get_db(); _ensure_tables(conn)
+    users = conn.execute("SELECT display_name,birthday,anniversary FROM users WHERE tenant_id=? AND role='user'", (tid,)).fetchall()
+    acts = conn.execute("SELECT title,start_date,end_date,status FROM activities WHERE status='open'").fetchall()
+    conn.close()
+    now = datetime.now()
+    events = []
+    for d in range(0, 14):
+        day = now + timedelta(days=d)
+        mmdd = day.strftime('%m-%d')
+        for u in users:
+            for fld, kind in (('birthday', '生日权益日'), ('anniversary', '周年庆权益日')):
+                v = u[fld] or ''
+                if len(v) >= 5 and v[-5:] == mmdd:
+                    events.append({'date': day.strftime('%Y-%m-%d'), 'type': kind, 'member': u['display_name'] or '会员'})
+        if day.weekday() == 2:  # 周三会员日
+            events.append({'date': day.strftime('%Y-%m-%d'), 'type': '周三会员日', 'member': '全量会员'})
+        for a in acts:
+            sd = (a['start_date'] or '')[:10]
+            if sd == day.strftime('%Y-%m-%d'):
+                events.append({'date': sd, 'type': '活动开始', 'member': a['title']})
+    events.sort(key=lambda x: x['date'])
+    return jsonify(ok=True, data={'events': events[:60], 'total': len(events)})
+
+# 17) 时段冷热热力（按消费记录小时分布）
+@app.route('/api/admin/timeslot-heat', methods=['GET'])
+@login_required
+def api_admin_timeslot_heat():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    rows = conn.execute("SELECT created_at FROM member_consumptions").fetchall()
+    conn.close()
+    heat = [0] * 24
+    for r in rows:
+        ts = r['created_at'] or ''
+        if len(ts) >= 13:
+            try:
+                h = int(ts[11:13])
+                heat[h] += 1
+            except Exception:
+                pass
+    peak = max(range(24), key=lambda i: heat[i]) if any(heat) else -1
+    return jsonify(ok=True, data={'heat': heat, 'peak_hour': peak})
+
 # ========== 健康检查 ==========
 @app.route('/api/health')
 def api_health():

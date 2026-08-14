@@ -46,6 +46,77 @@ export function getDailyReport() {
   return request('/api/admin/daily-report')
 }
 
+// ========== 后台智能运营中心 · 衍生功能（17 项） ==========
+export function getRecallCandidates() {
+  return request('/api/admin/recall-candidates')
+}
+export function getRepurchase() {
+  return request('/api/admin/repurchase')
+}
+export function getHighValue() {
+  return request('/api/admin/high-value')
+}
+export function getTierSprint() {
+  return request('/api/admin/tier-sprint')
+}
+export function getFeedbackAlerts() {
+  return request('/api/admin/feedback/alerts')
+}
+export function followFeedbackAlert(feedbackId, note = '') {
+  return request('/api/admin/feedback/alerts/follow', {
+    method: 'POST',
+    body: JSON.stringify({ feedback_id: feedbackId, note })
+  })
+}
+export function getFeedbackPainpoints() {
+  return request('/api/admin/feedback/painpoints')
+}
+export function getMerchantSentiment() {
+  return request('/api/admin/feedback/merchant-sentiment')
+}
+export function getFeedbackTrend() {
+  return request('/api/admin/feedback/trend')
+}
+export function getReportPeriod(period = 'weekly') {
+  return request('/api/admin/report-period?period=' + period)
+}
+export function getAnomaly() {
+  return request('/api/admin/anomaly')
+}
+export function getKpi() {
+  return request('/api/admin/kpi')
+}
+export function updateKpi(metric, target) {
+  return request('/api/admin/kpi', {
+    method: 'POST',
+    body: JSON.stringify({ metric, target })
+  })
+}
+export function getActivityRoi() {
+  return request('/api/admin/activity-roi')
+}
+export function getPushCopy(payload) {
+  return request('/api/admin/push-copy', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+export function getAdvisor(question) {
+  return request('/api/admin/advisor', {
+    method: 'POST',
+    body: JSON.stringify({ question })
+  })
+}
+export function getLeasing() {
+  return request('/api/admin/leasing')
+}
+export function getMarketingCalendar() {
+  return request('/api/admin/marketing-calendar')
+}
+export function getTimeslotHeat() {
+  return request('/api/admin/timeslot-heat')
+}
+
 // ========== 聊天 ==========
 export function sendChat(message, largeFont = false) {
   return request('/api/public/chat', {
