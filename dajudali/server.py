@@ -5088,6 +5088,128 @@ def api_redeem_goods():
     return jsonify(ok=True, data=[dict(r) for r in rows])
 
 
+# ========== API - Admin: 积分商城管理（上架/编辑/下架/删除） ==========
+@app.route('/api/admin/redeem-goods', methods=['GET'])
+@login_required
+def api_admin_redeem_goods_list():
+    """管理端查看全部积分商品（含已下架）"""
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    rows = conn.execute("SELECT * FROM redeem_goods ORDER BY (status='active') DESC, points").fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(r) for r in rows])
+
+
+@app.route('/api/admin/redeem-goods', methods=['POST'])
+@login_required
+def api_admin_redeem_goods_create():
+    """新增积分商品（上架）"""
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify(ok=False, error='请填写商品名称')
+    try:
+        points = int(data.get('points', 0))
+    except (ValueError, TypeError):
+        return jsonify(ok=False, error='积分必须为整数')
+    if points <= 0:
+        return jsonify(ok=False, error='积分必须大于 0')
+    category = (data.get('category') or '餐饮').strip() or '餐饮'
+    gradient = (data.get('gradient') or '').strip()
+    status = 'active' if data.get('status') == 'active' else 'inactive'
+    try:
+        stock = int(data.get('stock', -1))
+    except (ValueError, TypeError):
+        stock = -1
+    conn = get_db(); _ensure_tables(conn)
+    nums = []
+    for r in conn.execute("SELECT id FROM redeem_goods").fetchall():
+        try:
+            nums.append(int(str(r['id']).lstrip('g')))
+        except (ValueError, TypeError):
+            pass
+    nid = 'g' + str((max(nums) + 1) if nums else 1)
+    conn.execute(
+        "INSERT INTO redeem_goods (id,name,points,category,gradient,status,stock) VALUES (?,?,?,?,?,?,?)",
+        (nid, name, points, category, gradient, status, stock))
+    conn.commit(); conn.close()
+    return jsonify(ok=True, data={'id': nid, 'message': '已上架' if status == 'active' else '已添加（下架）'})
+
+
+@app.route('/api/admin/redeem-goods/<gid>', methods=['PUT'])
+@login_required
+def api_admin_redeem_goods_update(gid):
+    """编辑积分商品"""
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    data = request.get_json(force=True, silent=True) or {}
+    conn = get_db(); _ensure_tables(conn)
+    row = conn.execute("SELECT id FROM redeem_goods WHERE id=?", (gid,)).fetchone()
+    if not row:
+        conn.close(); return jsonify(ok=False, error='商品不存在')
+    fields = {}
+    if 'name' in data:
+        fields['name'] = str(data['name']).strip()
+    if 'points' in data:
+        try:
+            p = int(data['points'])
+        except (ValueError, TypeError):
+            return jsonify(ok=False, error='积分必须为整数')
+        if p <= 0:
+            return jsonify(ok=False, error='积分必须大于 0')
+        fields['points'] = p
+    if 'category' in data:
+        fields['category'] = str(data['category']).strip() or '餐饮'
+    if 'gradient' in data:
+        fields['gradient'] = str(data['gradient'])
+    if 'stock' in data:
+        try:
+            s = int(data['stock'])
+        except (ValueError, TypeError):
+            s = -1
+        fields['stock'] = s
+    if 'status' in data:
+        fields['status'] = data['status'] if data['status'] in ('active', 'inactive') else 'inactive'
+    if fields:
+        conn.execute(
+            "UPDATE redeem_goods SET " + ", ".join(f"{k}=?" for k in fields) + " WHERE id=?",
+            list(fields.values()) + [gid])
+        conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': '已更新'})
+
+
+@app.route('/api/admin/redeem-goods/<gid>/toggle', methods=['POST'])
+@login_required
+def api_admin_redeem_goods_toggle(gid):
+    """上架 / 下架切换"""
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    row = conn.execute("SELECT status FROM redeem_goods WHERE id=?", (gid,)).fetchone()
+    if not row:
+        conn.close(); return jsonify(ok=False, error='商品不存在')
+    new_status = 'inactive' if row['status'] == 'active' else 'active'
+    conn.execute("UPDATE redeem_goods SET status=? WHERE id=?", (new_status, gid))
+    conn.commit(); conn.close()
+    return jsonify(ok=True, data={'status': new_status, 'message': '已上架' if new_status == 'active' else '已下架'})
+
+
+@app.route('/api/admin/redeem-goods/<gid>', methods=['DELETE'])
+@login_required
+def api_admin_redeem_goods_delete(gid):
+    """删除积分商品"""
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    conn.execute("DELETE FROM redeem_goods WHERE id=?", (gid,))
+    conn.commit(); conn.close()
+    return jsonify(ok=True, data={'message': '已删除'})
+
+
 # ========== API - Parking ==========
 @app.route('/api/parking/query', methods=['POST'])
 def api_parking_query():
