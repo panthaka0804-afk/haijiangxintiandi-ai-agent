@@ -290,6 +290,22 @@ export function getShopDetail(id) {
 export function getOffers() {
   return request('/api/offers')
 }
+// 优惠券管理（上架/编辑/下架/删除）
+export function getAdminOffers() {
+  return request('/api/admin/offers')
+}
+export function createOffer(payload) {
+  return request('/api/admin/offers', { method: 'POST', body: JSON.stringify(payload) })
+}
+export function updateOffer(id, payload) {
+  return request('/api/admin/offers/' + id, { method: 'PUT', body: JSON.stringify(payload) })
+}
+export function toggleOffer(id) {
+  return request('/api/admin/offers/' + id + '/toggle', { method: 'POST' })
+}
+export function deleteOffer(id) {
+  return request('/api/admin/offers/' + id, { method: 'DELETE' })
+}
 
 // ========== 积分商城 ==========
 export function getRedeemGoods() {

@@ -5210,6 +5210,120 @@ def api_admin_redeem_goods_delete(gid):
     return jsonify(ok=True, data={'message': '已删除'})
 
 
+# ========== API - Admin: 优惠券管理（上架/编辑/下架/删除） ==========
+@app.route('/api/admin/offers', methods=['GET'])
+@login_required
+def api_admin_offers_list():
+    """管理端查看全部优惠券（含已停用）"""
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    rows = conn.execute("SELECT * FROM offers ORDER BY (status='active') DESC, id").fetchall()
+    conn.close()
+    return jsonify(ok=True, data=[dict(r) for r in rows])
+
+
+@app.route('/api/admin/offers', methods=['POST'])
+@login_required
+def api_admin_offers_create():
+    """新增优惠券（默认上架）"""
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    data = request.get_json(force=True, silent=True) or {}
+    shop_name = (data.get('shop_name') or '').strip()
+    label = (data.get('label') or '').strip()
+    if not shop_name:
+        return jsonify(ok=False, error='请填写商户名称')
+    if not label:
+        return jsonify(ok=False, error='请填写券说明')
+    try:
+        amount = int(data.get('amount', 0))
+    except (ValueError, TypeError):
+        return jsonify(ok=False, error='面额必须为整数')
+    if amount < 0:
+        return jsonify(ok=False, error='面额不能为负')
+    category = (data.get('category') or 'food').strip() or 'food'
+    color = (data.get('color') or '#FF7B2C').strip() or '#FF7B2C'
+    expire = (data.get('expire') or '').strip()
+    status = 'active' if data.get('status') == 'active' else 'inactive'
+    conn = get_db(); _ensure_tables(conn)
+    conn.execute(
+        "INSERT INTO offers (shop_name,label,expire,amount,category,color,status) VALUES (?,?,?,?,?,?,?)",
+        (shop_name, label, expire, amount, category, color, status))
+    oid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit(); conn.close()
+    return jsonify(ok=True, data={'id': oid, 'message': '已上架' if status == 'active' else '已添加（下架）'})
+
+
+@app.route('/api/admin/offers/<int:oid>', methods=['PUT'])
+@login_required
+def api_admin_offers_update(oid):
+    """编辑优惠券"""
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    data = request.get_json(force=True, silent=True) or {}
+    conn = get_db(); _ensure_tables(conn)
+    row = conn.execute("SELECT id FROM offers WHERE id=?", (oid,)).fetchone()
+    if not row:
+        conn.close(); return jsonify(ok=False, error='优惠券不存在')
+    fields = {}
+    if 'shop_name' in data:
+        fields['shop_name'] = str(data['shop_name']).strip()
+    if 'label' in data:
+        fields['label'] = str(data['label']).strip()
+    if 'amount' in data:
+        try:
+            a = int(data['amount'])
+        except (ValueError, TypeError):
+            return jsonify(ok=False, error='面额必须为整数')
+        if a < 0:
+            return jsonify(ok=False, error='面额不能为负')
+        fields['amount'] = a
+    if 'category' in data:
+        fields['category'] = str(data['category']).strip() or 'food'
+    if 'color' in data:
+        fields['color'] = str(data['color']).strip() or '#FF7B2C'
+    if 'expire' in data:
+        fields['expire'] = str(data['expire']).strip()
+    if 'status' in data:
+        fields['status'] = data['status'] if data['status'] in ('active', 'inactive') else 'inactive'
+    if fields:
+        conn.execute(
+            "UPDATE offers SET " + ", ".join(f"{k}=?" for k in fields) + " WHERE id=?",
+            list(fields.values()) + [oid])
+        conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': '已更新'})
+
+
+@app.route('/api/admin/offers/<int:oid>/toggle', methods=['POST'])
+@login_required
+def api_admin_offers_toggle(oid):
+    """上架 / 下架切换"""
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    row = conn.execute("SELECT status FROM offers WHERE id=?", (oid,)).fetchone()
+    if not row:
+        conn.close(); return jsonify(ok=False, error='优惠券不存在')
+    new_status = 'inactive' if row['status'] == 'active' else 'active'
+    conn.execute("UPDATE offers SET status=? WHERE id=?", (new_status, oid))
+    conn.commit(); conn.close()
+    return jsonify(ok=True, data={'status': new_status, 'message': '已上架' if new_status == 'active' else '已下架'})
+
+
+@app.route('/api/admin/offers/<int:oid>', methods=['DELETE'])
+@login_required
+def api_admin_offers_delete(oid):
+    """删除优惠券"""
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    conn.execute("DELETE FROM offers WHERE id=?", (oid,))
+    conn.commit(); conn.close()
+    return jsonify(ok=True, data={'message': '已删除'})
+
+
 # ========== API - Parking ==========
 @app.route('/api/parking/query', methods=['POST'])
 def api_parking_query():
