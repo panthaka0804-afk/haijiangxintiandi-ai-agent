@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """海江新天地系统 - 社区商业AI客服"""
-import os, sys, json, sqlite3, hashlib, secrets, re, time, io, base64, subprocess, tempfile, random
+import os, sys, json, sqlite3, hashlib, secrets, re, time, io, base64, subprocess, tempfile, random, traceback, logging as _logging
 from datetime import datetime, timedelta
 from functools import wraps
 import fcntl  # 跨进程文件锁，防止 gunicorn 多 worker 并发初始化抢 SQLite 写锁
@@ -28,6 +28,20 @@ app.secret_key = os.environ.get('DJDL_SECRET_KEY', 'dajudali-2026-secret-key-v1'
 DB_PATH = os.path.join(HERE, 'dajudali.db')
 DS_API_KEY = os.environ.get('DS_API_KEY', '')
 import subprocess as _sp
+
+# 常驻错误日志（替换临时 /tmp/srv500.log 调试手段）：结构化落盘，后续可一键接 Sentry
+os.makedirs(os.path.join(HERE, 'logs'), exist_ok=True)
+_logging.basicConfig(filename=os.path.join(HERE, 'logs', 'error.log'), level=_logging.ERROR,
+                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
+logger = _logging.getLogger('dajudali')
+
+@app.errorhandler(500)
+def _handle_500(e):
+    logger.error('500 %s %s\n%s', request.method, request.path, traceback.format_exc())
+    return jsonify(ok=False, error='服务器内部错误'), 500
+
+# 看板聚合缓存（单租户；gunicorn 多 worker 下为 per-worker 缓存，仍显著降 DB 压力）
+_DASHBOARD_CACHE = {'data': None, 'ts': 0.0, 'ttl': 300}
 
 # AI 服务健康状态（故障降级 + /api/health 健康检查用）
 AI_HEALTH = {'status': 'up', 'fail_count': 0, 'last_fail': None, 'last_check': None}
@@ -3215,6 +3229,10 @@ def api_consumption_record():
 @app.route('/api/dashboard')
 @admin_required
 def api_dashboard():
+    # 看板聚合较重，加 5 分钟缓存（单租户；gunicorn 多 worker 下为 per-worker 缓存，仍显著降 DB 压力）
+    _now = time.time()
+    if _DASHBOARD_CACHE['data'] and (_now - _DASHBOARD_CACHE['ts']) < _DASHBOARD_CACHE['ttl']:
+        return jsonify(ok=True, **_DASHBOARD_CACHE['data'])
     tid = session['tenant_id']
     conn = get_db()
     now = datetime.now()
@@ -3311,8 +3329,7 @@ def api_dashboard():
         alerts.append({'level': 'warn', 'text': f'今日差评/投诉 {neg_today} 条', 'key': 'neg'})
 
     acts = conn.execute("SELECT id,title,enrolled FROM activities WHERE status='open' ORDER BY enrolled DESC LIMIT 5").fetchall()
-    conn.close()
-    return jsonify(ok=True,
+    payload = dict(
         today_chats=today_chats, active_members=active_members, total_orders=total_orders,
         pending_orders=pending_orders, activity_count=activity_count, reg_count=reg_count,
         satisfaction=satisfaction, ai_rate=ai_rate, order_done_rate=order_done_rate,
@@ -3325,6 +3342,54 @@ def api_dashboard():
         funnel=funnel, member_levels=member_levels, member_segments=member_segments,
         alerts=alerts, hot_activities=[dict(r) for r in acts]
     )
+    _DASHBOARD_CACHE['data'] = payload
+    _DASHBOARD_CACHE['ts'] = time.time()
+    conn.close()
+    return jsonify(ok=True, **payload)
+
+# ========== 触达：主动短信扫描 + 发送日志 ==========
+@app.route('/api/admin/notify/scan', methods=['POST'])
+@admin_required
+def api_admin_notify_scan():
+    """主动触达扫描：今日生日 / 周年庆 / 沉默会员 → 发短信（去重，当天不重复发）。"""
+    conn = get_db()
+    _ensure_tables(conn)
+    now = datetime.now()
+    today_md = now.strftime('%m-%d')
+    today = now.strftime('%Y-%m-%d')
+    birthday = [r['phone'] for r in conn.execute(
+        "SELECT phone FROM users WHERE role='user' AND birthday=?", (today_md,)).fetchall() if r['phone']]
+    anniv = [r['phone'] for r in conn.execute(
+        "SELECT phone FROM users WHERE role='user' AND anniversary=?", (today_md,)).fetchall() if r['phone']]
+    silent = []
+    for r in conn.execute("SELECT phone, last_visit, created_at FROM users WHERE role='user'").fetchall():
+        if not r['phone']:
+            continue
+        lv = _parse_dt(r['last_visit']) or _parse_dt(r['created_at'])
+        if lv and (now - lv).days >= SILENT_DAYS:
+            silent.append(r['phone'])
+    conn.close()
+    sent = 0
+    for phone in birthday:
+        if _push_sms(phone, 'birthday', '【海江新天地】生日快乐！今天专属权益日只为您开放：双倍积分+生日礼+指定商户满减券，今天不来就亏啦~', cycle=today):
+            sent += 1
+    for phone in anniv:
+        if _push_sms(phone, 'anniversary', '【海江新天地】会员周年庆！今天专属权益日，到店领周年礼盒+全场95折券，必须来哦~', cycle=today):
+            sent += 1
+    for phone in silent:
+        if _push_sms(phone, 'recall', '【海江新天地】您已很久没来啦，特为您留了张专属券，回来看看吧~', cycle=today):
+            sent += 1
+    return jsonify(ok=True, birthday=len(birthday), anniversary=len(anniv), silent=len(silent), sent=sent)
+
+@app.route('/api/admin/notify/log', methods=['GET'])
+@admin_required
+def api_admin_notify_log():
+    """最近 50 条触达发送记录。"""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT phone, kind, content, status, created_at FROM notification_log ORDER BY id DESC LIMIT 50").fetchall()
+    conn.close()
+    return jsonify(ok=True, logs=[dict(r) for r in rows])
 
 @app.route('/api/users', methods=['GET','POST'])
 @admin_required
@@ -4161,6 +4226,12 @@ def _migrate_schema(conn):
         conn.execute('''CREATE TABLE IF NOT EXISTS insight_actions (
             id INTEGER PRIMARY KEY AUTOINCREMENT, action_type TEXT NOT NULL,
             ref_key TEXT DEFAULT '', created_at TEXT DEFAULT '', note TEXT DEFAULT '')''')
+        # 触达：短信/通知发送日志（发送状态可追溯）
+        conn.execute('''CREATE TABLE IF NOT EXISTS notification_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT DEFAULT '',
+            channel TEXT DEFAULT 'sms', kind TEXT DEFAULT '', content TEXT DEFAULT '',
+            status TEXT DEFAULT '', provider_resp TEXT DEFAULT '', cycle TEXT DEFAULT '',
+            created_at TEXT DEFAULT '')''')
         conn.commit()
     except Exception:
         pass
@@ -4175,6 +4246,76 @@ def _push_message(conn, title, body, mtype='system', user_id=0, ref_type='', ref
         conn.commit()
     except Exception:
         pass
+
+# ========== 触达：统一通知服务（provider-agnostic；当前接短信，微信订阅消息待域名后接入） ==========
+def _log_notification(phone, channel, kind, content, status, resp='', cycle=''):
+    """落通知发送日志，发送状态可追溯。失败静默。"""
+    try:
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO notification_log (phone,channel,kind,content,status,provider_resp,cycle,created_at) VALUES (?,?,?,?,?,?,?,?)",
+            (phone, channel, kind, content, status, str(resp)[:500], cycle, now))
+        conn.commit()
+    except Exception:
+        pass
+
+def send_sms(phone, content):
+    """发短信。无密钥走 sandbox（仅返回 sandbox 状态，落库由调用方负责）；配置真实密钥则真实发送。
+    返回 {'status': 'sandbox'|'sent'|'failed', 'resp': ...}。"""
+    provider = os.environ.get('SMS_PROVIDER', 'sandbox').strip().lower()
+    ak = os.environ.get('SMS_ACCESS_KEY', '').strip()
+    sk = os.environ.get('SMS_ACCESS_SECRET', '').strip()
+    if provider in ('sandbox', '') or not ak or not sk:
+        return {'status': 'sandbox', 'resp': 'no-provider'}
+    if provider == 'aliyun':
+        return _sms_aliyun(phone, content, ak, sk)
+    return {'status': 'sandbox', 'resp': 'unsupported-provider:' + provider}
+
+def _sms_aliyun(phone, content, ak, sk):
+    """阿里云短信 SendSms；TemplateParam 传 {"content": 文案}，需配置 SMS_TPL_GENERAL。
+    任何异常均回退 sandbox，保证触达管道不中断。"""
+    try:
+        from urllib.parse import urlencode, quote
+        import hmac, hashlib as _hl
+        tpl = os.environ.get('SMS_TPL_GENERAL', '').strip()
+        sign = os.environ.get('SMS_SIGN', '海江新天地')
+        if not tpl:
+            return {'status': 'sandbox', 'resp': 'no-template'}
+        ts = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+        params = {
+            'AccessKeyId': ak, 'Action': 'SendSms', 'Format': 'JSON',
+            'PhoneNumbers': phone, 'RegionId': 'cn-hangzhou', 'SignName': sign,
+            'TemplateCode': tpl, 'TemplateParam': json.dumps({'content': content}, ensure_ascii=False),
+            'Timestamp': ts, 'Version': '2017-05-25', 'SignatureMethod': 'HMAC-SHA1',
+            'SignatureNonce': secrets.token_hex(16), 'SignatureVersion': '1.0',
+        }
+        keys = sorted(params.keys())
+        canon = '&'.join([quote(k, safe='') + '=' + quote(str(params[k]), safe='') for k in keys])
+        str_to_sign = 'GET&' + quote('/', safe='') + '&' + quote(canon, safe='')
+        sig = base64.b64encode(_hl.hmac.new((sk + '&').encode('utf-8'), str_to_sign.encode('utf-8'), _hl.sha1).digest()).decode()
+        params['Signature'] = sig
+        url = 'https://dysmsapi.aliyuncs.com/?' + urlencode(params)
+        r = _sp.run(['curl', '-s', '--max-time', '8', url], capture_output=True, text=True, timeout=12)
+        return {'status': 'sent', 'resp': r.stdout[:200]}
+    except Exception as e:
+        logger.error('sms_aliyun fail %s: %s', phone, e)
+        return {'status': 'sandbox', 'resp': 'fallback:' + str(e)[:200]}
+
+def _push_sms(phone, kind, content, cycle=''):
+    """对单个会员发短信并落库（带去重：同 phone+kind+cycle 已发则跳过）。返回是否发送。"""
+    try:
+        if cycle:
+            ex = get_db().execute(
+                "SELECT id FROM notification_log WHERE phone=? AND kind=? AND cycle=? AND status IN ('sent','sandbox')",
+                (phone, kind, cycle)).fetchone()
+            if ex:
+                return False
+    except Exception:
+        pass
+    res = send_sms(phone, content)
+    _log_notification(phone, 'sms', kind, content, res.get('status', 'sandbox'), res.get('resp', ''), cycle)
+    return True
 
 def _ensure_tables(conn):
     """确保数据表存在并填充初始数据。表结构(DDL)并发安全；初始数据写入每个进程只跑一次，避免 gunicorn 多 worker 并发竞争 SQLite 锁。"""

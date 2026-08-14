@@ -106,7 +106,7 @@
           <div class="qr-title">会员二维码</div>
           <div class="qr-body">
             <div class="qr-code-box">
-              <img v-if="qrSrc" :src="qrSrc" width="160" height="160" style="background:#1C1C1E;border-radius:8px" />
+              <img v-if="qrSrc" :src="qrSrc" loading="lazy" width="160" height="160" style="background:#1C1C1E;border-radius:8px" />
               <svg v-else width="160" height="160" viewBox="0 0 160 160" fill="none"><rect x="60" y="60" width="40" height="40" rx="4" stroke="#555" stroke-width="2"/><line x1="80" y1="68" x2="80" y2="92" stroke="#555" stroke-width="2"/><line x1="68" y1="80" x2="92" y2="80" stroke="#555" stroke-width="2"/></svg>
             </div>
             <div class="qr-user">{{ displayName }}</div>

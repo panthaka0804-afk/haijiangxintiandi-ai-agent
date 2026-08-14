@@ -206,7 +206,7 @@
       <!-- 引荐二维码 -->
       <van-dialog v-model:show="showQr" title="我的引荐二维码">
         <div style="padding: 16px;text-align:center;">
-          <img v-if="refQr" :src="refQr" style="width:200px;height:200px;border-radius:8px;" alt="二维码" />
+          <img v-if="refQr" :src="refQr" loading="lazy" style="width:200px;height:200px;border-radius:8px;" alt="二维码" />
           <p style="font-size:13px;color:#FFB877;margin-top:8px;text-shadow:0 -1px 1px rgba(0,0,0,0.4),0 1px 1px rgba(255,255,255,0.25);">引荐码：{{ gift.referral_code }}</p>
           <p style="font-size:12px;color:#999;">朋友扫码后手动填写引荐码即可建立邻里关系</p>
         </div>

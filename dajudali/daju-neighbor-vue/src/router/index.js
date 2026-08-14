@@ -67,6 +67,7 @@ const routes = [
       { path: 'feedback', name: 'admin-feedback', component: () => import('@/views/admin/FeedbackAdmin.vue'), meta: { title: '满意度评价' } },
       { path: 'insights', name: 'admin-insights', component: () => import('@/views/admin/InsightsAdmin.vue'), meta: { title: '运营洞察' } },
       { path: 'intelligence', name: 'admin-intelligence', component: () => import('@/views/admin/AdminIntelligence.vue'), meta: { title: '智能运营中心' } },
+      { path: 'notify', name: 'admin-notify', component: () => import('@/views/admin/NotifyAdmin.vue'), meta: { title: '触达中心' } },
     ],
   },
   { path: '/platform', name: 'platform', component: () => import('@/views/admin/Platform.vue'), meta: { title: '平台管理 - 海江新天地', requiresSuperAdmin: true } },

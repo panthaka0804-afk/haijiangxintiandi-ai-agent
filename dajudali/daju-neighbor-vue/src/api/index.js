@@ -45,6 +45,12 @@ export function getFeedbackSentiment() {
 export function getDailyReport() {
   return request('/api/admin/daily-report')
 }
+export function notifyScan() {
+  return request('/api/admin/notify/scan', { method: 'POST', body: '{}' })
+}
+export function getNotifyLog() {
+  return request('/api/admin/notify/log')
+}
 
 // ========== 后台智能运营中心 · 衍生功能（17 项） ==========
 export function getRecallCandidates() {

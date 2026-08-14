@@ -59,6 +59,9 @@
             <template v-else-if="t.key === '/admin/intelligence'">
               <rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 3v2M15 3v2M9 19v2M15 19v2M3 9h2M3 15h2M19 9h2M19 15h2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/>
             </template>
+            <template v-else-if="t.key === '/admin/notify'">
+              <path d="M3 11l16-7c1 0 1.5.8 1 1.7l-3.2 11.3c-.4 1.3-1.7 1.3-2.2.2L12 13l-3 3 1 4M3 11l4 1"/>
+            </template>
           </svg>
           <span class="nav-label" v-show="!collapsed">{{ t.label }}</span>
         </a>
@@ -107,6 +110,7 @@ const activeMenu = computed(() => route.path)
 
 const superTabs = [
   { key: '/admin/intelligence', label: '智能中心', color: '#FF7B2C' },
+  { key: '/admin/notify', label: '触达', color: '#E8809E' },
   { key: '/admin/dashboard', label: '看板', color: '#C4923A' },
   { key: '/admin/orders', label: '工单', color: '#D4A59A' },
   { key: '/admin/human-chat', label: '人工客服', color: '#9B4A3E' },
