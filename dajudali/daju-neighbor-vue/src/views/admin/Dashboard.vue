@@ -110,19 +110,19 @@ const activeMenu = computed(() => route.path)
 
 const superTabs = [
   { key: '/admin/intelligence', label: '智能中心', color: '#FF7B2C' },
-  { key: '/admin/notify', label: '触达', color: '#E8809E' },
   { key: '/admin/dashboard', label: '看板', color: '#C4923A' },
-  { key: '/admin/orders', label: '工单', color: '#D4A59A' },
-  { key: '/admin/human-chat', label: '人工客服', color: '#9B4A3E' },
-  { key: '/admin/feedback', label: '评价', color: '#C9956C' },
   { key: '/admin/insights', label: '运营洞察', color: '#8B8B90' },
-  { key: '/admin/kb', label: '知识库', color: '#6B6E64' },
   { key: '/admin/members', label: '会员', color: '#C4923A' },
+  { key: '/admin/users', label: '用户', color: '#6B6E64' },
+  { key: '/admin/feedback', label: '评价', color: '#C9956C' },
   { key: '/admin/activities', label: '活动', color: '#D4A59A' },
-  { key: '/admin/shops', label: '商户', color: '#9B4A3E' },
   { key: '/admin/offers', label: '优惠券', color: '#C9956C' },
   { key: '/admin/redeem', label: '积分商城', color: '#8B8B90' },
-  { key: '/admin/users', label: '用户', color: '#6B6E64' },
+  { key: '/admin/shops', label: '商户', color: '#9B4A3E' },
+  { key: '/admin/notify', label: '触达', color: '#E8809E' },
+  { key: '/admin/orders', label: '工单', color: '#D4A59A' },
+  { key: '/admin/human-chat', label: '人工客服', color: '#9B4A3E' },
+  { key: '/admin/kb', label: '知识库', color: '#6B6E64' },
   { key: '/admin/settings', label: '设置', color: '#C4923A' },
 ]
 
