@@ -6320,6 +6320,235 @@ def api_admin_insights():
     })
 
 
+# ========== 会员智能分层（RFM）+ 流失预警 ==========
+def ai_text(messages, max_tokens=400):
+    """调用 DeepSeek 生成文本；无 key 或异常时返回 None（交由调用方兜底）。"""
+    if not DS_API_KEY:
+        return None
+    try:
+        resp = ds_client.chat.completions.create(
+            model='deepseek-chat', messages=messages, max_tokens=max_tokens, temperature=0.5
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception:
+        return None
+
+def _rfm_scores(last_visit, freq, monetary):
+    """返回 (R,F,M 分数1-5, 分段, 流失风险等级)"""
+    now = datetime.now()
+    if last_visit:
+        try:
+            lv = datetime.strptime(last_visit, '%Y-%m-%d %H:%M:%S')
+        except Exception:
+            lv = None
+    else:
+        lv = None
+    d = (now - lv).days if lv else 999
+    R = 5 if d <= 7 else 4 if d <= 30 else 3 if d <= 90 else 2 if d <= 180 else 1
+    F = 1 if freq <= 0 else 2 if freq <= 2 else 3 if freq <= 5 else 4 if freq <= 10 else 5
+    M = 1 if monetary < 100 else 2 if monetary < 500 else 3 if monetary < 2000 else 4 if monetary < 5000 else 5
+    if R <= 2:
+        seg = '沉睡/流失风险'
+    elif F >= 4 and M >= 4:
+        seg = '高价值'
+    elif M >= 4 and F <= 2:
+        seg = '潜力客户'
+    elif R >= 4 and F <= 2 and M <= 2:
+        seg = '新客活跃'
+    else:
+        seg = '稳定常客'
+    churn = 'high' if (R <= 2 and F <= 1) else ('mid' if R <= 2 else 'low')
+    return R, F, M, seg, churn
+
+@app.route('/api/admin/rfm', methods=['GET'])
+@login_required
+def api_admin_rfm():
+    """会员 RFM 智能分层 + 流失预警（复用 member_consumptions / users）"""
+    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+        return jsonify(ok=False, error='权限不足')
+    tid = session.get('tenant_id', 1)
+    conn = get_db()
+    _ensure_tables(conn)
+    members = conn.execute(
+        "SELECT id, phone, display_name, membership_level, last_visit, points, preferred_category FROM users WHERE tenant_id=? AND role='user'",
+        (tid,)
+    ).fetchall()
+    cons = conn.execute(
+        "SELECT phone, COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS amt FROM member_consumptions GROUP BY phone"
+    ).fetchall()
+    cons_map = {c['phone']: (c['cnt'], c['amt']) for c in cons}
+    segments = {}
+    churn_high = 0
+    churn_mid = 0
+    rows = []
+    for m in members:
+        freq, mon = cons_map.get(m['phone'], (0, 0))
+        R, F, M, seg, churn = _rfm_scores(m['last_visit'], freq, mon)
+        segments[seg] = segments.get(seg, 0) + 1
+        if churn == 'high': churn_high += 1
+        elif churn == 'mid': churn_mid += 1
+        rows.append({
+            'phone': m['phone'], 'name': m['display_name'], 'level': m['membership_level'],
+            'last_visit': m['last_visit'], 'points': m['points'], 'pref': m['preferred_category'],
+            'R': R, 'F': F, 'M': M, 'segment': seg, 'churn': churn, 'freq': freq, 'monetary': round(mon, 2)
+        })
+    rows.sort(key=lambda x: (x['R'], x['F']))
+    conn.close()
+    return jsonify(ok=True, data={
+        'total': len(members),
+        'segments': segments,
+        'churn_high': churn_high,
+        'churn_mid': churn_mid,
+        'list': rows[:300]
+    })
+
+
+# ========== 评价情感分析（LLM 优先，词典兜底） ==========
+_SENT_NEG = ['差','慢','贵','难','投诉','垃圾','失望','退款','假','坑','乱','坏','差评','敷衍','冷漠','态度','卫生','脏','吵','卡','崩','无法','不能','不行','骗']
+_SENT_POS = ['好','棒','满意','赞','不错','喜欢','贴心','热情','快','方便','优秀','给力','舒服']
+_TOPIC_KW = {
+    '停车': ['停车','车位','泊车'],
+    '服务态度': ['态度','冷漠','热情','敷衍','服务'],
+    '活动': ['活动','体验','好玩','没意思'],
+    '商品': ['商品','货','质量','假','正品'],
+    '环境': ['环境','卫生','脏','吵','装修','空调'],
+    '价格': ['贵','便宜','价格','性价比','划算'],
+    '物流配送': ['配送','快递','外卖','送达','物流'],
+}
+
+def _sentiment_heuristic(text, rating):
+    t = (text or '').lower()
+    neg = sum(1 for k in _SENT_NEG if k in t)
+    pos = sum(1 for k in _SENT_POS if k in t)
+    if rating and rating <= 2:
+        sent = '投诉' if neg else '负面'
+    elif rating and rating >= 4:
+        sent = '正面' if (pos or not neg) else '中性'
+    elif neg > pos:
+        sent = '负面'
+    elif pos > neg:
+        sent = '正面'
+    else:
+        sent = '中性'
+    topics = [tp for tp, kws in _TOPIC_KW.items() if any(k in t for k in kws)]
+    return sent, (topics or ['其他'])
+
+@app.route('/api/admin/feedback/sentiment', methods=['GET'])
+@login_required
+def api_admin_feedback_sentiment():
+    """评价情感分析：正面/负面/投诉分布 + 主题聚类（LLM 优先，无 key 用词典兜底）"""
+    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db()
+    _ensure_tables(conn)
+    rows = conn.execute(
+        "SELECT id, feedback_text, feedback_type, rating, created_at FROM feedbacks ORDER BY id DESC LIMIT 200"
+    ).fetchall()
+    conn.close()
+    items = [{'id': r['id'], 'text': r['feedback_text'], 'type': r['feedback_type'], 'rating': r['rating'], 'created_at': r['created_at']} for r in rows]
+    engine = 'heuristic'
+    if DS_API_KEY and items:
+        batch = [f"[{it['id']}] 评分{it['rating']}：{it['text']}" for it in items if it['text']]
+        if batch:
+            prompt = ("你是商场评价分析助手。下面是若干顾客评价，每条带编号。请为每条判断情感(sentiment: 正面/负面/投诉/中性)和主题(topic: 从[停车,服务态度,活动,商品,环境,价格,物流配送,其他]选最相关的1个)。\n"
+                      "只返回 JSON 数组，元素格式：{\"id\":编号,\"sentiment\":\"...\",\"topic\":\"...\"}，不要其他文字。\n评价：\n" + "\n".join(batch))
+            out = ai_text([{'role':'system','content':'你是严谨的数据标注助手，只输出 JSON。'}, {'role':'user','content': prompt}], max_tokens=1500)
+            if out:
+                try:
+                    arr = json.loads(out)
+                    mapping = {str(x.get('id')): x for x in arr}
+                    for it in items:
+                        m = mapping.get(str(it['id']))
+                        if m:
+                            it['sentiment'] = m.get('sentiment', '中性')
+                            it['topic'] = m.get('topic', '其他')
+                        else:
+                            s, tp = _sentiment_heuristic(it['text'], it['rating'])
+                            it['sentiment'], it['topic'] = s, tp[0]
+                    engine = 'llm'
+                except Exception:
+                    for it in items:
+                        s, tp = _sentiment_heuristic(it['text'], it['rating'])
+                        it['sentiment'], it['topic'] = s, tp[0]
+    else:
+        for it in items:
+            s, tp = _sentiment_heuristic(it['text'], it['rating'])
+            it['sentiment'], it['topic'] = s, tp[0]
+    from collections import Counter
+    sent_cnt = Counter(it['sentiment'] for it in items)
+    topic_cnt = Counter(it['topic'] for it in items)
+    negatives = [it for it in items if it['sentiment'] in ('负面','投诉')]
+    return jsonify(ok=True, data={
+        'engine': engine,
+        'total': len(items),
+        'by_sentiment': dict(sent_cnt),
+        'by_topic': dict(topic_cnt),
+        'negatives': negatives[:50],
+    })
+
+
+# ========== AI 经营日报（LLM 生成，模板兜底） ==========
+@app.route('/api/admin/daily-report', methods=['GET'])
+@login_required
+def api_admin_daily_report():
+    """AI 经营日报：聚合会员/券/活动/评价，LLM 生成人话日报（无 key 用模板）"""
+    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+        return jsonify(ok=False, error='权限不足')
+    tid = session.get('tenant_id', 1)
+    conn = get_db()
+    _ensure_tables(conn)
+    today = datetime.now().strftime('%Y-%m-%d')
+    week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+    total_members = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user'", (tid,)).fetchone()[0]
+    new_week = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND created_at >= ?", (tid, week_ago)).fetchone()[0]
+    active_week = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND last_visit >= ?", (tid, week_ago)).fetchone()[0]
+    churn = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user' AND (last_visit IS NULL OR last_visit='' OR last_visit <= ?)", (tid, (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d %H:%M:%S'))).fetchone()[0]
+    coupons_total = conn.execute("SELECT COUNT(*) FROM coupon_claims").fetchone()[0]
+    coupons_today = conn.execute("SELECT COUNT(*) FROM coupon_claims WHERE DATE(claimed_at)=?", (today,)).fetchone()[0]
+    activities_open = conn.execute("SELECT COUNT(*) FROM activities WHERE status='open'").fetchone()[0]
+    fb_total = conn.execute("SELECT COUNT(*) FROM feedbacks").fetchone()[0]
+    fb_today = conn.execute("SELECT COUNT(*) FROM feedbacks WHERE DATE(created_at)=?", (today,)).fetchone()[0]
+    fb_avg = conn.execute("SELECT AVG(rating) FROM feedbacks").fetchone()[0]
+    low_fb = conn.execute("SELECT COUNT(*) FROM feedbacks WHERE rating <= 2").fetchone()[0]
+    conn.close()
+    metrics = {
+        'date': today,
+        'total_members': total_members,
+        'new_members_week': new_week,
+        'active_members_week': active_week,
+        'churn_risk_members': churn,
+        'coupons_total': coupons_total,
+        'coupons_today': coupons_today,
+        'activities_open': activities_open,
+        'feedback_total': fb_total,
+        'feedback_today': fb_today,
+        'feedback_avg': round(fb_avg, 2) if fb_avg else 0,
+        'low_feedback': low_fb,
+    }
+    engine = 'heuristic'
+    report = ''
+    if DS_API_KEY:
+        mp = metrics
+        prompt = (f"你是商场运营助手。以下是海江新天地今日/本周经营数据：\n"
+                  f"会员总数 {mp['total_members']}，本周新增 {mp['new_members_week']}，本周活跃 {mp['active_members_week']}，流失风险会员 {mp['churn_risk_members']}；\n"
+                  f"券累计领取 {mp['coupons_total']}，今日领取 {mp['coupons_today']}；进行中活动 {mp['activities_open']} 个；\n"
+                  f"评价总数 {mp['feedback_total']}，今日 {mp['feedback_today']}，平均评分 {mp['feedback_avg']}，差评(≤2分) {mp['low_feedback']} 条。\n"
+                  f"请写一段 150 字内的中文经营日报：先一句话总评，再 3 条具体发现与建议（用 • 开头）。只输出日报正文。")
+        out = ai_text([{'role':'system','content':'你是专业商场运营分析师。'}, {'role':'user','content': prompt}], max_tokens=400)
+        if out:
+            report = out
+            engine = 'llm'
+    if not report:
+        report = (
+            f"【海江新天地经营日报 {today}】\n"
+            f"• 会员总数 {total_members}，本周新增 {new_week}、活跃 {active_week}；流失风险会员 {churn} 人，建议针对沉默会员推送「回来看看」定向券。\n"
+            f"• 优惠券累计领取 {coupons_total} 张、今日 {coupons_today} 张；进行中活动 {activities_open} 个，可结合会员日加大曝光。\n"
+            f"• 评价均分 {metrics['feedback_avg']}（共 {fb_total} 条），今日 {fb_today} 条、差评 {low_fb} 条"
+            + (f"，请尽快跟进差评服务卡点。" if low_fb else "，口碑平稳。")
+        )
+    return jsonify(ok=True, data={'engine': engine, 'report': report, 'metrics': metrics})
+
+
 # ========== 健康检查 ==========
 @app.route('/api/health')
 def api_health():

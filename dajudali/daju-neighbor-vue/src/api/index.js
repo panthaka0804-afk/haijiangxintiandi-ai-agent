@@ -35,6 +35,17 @@ export function logout() {
   return request('/logout', { method: 'POST' })
 }
 
+// ========== 后台智能化模块 ==========
+export function getAdminRfm() {
+  return request('/api/admin/rfm')
+}
+export function getFeedbackSentiment() {
+  return request('/api/admin/feedback/sentiment')
+}
+export function getDailyReport() {
+  return request('/api/admin/daily-report')
+}
+
 // ========== 聊天 ==========
 export function sendChat(message, largeFont = false) {
   return request('/api/public/chat', {

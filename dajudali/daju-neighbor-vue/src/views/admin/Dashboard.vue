@@ -41,6 +41,9 @@
             <template v-else-if="t.key === '/admin/settings'">
               <circle cx="12" cy="12" r="2.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
             </template>
+            <template v-else-if="t.key === '/admin/intelligence'">
+              <rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 3v2M15 3v2M9 19v2M15 19v2M3 9h2M3 15h2M19 9h2M19 15h2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/>
+            </template>
           </svg>
           <span class="nav-label" v-show="!collapsed">{{ t.label }}</span>
         </a>
@@ -101,6 +104,7 @@ const superTabs = [
   { key: '/admin/redeem', label: '积分商城', color: '#8B8B90' },
   { key: '/admin/users', label: '用户', color: '#6B6E64' },
   { key: '/admin/settings', label: '设置', color: '#C4923A' },
+  { key: '/admin/intelligence', label: '智能中心', color: '#FF7B2C' },
 ]
 
 const currentTabLabel = computed(() => {

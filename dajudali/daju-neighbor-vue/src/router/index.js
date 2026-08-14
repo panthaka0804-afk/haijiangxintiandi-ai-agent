@@ -64,6 +64,7 @@ const routes = [
       { path: 'human-chat', name: 'admin-human-chat', component: () => import('@/views/admin/HumanChatAdmin.vue'), meta: { title: '人工客服' } },
       { path: 'feedback', name: 'admin-feedback', component: () => import('@/views/admin/FeedbackAdmin.vue'), meta: { title: '满意度评价' } },
       { path: 'insights', name: 'admin-insights', component: () => import('@/views/admin/InsightsAdmin.vue'), meta: { title: '运营洞察' } },
+      { path: 'intelligence', name: 'admin-intelligence', component: () => import('@/views/admin/AdminIntelligence.vue'), meta: { title: '智能运营中心' } },
     ],
   },
   { path: '/platform', name: 'platform', component: () => import('@/views/admin/Platform.vue'), meta: { title: '平台管理 - 海江新天地', requiresSuperAdmin: true } },
