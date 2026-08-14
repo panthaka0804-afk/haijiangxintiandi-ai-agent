@@ -4234,6 +4234,14 @@ migrate_db()
 
 import uuid
 
+# 活动表真实列（与线上 SQLite 一致；注意无 cover_url/created_at 两列）。
+# 历史 SELECT * + 硬编码错位 cols 导致 enrolled/status 等长错位 → 前端「累计报名」乱码。
+# 统一用显式列名 SELECT，杜绝依赖 SELECT * 的列顺序。
+_ACT_COLS = ['id','title','desc','venue','start_date','end_date','gradient','price','points_price','max_people','enrolled','status','offer_ids','budget']
+_ACT_SEL = 'id,title,"desc",venue,start_date,end_date,gradient,price,points_price,max_people,enrolled,status,offer_ids,budget'
+_SESS_COLS = ['id','activity_id','session_date','session_time','venue','max_people','enrolled']
+_SESS_SEL = 'id,activity_id,session_date,session_time,venue,max_people,enrolled'
+
 @app.route('/api/activities', methods=['GET'])
 def api_activities():
     '''活动列表'''
@@ -4243,16 +4251,15 @@ def api_activities():
     c = conn.cursor()
     now = datetime.now().strftime('%Y-%m-%d')
     if cat == 'ongoing':
-        c.execute('SELECT * FROM activities WHERE start_date <= ? AND end_date >= ? AND status="open" ORDER BY start_date', (now, now))
+        c.execute(f'SELECT {_ACT_SEL} FROM activities WHERE start_date <= ? AND end_date >= ? AND status="open" ORDER BY start_date', (now, now))
     elif cat == 'upcoming':
-        c.execute('SELECT * FROM activities WHERE start_date > ? AND status="open" ORDER BY start_date', (now,))
+        c.execute(f'SELECT {_ACT_SEL} FROM activities WHERE start_date > ? AND status="open" ORDER BY start_date', (now,))
     elif cat == 'past':
-        c.execute('SELECT * FROM activities WHERE end_date < ? ORDER BY end_date DESC', (now,))
+        c.execute(f'SELECT {_ACT_SEL} FROM activities WHERE end_date < ? ORDER BY end_date DESC', (now,))
     else:
-        c.execute('SELECT * FROM activities ORDER BY start_date')
+        c.execute(f'SELECT {_ACT_SEL} FROM activities ORDER BY start_date')
     rows = c.fetchall()
-    cols = ['id','title','desc','venue','start_date','end_date','gradient','cover_url','price','points_price','max_people','enrolled','status','created_at']
-    acts = [dict(zip(cols, r)) for r in rows]
+    acts = [dict(zip(_ACT_COLS, r)) for r in rows]
     conn.close()
     return jsonify(ok=True, data=acts)
 
@@ -4261,16 +4268,14 @@ def api_activity_detail(aid):
     '''活动详情+场次列表'''
     conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT * FROM activities WHERE id=?', (aid,))
+    c.execute(f'SELECT {_ACT_SEL} FROM activities WHERE id=?', (aid,))
     r = c.fetchone()
     if not r:
         conn.close()
         return jsonify(ok=False, error='活动不存在'), 404
-    cols = ['id','title','desc','venue','start_date','end_date','gradient','cover_url','price','points_price','max_people','enrolled','status','created_at']
-    act = dict(zip(cols, r))
-    c.execute('SELECT * FROM activity_sessions WHERE activity_id=? ORDER BY session_date, session_time', (aid,))
-    sess_cols = ['id','activity_id','session_date','session_time','venue','max_people','enrolled','status']
-    sessions = [dict(zip(sess_cols, s)) for s in c.fetchall()]
+    act = dict(zip(_ACT_COLS, r))
+    c.execute(f'SELECT {_SESS_SEL} FROM activity_sessions WHERE activity_id=? ORDER BY session_date, session_time', (aid,))
+    sessions = [dict(zip(_SESS_COLS, s)) for s in c.fetchall()]
     conn.close()
     return jsonify(ok=True, activity=act, sessions=sessions)
 
@@ -4292,23 +4297,24 @@ def api_activity_register():
     c = conn.cursor()
 
     # 查活动
-    c.execute('SELECT * FROM activities WHERE id=?', (aid,))
+    c.execute(f'SELECT {_ACT_SEL} FROM activities WHERE id=?', (aid,))
     act = c.fetchone()
     if not act:
         conn.close()
         return jsonify(ok=False, error='活动不存在'), 404
-    price = act[8] or 0
-    points_price = act[9] or 0
+    act = dict(zip(_ACT_COLS, act))
+    price = act['price'] or 0
+    points_price = act['points_price'] or 0
 
     # 查场次
-    c.execute('SELECT * FROM activity_sessions WHERE id=? AND activity_id=?', (sid, aid))
+    c.execute(f'SELECT {_SESS_SEL} FROM activity_sessions WHERE id=? AND activity_id=?', (sid, aid))
     sess = c.fetchone()
     if not sess:
         conn.close()
         return jsonify(ok=False, error='场次不存在'), 404
-    # 列顺序: id, activity_id, session_date, session_time, venue, max_people, enrolled, status
-    max_people = int(sess[5] or 0)
-    enrolled = int(sess[6] or 0)
+    sess = dict(zip(_SESS_COLS, sess))
+    max_people = int(sess['max_people'] or 0)
+    enrolled = int(sess['enrolled'] or 0)
     if enrolled + count > max_people:
         conn.close()
         return jsonify(ok=False, error=f'名额不足，剩余{max_people - enrolled}个位置'), 400
@@ -4390,7 +4396,7 @@ def api_my_registrations():
     rows = c.fetchall()
     cols = ['id','registration_no','activity_id','session_id','user_phone','user_name','people_count','amount','pay_method','points_used','status','ticket_code','created_at','activity_title','session_date','session_time']
     conn.close()
-    return jsonify(ok=True, data=[dict(zip(cols, r)) for r in rows])
+    return jsonify(ok=True, data=[dict(zip(_ACT_COLS, r)) for r in rows])
 
 @app.route('/api/activities/reschedule', methods=['POST'])
 def api_activity_reschedule():
@@ -4563,7 +4569,7 @@ def admin_registrations():
     rows = c.fetchall()
     cols = ['id','registration_no','activity_id','session_id','user_phone','user_name','people_count','amount','pay_method','points_used','status','ticket_code','created_at','updated_at','activity_title','session_date','session_time']
     conn.close()
-    return jsonify(ok=True, data=[dict(zip(cols, r)) for r in rows])
+    return jsonify(ok=True, data=[dict(zip(_ACT_COLS, r)) for r in rows])
 
 
 # ========== 安全响应头 ==========
