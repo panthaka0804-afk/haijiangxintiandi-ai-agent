@@ -490,30 +490,20 @@ async function handleLogin() {
         alert(bind.error || '绑定失败')
       }
     } else {
-      // 无微信会话 → 传统手机号登录
+      // 无微信会话 → 纯手机号登录（与 LoginSheet 一致：手机号即身份，不依赖脆弱的隐式密码，避免"用户名或密码错误"）
       const lookup = await http.post('/api/member/lookup', { phone: p })
       if (lookup.ok && lookup.member) {
-        const res = await http.post('/login', { username: 'm' + p, password: 'member' + p })
-        if (res.ok && res.user) {
-          loggedIn.value = true
-          memberInfo.value = lookup.member
-          displayName.value = res.user.display_name || '会员'
-          memberStore.setMember(buildMember({ phone: p, display_name: res.user.display_name, headimgurl: res.user.headimgurl, ...lookup.member }))
-        } else {
-          alert(res.error || '登录失败')
-        }
+        loggedIn.value = true
+        memberInfo.value = lookup.member
+        displayName.value = lookup.member.display_name || ('会员' + p.slice(-4))
+        memberStore.setMember(buildMember({ phone: p, ...lookup.member }))
       } else {
         const reg = await http.post('/api/member/register', { phone: p, display_name: '会员' + p.slice(-4) })
         if (reg.ok && reg.user) {
-          const res2 = await http.post('/login', { username: 'm' + p, password: 'member' + p })
-          if (res2.ok && res2.user) {
-            loggedIn.value = true
-            memberInfo.value = reg.user
-            displayName.value = '会员' + p.slice(-4)
-            memberStore.setMember(buildMember(reg.user))
-          } else {
-            alert(res2.error || '登录失败')
-          }
+          loggedIn.value = true
+          memberInfo.value = reg.user
+          displayName.value = '会员' + p.slice(-4)
+          memberStore.setMember(buildMember(reg.user))
         } else {
           alert(reg.error || '注册失败')
         }
