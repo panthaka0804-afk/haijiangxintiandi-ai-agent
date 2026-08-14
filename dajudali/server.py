@@ -1971,6 +1971,32 @@ def api_member_claim_coupon():
     conn.close()
     return jsonify(ok=True, data={'message': '领取成功！'})
 
+@app.route('/api/member/coupon/redeem', methods=['POST'])
+def api_member_coupon_redeem():
+    """会员核销已领取的优惠券（真实数据链路：写入 redeemed/redeem_amount/redeem_at）"""
+    data = request.get_json()
+    phone = (data.get('phone') or '').strip()
+    claim_id = data.get('claim_id') or data.get('id')
+    amount = float(data.get('amount') or 0)
+    if not phone or not claim_id:
+        return jsonify(ok=False, error='参数不完整')
+    conn = get_db()
+    _ensure_tables(conn)
+    row = conn.execute('SELECT * FROM coupon_claims WHERE id=? AND user_phone=?', (claim_id, phone)).fetchone()
+    if not row:
+        conn.close()
+        return jsonify(ok=False, error='未找到该券或不属于当前会员')
+    if row['redeemed']:
+        conn.close()
+        return jsonify(ok=False, error='该券已核销')
+    amt = amount if amount > 0 else (row['amount'] or 0)
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn.execute('UPDATE coupon_claims SET redeemed=1, redeem_amount=?, redeem_at=? WHERE id=?',
+                 (amt, now, claim_id))
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, data={'message': '核销成功', 'redeem_amount': amt})
+
 @app.route('/api/member/my-coupons', methods=['POST'])
 def api_member_my_coupons():
     """我的优惠券（含offers领取 + 积分兑换）"""
@@ -3846,11 +3872,12 @@ def admin_create_activity():
     data = request.get_json(force=True)
     conn = get_db()
     c = conn.cursor()
-    c.execute('''INSERT INTO activities (title,"desc",venue,start_date,end_date,gradient,price,points_price,max_people,enrolled,status)
-                 VALUES (?,?,?,?,?,?,?,?,?,0,"open")''',
+    c.execute('''INSERT INTO activities (title,"desc",venue,start_date,end_date,gradient,price,points_price,max_people,enrolled,status,offer_ids,budget)
+                 VALUES (?,?,?,?,?,?,?,?,?,0,"open",?,?)''',
               (data.get('title',''), data.get('desc',''), data.get('venue',''),
                data.get('start_date',''), data.get('end_date',''), data.get('gradient',''),
-               data.get('price',0), data.get('points_price',0), data.get('max_people',100)))
+               data.get('price',0), data.get('points_price',0), data.get('max_people',100),
+               data.get('offer_ids','') or '', data.get('budget',0) or 0))
     aid = c.lastrowid
     for s in data.get('sessions', []):
         c.execute('INSERT INTO activity_sessions (activity_id,session_date,session_time,venue,max_people,enrolled) VALUES (?,?,?,?,?,0)',
@@ -3867,7 +3894,7 @@ def admin_update_activity(aid):
     # 支持部分更新
     fields = []
     vals = []
-    for f in ['title','desc','venue','start_date','end_date','gradient','price','points_price','max_people','status']:
+    for f in ['title','desc','venue','start_date','end_date','gradient','price','points_price','max_people','status','offer_ids','budget']:
         if f in data:
             field_name = '"desc"' if f == 'desc' else f
             fields.append(f'{field_name}=?')
@@ -3979,6 +4006,13 @@ def _migrate_schema(conn):
         _col_add(conn, 'users', 'birthday', "TEXT DEFAULT ''")          # MM-DD
         _col_add(conn, 'users', 'anniversary', "TEXT DEFAULT ''")       # MM-DD（入会纪念日）
         _col_add(conn, 'users', 'preferred_category', "TEXT DEFAULT ''") # 历史消费偏好
+        # 真实数据链路：评价→商户 / 活动绑券+核销
+        _col_add(conn, 'feedbacks', 'shop_id', "TEXT DEFAULT ''")          # 关联真实商户(shops.id)
+        _col_add(conn, 'activities', 'offer_ids', "TEXT DEFAULT ''")       # 绑定的券 offer_id 列表(逗号分隔)
+        _col_add(conn, 'activities', 'budget', 'REAL DEFAULT 0')           # 活动预算成本(元)
+        _col_add(conn, 'coupon_claims', 'redeemed', 'INTEGER DEFAULT 0')   # 是否已核销
+        _col_add(conn, 'coupon_claims', 'redeem_amount', 'REAL DEFAULT 0') # 核销金额
+        _col_add(conn, 'coupon_claims', 'redeem_at', "TEXT DEFAULT ''")    # 核销时间
         conn.execute('''CREATE TABLE IF NOT EXISTS gift_cards (
             id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE NOT NULL,
             from_phone TEXT NOT NULL, from_level TEXT NOT NULL,
@@ -6168,13 +6202,14 @@ def api_feedback():
     phone = data.get('phone', '').strip()
     biz_type = data.get('biz_type', '').strip()
     order_id = data.get('order_id', '').strip()
+    shop_id = data.get('shop_id', '').strip()
     if not rating or rating < 1 or rating > 5:
         return jsonify(ok=False, error='请选择评分（1-5星）')
     conn = get_db()
     _ensure_tables(conn)
     conn.execute(
-        "INSERT INTO feedbacks (user_phone, feedback_type, biz_type, order_id, rating, feedback_text) VALUES (?,?,?,?,?,?)",
-        (phone, feedback_type, biz_type, order_id, rating, feedback_text)
+        "INSERT INTO feedbacks (user_phone, feedback_type, biz_type, order_id, shop_id, rating, feedback_text) VALUES (?,?,?,?,?,?,?)",
+        (phone, feedback_type, biz_type, order_id, shop_id, rating, feedback_text)
     )
     conn.commit()
     conn.close()
@@ -6771,19 +6806,27 @@ def api_admin_feedback_painpoints():
     ranked = [{'topic': t, 'count': c} for t, c in topic_cnt.most_common()]
     return jsonify(ok=True, data={'total': len(items), 'ranked': ranked, 'list': items[:50]})
 
-# 7) 商户 / 品类情感榜（按 biz_type 维度）
+# 7) 商户 / 品类情感榜（按真实商户 shop_id 维度，JOIN shops）
 @app.route('/api/admin/feedback/merchant-sentiment', methods=['GET'])
 @login_required
 def api_admin_feedback_merchant_sentiment():
     if not _admin_role_ok():
         return jsonify(ok=False, error='权限不足')
     conn = get_db(); _ensure_tables(conn)
-    rows = conn.execute("SELECT biz_type, rating, feedback_text FROM feedbacks").fetchall()
+    rows = conn.execute(
+        "SELECT f.shop_id, f.rating, f.feedback_text, s.name, s.category, s.floor, s.zone "
+        "FROM feedbacks f LEFT JOIN shops s ON f.shop_id = s.id").fetchall()
     conn.close()
     agg = {}
     for r in rows:
-        dim = (r['biz_type'] or '其他').strip() or '其他'
-        a = agg.setdefault(dim, {'dim': dim, 'cnt': 0, 'sum': 0, 'neg': 0})
+        sid = (r['shop_id'] or '').strip()
+        if not sid:
+            dim = '未关联商户'
+        else:
+            dim = r['name'] or r['shop_id']
+        a = agg.setdefault(sid or 'none', {'shop_id': sid, 'shop_name': dim,
+                                           'category': r['category'] or '', 'floor': r['floor'] or '',
+                                           'zone': r['zone'] or '', 'cnt': 0, 'sum': 0, 'neg': 0})
         a['cnt'] += 1
         a['sum'] += (r['rating'] or 0)
         s, tp = _sentiment_heuristic(r['feedback_text'], r['rating'])
@@ -6792,11 +6835,25 @@ def api_admin_feedback_merchant_sentiment():
     out = []
     for a in agg.values():
         avg = round(a['sum'] / a['cnt'], 2) if a['cnt'] else 0
-        out.append({'dim': a['dim'], 'cnt': a['cnt'], 'avg_rating': avg,
+        out.append({'shop_id': a['shop_id'], 'shop_name': a['shop_name'], 'category': a['category'],
+                    'floor': a['floor'], 'zone': a['zone'], 'cnt': a['cnt'], 'avg_rating': avg,
                     'neg_rate': round(a['neg'] / a['cnt'] * 100, 1) if a['cnt'] else 0,
                     'neg': a['neg']})
-    out.sort(key=lambda x: x['neg_rate'], reverse=True)
-    return jsonify(ok=True, data={'list': out})
+    out.sort(key=lambda x: (x['neg_rate'], x['cnt']), reverse=True)
+    # 品类维度汇总
+    cat_agg = {}
+    for o in out:
+        if o['shop_id'] == '未关联商户' or not o['category']:
+            continue
+        c = cat_agg.setdefault(o['category'], {'category': o['category'], 'cnt': 0, 'sum': 0, 'neg': 0})
+        c['cnt'] += o['cnt']; c['sum'] += o['cnt'] * o['avg_rating']; c['neg'] += o['neg']
+    cat_out = []
+    for c in cat_agg.values():
+        cat_out.append({'category': c['category'], 'cnt': c['cnt'],
+                        'avg_rating': round(c['sum'] / c['cnt'], 2) if c['cnt'] else 0,
+                        'neg_rate': round(c['neg'] / c['cnt'] * 100, 1) if c['cnt'] else 0})
+    cat_out.sort(key=lambda x: x['neg_rate'], reverse=True)
+    return jsonify(ok=True, data={'list': out, 'by_category': cat_out, 'real': True})
 
 # 8) 口碑周趋势 + NPS
 @app.route('/api/admin/feedback/trend', methods=['GET'])
@@ -6959,7 +7016,12 @@ def api_admin_activity_roi():
     if not _admin_role_ok():
         return jsonify(ok=False, error='权限不足')
     conn = get_db(); _ensure_tables(conn)
-    rows = conn.execute("SELECT id,title,venue,start_date,end_date,price,points_price,max_people,enrolled,status FROM activities").fetchall()
+    rows = conn.execute("SELECT id,title,venue,start_date,end_date,price,points_price,max_people,enrolled,status,offer_ids,budget FROM activities").fetchall()
+    # 该活动绑定券的真实核销金额
+    redeem_rows = conn.execute(
+        "SELECT offer_id, SUM(redeem_amount) AS amt, COUNT(*) AS cnt FROM coupon_claims "
+        "WHERE redeemed=1 AND offer_id IS NOT NULL AND offer_id<>'' GROUP BY offer_id").fetchall()
+    redeem_map = {r['offer_id']: {'amt': r['amt'] or 0, 'cnt': r['cnt'] or 0} for r in redeem_rows}
     conn.close()
     out = []
     for r in rows:
@@ -6967,14 +7029,23 @@ def api_admin_activity_roi():
         pp = r['points_price'] or 0
         enrolled = r['enrolled'] or 0
         maxp = r['max_people'] or 0
-        est = enrolled * max(price, pp * 0.1)
+        budget = r['budget'] or 0
+        offer_ids = [o.strip() for o in (r['offer_ids'] or '').split(',') if o.strip()]
+        real_redeem = sum(redeem_map.get(o, {'amt': 0})['amt'] for o in offer_ids)
+        redeem_cnt = sum(redeem_map.get(o, {'cnt': 0})['cnt'] for o in offer_ids)
+        # 真实成本：填了预算用预算；否则按报名人数×客单价估算成本
+        cost = budget if budget > 0 else (enrolled * max(price, pp * 0.1))
+        roi = round(real_redeem / cost, 2) if cost > 0 else 0
         out.append({
             'id': r['id'], 'title': r['title'], 'venue': r['venue'], 'status': r['status'],
             'enrolled': enrolled, 'max_people': maxp,
             'full_rate': round(enrolled / maxp * 100, 1) if maxp else 0,
-            'est_revenue': round(est, 0)
+            'budget': budget, 'offer_ids': offer_ids,
+            'redeem_amount': round(real_redeem, 0), 'redeem_count': redeem_cnt,
+            'roi': roi, 'cost': round(cost, 0),
+            'real': bool(offer_ids and real_redeem > 0)
         })
-    out.sort(key=lambda x: x['est_revenue'], reverse=True)
+    out.sort(key=lambda x: (x['real'], x['redeem_amount']), reverse=True)
     return jsonify(ok=True, data={'list': out})
 
 # 13) AI 推送文案生成
@@ -7095,19 +7166,50 @@ def api_admin_timeslot_heat():
     if not _admin_role_ok():
         return jsonify(ok=False, error='权限不足')
     conn = get_db(); _ensure_tables(conn)
-    rows = conn.execute("SELECT created_at FROM member_consumptions").fetchall()
-    conn.close()
     heat = [0] * 24
-    for r in rows:
-        ts = r['created_at'] or ''
-        if len(ts) >= 13:
+    total = 0
+    # 真实到店信号：会员签到(sign_in_records)、每日打卡(daily_checkins)、消费(member_consumptions)
+    sources = []
+    for sql, col in [
+        ("SELECT created_at FROM sign_in_records", 'created_at'),
+        ("SELECT created_at FROM member_consumptions", 'created_at'),
+    ]:
+        try:
+            rows = conn.execute(sql).fetchall()
+            for r in rows:
+                ts = r[col] or ''
+                if len(ts) >= 13:
+                    try:
+                        heat[int(ts[11:13])] += 1; total += 1
+                    except Exception:
+                        pass
+            sources.append(sql.split('FROM')[1].strip())
+        except Exception:
+            pass
+    # daily_checkins 可能用 sign_date/created_at，容错读取
+    try:
+        for col in ('created_at', 'sign_date'):
             try:
-                h = int(ts[11:13])
-                heat[h] += 1
+                rows = conn.execute(f"SELECT {col} FROM daily_checkins").fetchall()
+                for r in rows:
+                    ts = r[col] or ''
+                    if len(ts) >= 13:
+                        try:
+                            heat[int(ts[11:13])] += 1; total += 1
+                        except Exception:
+                            pass
+                sources.append('daily_checkins')
+                break
             except Exception:
-                pass
+                continue
+    except Exception:
+        pass
+    conn.close()
     peak = max(range(24), key=lambda i: heat[i]) if any(heat) else -1
-    return jsonify(ok=True, data={'heat': heat, 'peak_hour': peak})
+    return jsonify(ok=True, data={
+        'heat': heat, 'peak_hour': peak, 'total': total,
+        'sources': sources, 'real': True
+    })
 
 # ========== 健康检查 ==========
 @app.route('/api/health')

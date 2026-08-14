@@ -12,6 +12,13 @@
         </button>
       </div>
       <div class="rm-stars-label">{{ starLabel }}</div>
+      <div class="rm-shop" v-if="shops.length">
+        <label>关联商户（可选）</label>
+        <select v-model="shopId" class="rm-select">
+          <option value="">不关联</option>
+          <option v-for="s in shops" :key="s.id" :value="s.id">{{ s.floor || '' }}F · {{ s.name }}（{{ s.category }}）</option>
+        </select>
+      </div>
       <textarea v-model="text" placeholder="说说您的体验，帮助我们改进（可选）" class="rm-textarea" rows="2"></textarea>
       <div class="rm-actions">
         <button class="rm-btn-cancel" @click="close">稍后再说</button>
@@ -39,9 +46,20 @@ const emit = defineEmits(['close', 'submitted'])
 const rating = ref(0)
 const text = ref('')
 const submitting = ref(false)
+const shops = ref([])
+const shopId = ref('')
 
 const starLabels = ['', '很不满意', '不太满意', '一般', '满意', '非常满意']
 const starLabel = computed(() => rating.value ? starLabels[rating.value] : '点击星星评分')
+
+// 拉取真实商户列表，供评价关联具体商户（真实数据链路）
+async function loadShops() {
+  try {
+    const res = await fetch('/api/shops')
+    const d = await res.json()
+    if (d.ok) shops.value = d.data || []
+  } catch (e) { shops.value = [] }
+}
 
 function close() {
   emit('close')
@@ -58,6 +76,7 @@ async function submit() {
         feedback_type: props.feedbackType,
         biz_type: props.bizType,
         order_id: props.orderId,
+        shop_id: shopId.value,
         rating: rating.value,
         feedback_text: text.value,
         phone: props.phone
@@ -69,6 +88,8 @@ async function submit() {
     submitting.value = false
   }
 }
+
+loadShops()
 </script>
 
 <style scoped>
@@ -83,6 +104,9 @@ async function submit() {
 .rm-star:active { transform: scale(1.2); }
 .rm-stars-label { text-align: center; font-size: 13px; color: #FFB400; min-height: 18px; margin-bottom: 12px; }
 .rm-textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 10px; border: 1px solid #333; background: #151515; color: #ddd; font-size: 13px; resize: none; font-family: 'PingFang SC', sans-serif; }
+.rm-shop { margin-bottom: 10px; text-align: left; }
+.rm-shop label { display: block; font-size: 12px; color: #999; margin-bottom: 5px; }
+.rm-select { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 9px; border: 1px solid #333; background: #151515; color: #ddd; font-size: 13px; font-family: 'PingFang SC', sans-serif; }
 .rm-textarea::placeholder { color: #555; }
 .rm-actions { display: flex; gap: 10px; margin-top: 14px; }
 .rm-btn-cancel { flex: 1; padding: 11px 0; border-radius: 10px; border: 1px solid #333; background: #151515; color: #999; font-size: 14px; cursor: pointer; }

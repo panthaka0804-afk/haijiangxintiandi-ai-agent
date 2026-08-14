@@ -161,17 +161,29 @@
         </div>
       </section>
 
-      <!-- 商户情感榜 -->
+      <!-- 商户情感榜（真实商户维度） -->
       <section class="panel">
-        <div class="panel-head"><h2><span class="dot" style="background:#8B8B90"></span>商户 / 品类情感榜</h2></div>
+        <div class="panel-head"><h2><span class="dot" style="background:#8B8B90"></span>商户 / 品类情感榜</h2><span class="engine on">真实商户数据</span></div>
         <div class="tbl">
-          <div class="tr th"><span>维度</span><span>样本</span><span>均分</span><span>差评率</span></div>
+          <div class="tr th"><span>商户</span><span>位置</span><span>样本</span><span>均分</span><span>差评率</span></div>
           <div class="tr" v-for="(m, i) in merchantSent.list" :key="i">
-            <span>{{ m.dim }}</span><span>{{ m.cnt }}</span>
+            <span class="cell-member">{{ m.shop_name }}<i v-if="m.category"> · {{ m.category }}</i></span>
+            <span class="tag gray">{{ (m.floor && m.floor !== '') ? (m.floor + 'F') : '' }} {{ m.zone }}</span>
+            <span>{{ m.cnt }}</span>
             <span :style="{ color: m.avg_rating >= 4 ? '#67C23A' : m.avg_rating >= 3 ? '#E6A23C' : '#F56C6C' }">{{ m.avg_rating }}</span>
             <span :class="m.neg_rate >= 30 ? 'neg-rate hot' : 'neg-rate'">{{ m.neg_rate }}%</span>
           </div>
           <div v-if="!merchantSent.list.length" class="empty">暂无评价分类</div>
+        </div>
+        <h3 class="sub">品类维度</h3>
+        <div class="tbl">
+          <div class="tr th"><span>品类</span><span>样本</span><span>均分</span><span>差评率</span></div>
+          <div class="tr" v-for="(c, i) in merchantSent.by_category" :key="i">
+            <span>{{ c.category }}</span><span>{{ c.cnt }}</span>
+            <span :style="{ color: c.avg_rating >= 4 ? '#67C23A' : c.avg_rating >= 3 ? '#E6A23C' : '#F56C6C' }">{{ c.avg_rating }}</span>
+            <span :class="c.neg_rate >= 30 ? 'neg-rate hot' : 'neg-rate'">{{ c.neg_rate }}%</span>
+          </div>
+          <div v-if="!merchantSent.by_category || !merchantSent.by_category.length" class="empty">暂无品类汇总</div>
         </div>
       </section>
 
@@ -244,20 +256,22 @@
         </div>
       </section>
 
-      <!-- 活动 ROI -->
+      <!-- 活动 ROI（真实核销） -->
       <section class="panel">
-        <div class="panel-head"><h2><span class="dot" style="background:#C9956C"></span>活动 ROI 估算</h2></div>
+        <div class="panel-head"><h2><span class="dot" style="background:#C9956C"></span>活动 ROI（真实核销链路）</h2></div>
         <div class="tbl">
-          <div class="tr th"><span>活动</span><span>报名</span><span>满员率</span><span>预估产出</span><span>状态</span></div>
+          <div class="tr th"><span>活动</span><span>报名</span><span>满员率</span><span>核销金额</span><span>ROI</span><span>链路</span></div>
           <div class="tr" v-for="(a, i) in activityRoi.list" :key="i">
             <span class="cell-member">{{ a.title }}</span>
             <span>{{ a.enrolled }}/{{ a.max_people }}</span>
             <span :class="a.full_rate >= 80 ? 'ok' : ''">{{ a.full_rate }}%</span>
-            <span class="money">¥{{ a.est_revenue }}</span>
-            <span class="tag gray">{{ a.status }}</span>
+            <span class="money">¥{{ a.redeem_amount }}</span>
+            <span :style="a.roi > 0 ? 'color:#67C23A;font-weight:700' : ''">{{ a.roi }}</span>
+            <span class="tag" :style="{ '--c': a.real ? '#67C23A' : '#E6A23C' }">{{ a.real ? '真实核销' : '待绑券' }}</span>
           </div>
           <div v-if="!activityRoi.list.length" class="empty">暂无活动</div>
         </div>
+        <p class="hint">ROI = 绑定券核销金额 ÷ 活动预算（未填预算时按 报名×客单价 估算成本）。在「活动管理」绑定优惠券并填报预算后，此处显示真实核销数据。</p>
       </section>
     </div>
 
@@ -315,15 +329,16 @@
         </div>
       </section>
 
-      <!-- 时段冷热 -->
+      <!-- 时段冷热（真实到店数据） -->
       <section class="panel">
-        <div class="panel-head"><h2><span class="dot" style="background:#6B6E64"></span>时段冷热热力（消费记录）</h2><span class="engine" v-if="heat.peak_hour >= 0">高峰 {{ heat.peak_hour }}:00</span></div>
+        <div class="panel-head"><h2><span class="dot" style="background:#6B6E64"></span>时段冷热热力（真实到店）</h2><span class="engine on" v-if="heat.peak_hour >= 0">高峰 {{ heat.peak_hour }}:00 · 样本 {{ heat.total }}</span></div>
         <div class="heat-row">
           <div class="hc" v-for="(h, i) in heat.heat" :key="i">
             <span class="hc-bar"><i :style="{ height: (h / (Math.max(...heat.heat) || 1) * 100) + '%' }"></i></span>
             <span class="hc-lab">{{ i }}</span>
           </div>
         </div>
+        <p class="hint">数据来源：会员签到、每日打卡、消费记录（真实到店行为），共 {{ heat.total }} 条。</p>
       </section>
     </div>
   </div>
@@ -574,4 +589,5 @@ function fmtDate(s) { if (!s) return ''; return String(s).slice(0, 16) }
 .hc-lab { font-size: 10px; color: #888; }
 
 .empty { color: #777; font-size: 13px; padding: 14px 0; text-align: center; }
+.hint { color: #888; font-size: 12px; line-height: 1.6; margin: 10px 2px 2px; padding: 8px 12px; background: rgba(255,255,255,0.04); border-radius: 8px; border-left: 3px solid #6B6E64; }
 </style>
