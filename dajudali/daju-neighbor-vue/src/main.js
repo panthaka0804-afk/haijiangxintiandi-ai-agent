@@ -9,6 +9,8 @@ import 'element-plus/dist/index.css'
 import 'vant/lib/index.css'
 // 全局样式（暗黑主题变量 + 字体规范 + UI库暗色覆盖），须在三方库之后以覆盖默认值
 import './style.css'
+// 后台管理多彩主题增强层（叠加在暗色底层之上）
+import './admin-theme.css'
 
 const app = createApp(App)
 

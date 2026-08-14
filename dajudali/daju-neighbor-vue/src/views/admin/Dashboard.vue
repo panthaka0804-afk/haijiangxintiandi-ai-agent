@@ -7,7 +7,7 @@
         <span class="logo-short" v-else>海江</span>
       </div>
       <nav class="sidebar-nav">
-        <a v-for="t in superTabs" :key="t.key" class="nav-item" :class="{ active: activeMenu === t.key }" :href="'/vue' + t.key" @click.prevent="router.push(t.key)">
+        <a v-for="t in superTabs" :key="t.key" class="nav-item" :class="{ active: activeMenu === t.key }" :style="{ '--c': t.color }" :href="'/vue' + t.key" @click.prevent="router.push(t.key)">
           <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <template v-if="t.key === '/admin/dashboard'">
               <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
@@ -88,19 +88,19 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile))
 const activeMenu = computed(() => route.path)
 
 const superTabs = [
-  { key: '/admin/dashboard', label: '看板' },
-  { key: '/admin/orders', label: '工单' },
-  { key: '/admin/human-chat', label: '人工客服' },
-  { key: '/admin/feedback', label: '评价' },
-  { key: '/admin/insights', label: '运营洞察' },
-  { key: '/admin/kb', label: '知识库' },
-  { key: '/admin/members', label: '会员' },
-  { key: '/admin/activities', label: '活动' },
-  { key: '/admin/shops', label: '商户' },
-  { key: '/admin/offers', label: '优惠券' },
-  { key: '/admin/redeem', label: '积分商城' },
-  { key: '/admin/users', label: '用户' },
-  { key: '/admin/settings', label: '设置' },
+  { key: '/admin/dashboard', label: '看板', color: '#C4923A' },
+  { key: '/admin/orders', label: '工单', color: '#D4A59A' },
+  { key: '/admin/human-chat', label: '人工客服', color: '#9B4A3E' },
+  { key: '/admin/feedback', label: '评价', color: '#C9956C' },
+  { key: '/admin/insights', label: '运营洞察', color: '#8B8B90' },
+  { key: '/admin/kb', label: '知识库', color: '#6B6E64' },
+  { key: '/admin/members', label: '会员', color: '#C4923A' },
+  { key: '/admin/activities', label: '活动', color: '#D4A59A' },
+  { key: '/admin/shops', label: '商户', color: '#9B4A3E' },
+  { key: '/admin/offers', label: '优惠券', color: '#C9956C' },
+  { key: '/admin/redeem', label: '积分商城', color: '#8B8B90' },
+  { key: '/admin/users', label: '用户', color: '#6B6E64' },
+  { key: '/admin/settings', label: '设置', color: '#C4923A' },
 ]
 
 const currentTabLabel = computed(() => {
@@ -116,54 +116,88 @@ function handleLogout() {
 </script>
 
 <style scoped>
-.admin-layout { display: flex; min-height: 100vh; background: #1A1A1A; }
+.admin-layout { display: flex; min-height: 100vh; background: #000000; }
 
-/* ====== 左侧黑色栏 ====== */
+/* ====== 左侧栏 ====== */
 .sidebar {
   position: fixed; top: 0; left: 0; bottom: 0;
-  background: #1A1A1A;
+  background: #0A0A0A;
   display: flex; flex-direction: column;
   transition: width 0.25s;
   z-index: 50;
   overflow: hidden;
+  border-right: 1px solid #1A1A1A;
 }
-.sidebar-header { padding: 20px 16px 16px; text-align: center; white-space: nowrap; }
-.sidebar-header .logo { color: #999999; font-size: 16px; font-weight: 800; }
-.sidebar-header .logo-short { color: #999999; font-size: 16px; font-weight: 800; display: block; }
+.sidebar-header { padding: 22px 16px 18px; text-align: center; white-space: nowrap; }
+.sidebar-header .logo {
+  font-size: 17px; font-weight: 800;
+  background: linear-gradient(135deg, #FF7B2C, #E85D04);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.sidebar-header .logo-short {
+  font-size: 17px; font-weight: 800; display: block;
+  background: linear-gradient(135deg, #FF7B2C, #E85D04);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
 
-.sidebar-nav { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.sidebar-nav { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
 .nav-item {
+  position: relative;
   display: flex; align-items: center; gap: 12px;
   padding: 12px 14px; border-radius: 10px;
-  color: #A7A7A7; text-decoration: none; font-size: 14px;
+  color: #8A8A8A; text-decoration: none; font-size: 14px;
   transition: all 0.2s; white-space: nowrap; cursor: pointer;
 }
-.nav-item:hover { background: #1A1A1A; color: #e0e0e0; }
-.nav-item.active { background: #1A1A1A; color: #999999; font-weight: 600; }
-.nav-icon { flex-shrink: 0; }
-.nav-label { overflow: hidden; }
+.nav-item .nav-icon { flex-shrink: 0; color: var(--c, #C4923A); transition: color 0.2s; }
+.nav-item .nav-label { overflow: hidden; transition: color 0.2s; }
+.nav-item:hover { background: rgba(255, 255, 255, 0.06); }
+.nav-item:hover .nav-icon, .nav-item:hover .nav-label { color: var(--c, #C4923A); }
+.nav-item.active {
+  background: linear-gradient(135deg, rgba(255, 123, 44, 0.92), rgba(232, 93, 4, 0.92));
+  color: #fff; font-weight: 600;
+  box-shadow: 0 6px 16px rgba(232, 93, 4, 0.35);
+}
+.nav-item.active .nav-icon, .nav-item.active .nav-label { color: #fff; }
+.nav-item.active::before {
+  content: ''; position: absolute; left: 0; top: 10px; bottom: 10px;
+  width: 3px; background: #fff; border-radius: 0 2px 2px 0;
+}
 
 .sidebar-footer { padding: 12px; }
-.collapse-btn { width: 36px; height: 36px; background: #1A1A1A; border: none; color: #A7A7A7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+.collapse-btn {
+  width: 36px; height: 36px; background: #1A1A1A; border: none;
+  color: #888; border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; margin: 0 auto;
+  transition: all 0.2s;
+}
+.collapse-btn:hover { background: #242424; color: #FF7B2C; }
 
 /* ====== 右侧内容区 ====== */
-.main-area { flex: 1; display: flex; flex-direction: column; background: #1A1A1A; transition: margin-left 0.25s; min-height: 100vh; }
+.main-area { flex: 1; display: flex; flex-direction: column; background: #000000; transition: margin-left 0.25s; min-height: 100vh; }
 .top-bar {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 24px; height: 56px;
-  background: #1A1A1A; border-bottom: 1px solid #eee;
+  background: #0A0A0A; border-bottom: 1px solid #1A1A1A;
   flex-shrink: 0;
 }
-.top-title { font-size: 16px; font-weight: 700; color: #F0F0F0; }
+.top-title {
+  font-size: 16px; font-weight: 700;
+  background: linear-gradient(135deg, #FF7B2C, #E85D04);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
 .top-right { display: flex; align-items: center; gap: 12px; }
 .user-name { font-size: 13px; color: #999; }
 .logout-btn {
-  padding: 6px 16px; border: 1px solid #e0e0e0; border-radius: 8px;
-  background: #1A1A1A; color: #BBBBBB; font-size: 13px; cursor: pointer;
+  padding: 6px 16px; border: 1px solid rgba(255, 123, 44, 0.5); border-radius: 8px;
+  background: transparent; color: #FF7B2C; font-size: 13px; cursor: pointer;
+  transition: all 0.2s;
 }
-.logout-btn:hover { border-color: #767676; color: #BBBBBB; }
+.logout-btn:hover { background: rgba(255, 123, 44, 0.14); border-color: #FF7B2C; color: #FF8F47; }
 
-.main-body { flex: 1; padding: 20px; background: #1A1A1A; overflow-y: auto; }
+.main-body { flex: 1; padding: 20px; background: #000000; overflow-y: auto; }
 
 @media (max-width: 767px) {
   .sidebar { width: 0 !important; }

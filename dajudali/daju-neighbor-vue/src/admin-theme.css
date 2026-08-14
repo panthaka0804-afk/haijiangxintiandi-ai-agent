@@ -1,0 +1,72 @@
+/* ================================================================
+   后台管理 — 多彩主题增强层（叠加在 style.css 暗色底层之上）
+   视觉语言对齐 C 端：纯黑底 + 品牌橙主色 + 多彩层次
+   色板：金黄 / 浅粉棕 / 深红棕 / 浅橙棕 / 灰紫 / 深灰绿
+   ================================================================ */
+:root {
+  /* C 端多彩色板 */
+  --mc-gold: #C4923A;     /* 金黄 */
+  --mc-pink: #D4A59A;     /* 浅粉棕 */
+  --mc-red: #9B4A3E;      /* 深红棕 */
+  --mc-orange: #C9956C;   /* 浅橙棕 */
+  --mc-purple: #8B8B90;   /* 灰紫 */
+  --mc-green: #6B6E64;    /* 深灰绿 */
+  /* 品牌橙（亮于 C 端主橙，用于强调/高亮） */
+  --mc-brand: #FF7B2C;
+  --mc-brand2: #E85D04;
+}
+
+/* ========== 后台主按钮：品牌橙渐变 ========== */
+.admin-layout .el-button--primary {
+  background: linear-gradient(135deg, #FF7B2C, #E85D04) !important;
+  border: none !important;
+  box-shadow: 0 6px 16px rgba(232, 93, 4, 0.30) !important;
+  color: #fff !important;
+}
+.admin-layout .el-button--primary:hover {
+  background: linear-gradient(135deg, #FF8F47, #F26A0E) !important;
+  box-shadow: 0 8px 22px rgba(232, 93, 4, 0.42) !important;
+}
+.admin-layout .el-button--primary:active {
+  background: linear-gradient(135deg, #E85D04, #C84E02) !important;
+}
+
+/* ========== 后台标签：多彩（呼应 C 端色板） ========== */
+.admin-layout .el-tag { background: rgba(201, 149, 108, 0.16) !important; color: #E7C3A6 !important; border-color: rgba(201, 149, 108, 0.42) !important; }
+.admin-layout .el-tag--success { background: rgba(107, 110, 100, 0.20) !important; color: #A9BBA0 !important; border-color: rgba(107, 110, 100, 0.45) !important; }
+.admin-layout .el-tag--warning { background: rgba(196, 146, 58, 0.18) !important; color: #E3BB6A !important; border-color: rgba(196, 146, 58, 0.42) !important; }
+.admin-layout .el-tag--danger { background: rgba(155, 74, 62, 0.22) !important; color: #DD8E7C !important; border-color: rgba(155, 74, 62, 0.48) !important; }
+.admin-layout .el-tag--info { background: rgba(139, 139, 144, 0.18) !important; color: #BABABA !important; border-color: rgba(139, 139, 144, 0.42) !important; }
+
+/* ========== 子页标题：左侧品牌橙条 ========== */
+.admin-layout .page-header h3 {
+  color: #F2F2F2 !important;
+  border-left: 4px solid #FF7B2C;
+  padding-left: 12px;
+  line-height: 1.2;
+}
+
+/* ========== 输入框聚焦：品牌橙描边 ========== */
+.admin-layout .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px #FF7B2C inset, 0 0 0 3px rgba(255, 123, 44, 0.18) !important;
+}
+
+/* ========== 多彩卡片工具类（供后台子页复用） ========== */
+.mc-card {
+  position: relative;
+  background: #161616;
+  border: 1px solid #2A2A2A;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.mc-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--mc-bar, #FF7B2C), transparent);
+}
+.mc-card-gold::before { --mc-bar: #C4923A; }
+.mc-card-pink::before { --mc-bar: #D4A59A; }
+.mc-card-red::before { --mc-bar: #9B4A3E; }
+.mc-card-orange::before { --mc-bar: #C9956C; }
+.mc-card-purple::before { --mc-bar: #8B8B90; }
+.mc-card-green::before { --mc-bar: #6B6E64; }
