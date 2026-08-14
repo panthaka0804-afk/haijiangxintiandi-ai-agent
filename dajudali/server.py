@@ -6535,59 +6535,290 @@ def api_admin_kb_pending_dismiss(pid):
     conn.close()
     return jsonify(ok=True, data={'message': '已忽略'})
 
+# ========== 运营洞察聚合辅助函数 ==========
+def _parse_dt(s):
+    """容错解析日期字符串 -> datetime 或 None"""
+    if not s:
+        return None
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+        try:
+            return datetime.strptime(s, fmt)
+        except Exception:
+            pass
+    return None
+
+def _daily_agg(conn, table, date_col, days, agg='COUNT(*)', where=''):
+    """返回最近 days 天每日聚合序列 [{date, value}]（缺失补 0）。table/agg/where 均为内部常量。"""
+    now = datetime.now()
+    start = now - timedelta(days=days - 1)
+    start_str = start.strftime('%Y-%m-%d 00:00:00')
+    w = f" AND {where}" if where else ""
+    sql = f"SELECT strftime('%Y-%m-%d', {date_col}) AS d, {agg} FROM {table} WHERE {date_col} >= ?{w} GROUP BY d"
+    m = {}
+    try:
+        for r in conn.execute(sql, (start_str,)).fetchall():
+            m[r['d']] = r[1] or 0
+    except Exception:
+        pass
+    series = []
+    d = start.date()
+    while d <= now.date():
+        ds = d.strftime('%Y-%m-%d')
+        series.append({'date': ds, 'value': m.get(ds, 0)})
+        d += timedelta(days=1)
+    return series
+
+def _window_total(conn, table, date_col, days, agg='COUNT(*)', where=''):
+    """返回 (当前 days 窗口合计, 上一周期合计)，用于环比。table/agg/where 均为内部常量。"""
+    now = datetime.now()
+    start = now - timedelta(days=days)
+    prev_start = now - timedelta(days=2 * days)
+    w = f" AND {where}" if where else ""
+    cur = conn.execute(f"SELECT {agg} FROM {table} WHERE {date_col} >= ?{w}", (start.strftime('%Y-%m-%d %H:%M:%S'),)).fetchone()[0] or 0
+    prev = conn.execute(f"SELECT {agg} FROM {table} WHERE {date_col} >= ? AND {date_col} < ?{w}", (prev_start.strftime('%Y-%m-%d %H:%M:%S'), start.strftime('%Y-%m-%d %H:%M:%S'))).fetchone()[0] or 0
+    return cur, prev
+
 @app.route('/api/admin/insights', methods=['GET'])
 @login_required
 def api_admin_insights():
-    """运营洞察：高频投诉/建议/未命中问题汇总，形成优化建议"""
+    """运营洞察（全量）：趋势/转化/预警/健康度 + 基础诊断，均基于真实表实时聚合。
+    支持 ?days=7|30|90（默认 30）。"""
     if session.get('role') not in ('admin','super_admin','tenant_admin'):
         return jsonify(ok=False, error='权限不足')
+    try:
+        days = int(request.args.get('days', 30))
+    except Exception:
+        days = 30
+    if days not in (7, 30, 90):
+        days = 30
     conn = get_db()
     _ensure_tables(conn)
-    # 高频投诉（按分类统计）
-    complaints = conn.execute(
-        "SELECT COUNT(*) as cnt FROM work_orders WHERE type='投诉建议'"
-    ).fetchone()['cnt']
-    complaint_categories = conn.execute(
-        "SELECT title FROM work_orders WHERE type='投诉建议' ORDER BY id DESC LIMIT 200"
-    ).fetchall()
-    # 高频未命中问题（kb_pending）
-    pending = conn.execute(
-        "SELECT question, COUNT(*) as cnt FROM kb_pending WHERE status='pending' GROUP BY question ORDER BY cnt DESC LIMIT 10"
-    ).fetchall()
+    now = datetime.now()
+    start = now - timedelta(days=days - 1)
+    start_str = start.strftime('%Y-%m-%d 00:00:00')
+    prev_start = now - timedelta(days=2 * days)
+
+    # ---------- 基础诊断（保留旧结构） ----------
+    complaints = conn.execute("SELECT COUNT(*) FROM work_orders WHERE type='投诉建议'").fetchone()[0]
+    complaint_categories = conn.execute("SELECT title FROM work_orders WHERE type='投诉建议' ORDER BY id DESC LIMIT 200").fetchall()
+    pending = conn.execute("SELECT question, COUNT(*) as cnt FROM kb_pending WHERE status='pending' GROUP BY question ORDER BY cnt DESC LIMIT 10").fetchall()
     pending_total = conn.execute("SELECT COUNT(*) FROM kb_pending WHERE status='pending'").fetchone()[0]
-    # 低分评价
-    low_feedback = conn.execute(
-        "SELECT * FROM feedbacks WHERE rating <= 3 ORDER BY id DESC LIMIT 20"
-    ).fetchall()
-    conn.close()
-    # 统计投诉类别频次
+    low_feedback = conn.execute("SELECT * FROM feedbacks WHERE rating <= 3 ORDER BY id DESC LIMIT 20").fetchall()
     from collections import Counter
     cat_counter = Counter()
     for c in complaint_categories:
         t = c['title'] or ''
-        # 标题格式: 投诉 - 级别 - 类别
         parts = t.split(' - ')
         if len(parts) >= 3:
             cat_counter[parts[2]] += 1
         elif len(parts) == 2:
             cat_counter[parts[1]] += 1
     top_complaints = [{'category': k, 'count': v} for k, v in cat_counter.most_common(8)]
+
+    # ========== A. 投诉/评分趋势 + 环比 ==========
+    complaint_trend = _daily_agg(conn, 'work_orders', 'created_at', days, where="type='投诉建议'")
+    rating_rows = conn.execute(
+        "SELECT strftime('%Y-%m-%d',created_at) d, AVG(rating) avg_r, SUM(CASE WHEN rating<=3 THEN 1 ELSE 0 END) low, COUNT(*) c FROM feedbacks WHERE created_at >= ? GROUP BY d",
+        (start_str,)).fetchall()
+    rating_map = {r['d']: r for r in rating_rows}
+    rating_trend = []
+    d = start.date()
+    while d <= now.date():
+        ds = d.strftime('%Y-%m-%d')
+        rr = rating_map.get(ds)
+        rating_trend.append({'date': ds, 'avg': round(rr['avg_r'], 2) if rr and rr['avg_r'] else None, 'low': rr['low'] if rr else 0})
+        d += timedelta(days=1)
+    comp_cur, comp_prev = _window_total(conn, 'work_orders', 'created_at', days, where="type='投诉建议'")
+    r_cur = conn.execute("SELECT AVG(rating), SUM(CASE WHEN rating<=3 THEN 1 ELSE 0 END), COUNT(*) FROM feedbacks WHERE created_at >= ?", (start.strftime('%Y-%m-%d %H:%M:%S'),)).fetchone()
+    r_prev = conn.execute("SELECT AVG(rating), SUM(CASE WHEN rating<=3 THEN 1 ELSE 0 END), COUNT(*) FROM feedbacks WHERE created_at >= ? AND created_at < ?", (prev_start.strftime('%Y-%m-%d %H:%M:%S'), start.strftime('%Y-%m-%d %H:%M:%S'))).fetchone()
+    rating_cur = round(r_cur[0], 2) if r_cur[0] else 0
+    rating_prev = round(r_prev[0], 2) if r_prev[0] else 0
+    lowrate_cur = round(r_cur[1] / r_cur[2] * 100, 1) if r_cur[2] else 0
+    lowrate_prev = round(r_prev[1] / r_prev[2] * 100, 1) if r_prev[2] else 0
+
+    # ========== B. 会员新增/活跃/沉默趋势 ==========
+    members = conn.execute("SELECT phone, last_visit, created_at FROM users WHERE role='user'").fetchall()
+    silent = 0
+    for m in members:
+        lv = _parse_dt(m['last_visit']) or _parse_dt(m['created_at'])
+        ds_since = (now - lv).days if lv else 9999
+        if ds_since > 90:
+            silent += 1
+    silent_total = len(members)
+    silent_ratio = round(silent / silent_total * 100, 1) if silent_total else 0
+    # 每日活跃（签到/打卡/消费去重）+ 每日新增
+    active_map = {}
+    for table, col, mode, pcol in [('sign_in_records', 'sign_date', 'date', 'user_phone'),
+                                   ('daily_checkins', 'checkin_date', 'date', 'phone'),
+                                   ('member_consumptions', 'created_at', 'dt', 'phone')]:
+        if mode == 'date':
+            for r in conn.execute(f"SELECT {col}, {pcol} FROM {table} WHERE {col} >= ?", (start.strftime('%Y-%m-%d'),)).fetchall():
+                d0 = (r[col] or '')[:10]
+                if d0:
+                    active_map.setdefault(d0, set()).add(r[pcol])
+        else:
+            for r in conn.execute(f"SELECT strftime('%Y-%m-%d',{col}) d, {pcol} FROM {table} WHERE {col} >= ?", (start_str,)).fetchall():
+                d0 = (r['d'] or '')[:10]
+                if d0:
+                    active_map.setdefault(d0, set()).add(r[pcol])
+    new_map = {}
+    for r in conn.execute("SELECT strftime('%Y-%m-%d',created_at) d, phone FROM users WHERE role='user' AND created_at >= ?", (start_str,)).fetchall():
+        new_map.setdefault(r['d'], set()).add(r['phone'])
+    member_trend = []
+    d = start.date()
+    while d <= now.date():
+        ds = d.strftime('%Y-%m-%d')
+        member_trend.append({'date': ds, 'active': len(active_map.get(ds, set())), 'new': len(new_map.get(ds, set()))})
+        d += timedelta(days=1)
+    # 沉默会员趋势：每个统计日，last_visit/created_at 早于 (该日-90天) 的人数
+    silent_trend = []
+    d = start.date()
+    while d <= now.date():
+        ds = d.strftime('%Y-%m-%d')
+        thr = datetime(d.year, d.month, d.day) - timedelta(days=90)
+        cnt = 0
+        for m in members:
+            lv = _parse_dt(m['last_visit']) or _parse_dt(m['created_at'])
+            if lv and lv < thr:
+                cnt += 1
+        silent_trend.append({'date': ds, 'value': cnt})
+        d += timedelta(days=1)
+
+    # ========== C. 营销转化漏斗（券：发放→领取→核销 + 活动转化） ==========
+    issued = conn.execute("SELECT COUNT(*) FROM offers WHERE status='active'").fetchone()[0]
+    cr = conn.execute("SELECT COUNT(*), COALESCE(SUM(CASE WHEN redeemed=1 THEN 1 ELSE 0 END),0) FROM coupon_claims WHERE claimed_at >= ?", (start_str,)).fetchone()
+    claimed = cr[0] or 0
+    redeemed = cr[1] or 0
+    claim_rate = round(claimed / issued * 100, 1) if issued else 0
+    redeem_rate = round(redeemed / claimed * 100, 1) if claimed else 0
+    act_rows = conn.execute("SELECT COUNT(*), COALESCE(SUM(enrolled),0), COALESCE(SUM(CASE WHEN offer_ids IS NOT NULL AND offer_ids<>'' THEN 1 ELSE 0 END),0) FROM activities").fetchone()
+    act_count = act_rows[0] or 0
+    act_enrolled = act_rows[1] or 0
+    act_with_offer = act_rows[2] or 0
+    act_offer_ids = set()
+    for s in conn.execute("SELECT offer_ids FROM activities WHERE offer_ids IS NOT NULL AND offer_ids<>''").fetchall():
+        for o in (s[0] or '').split(','):
+            o = o.strip()
+            if o:
+                act_offer_ids.add(o)
+    act_redeemed = 0
+    if act_offer_ids:
+        ph = ','.join('?' * len(act_offer_ids))
+        act_redeemed = conn.execute(f"SELECT COUNT(*) FROM coupon_claims WHERE redeemed=1 AND offer_id IN ({ph})", tuple(act_offer_ids)).fetchone()[0] or 0
+    funnel = {'issued': issued, 'claimed': claimed, 'redeemed': redeemed,
+              'claim_rate': claim_rate, 'redeem_rate': redeem_rate,
+              'act_count': act_count, 'act_enrolled': act_enrolled,
+              'act_with_offer': act_with_offer, 'act_redeemed': act_redeemed}
+
+    # ========== D. AI 命中率 / 知识库健康度 ==========
+    kb_total = conn.execute("SELECT COUNT(*) FROM kb_pending").fetchone()[0]
+    kb_imported = conn.execute("SELECT COUNT(*) FROM kb_pending WHERE status='imported'").fetchone()[0]
+    kb_dismissed = conn.execute("SELECT COUNT(*) FROM kb_pending WHERE status='dismissed'").fetchone()[0]
+    kb_handled = kb_imported + kb_dismissed
+    kb_hit_rate = round(kb_handled / kb_total * 100, 1) if kb_total else 100
+    kb_pending_trend = _daily_agg(conn, 'kb_pending', 'created_at', days)
+    esc_rows = conn.execute("SELECT strftime('%Y-%m-%d',created_at) d, COUNT(*) c FROM human_chat_messages WHERE work_order_id IS NOT NULL AND created_at >= ? GROUP BY d", (start_str,)).fetchall()
+    esc_map = {r['d']: r['c'] for r in esc_rows}
+    esc_trend = []
+    d = start.date()
+    while d <= now.date():
+        ds = d.strftime('%Y-%m-%d')
+        esc_trend.append({'date': ds, 'value': esc_map.get(ds, 0)})
+        d += timedelta(days=1)
+    kb_health = {'total': kb_total, 'pending': pending_total, 'imported': kb_imported,
+                 'dismissed': kb_dismissed, 'hit_rate': kb_hit_rate,
+                 'pending_trend': kb_pending_trend, 'escalation_trend': esc_trend}
+
+    # ========== F. GMV / 客单价 / 人均趋势 + 环比 ==========
+    gmv_trend = _daily_agg(conn, 'member_consumptions', 'created_at', days, agg='COALESCE(SUM(amount),0)')
+    gmv_rows = conn.execute("SELECT strftime('%Y-%m-%d',created_at) d, SUM(amount) s, COUNT(*) c, COUNT(DISTINCT phone) p FROM member_consumptions WHERE created_at >= ? GROUP BY d", (start_str,)).fetchall()
+    gmv_map = {r['d']: r for r in gmv_rows}
+    aov_trend = []
+    percap_trend = []
+    d = start.date()
+    while d <= now.date():
+        ds = d.strftime('%Y-%m-%d')
+        g = gmv_map.get(ds)
+        aov_trend.append({'date': ds, 'value': round(g['s'] / g['c'], 1) if g and g['c'] else 0})
+        percap_trend.append({'date': ds, 'value': round(g['s'] / g['p'], 1) if g and g['p'] else 0})
+        d += timedelta(days=1)
+    gmv_cur, gmv_prev = _window_total(conn, 'member_consumptions', 'created_at', days, agg='COALESCE(SUM(amount),0)')
+    ac = conn.execute("SELECT COALESCE(SUM(amount),0), COUNT(*) FROM member_consumptions WHERE created_at >= ?", (start.strftime('%Y-%m-%d %H:%M:%S'),)).fetchone()
+    ap = conn.execute("SELECT COUNT(DISTINCT phone) FROM member_consumptions WHERE created_at >= ?", (start.strftime('%Y-%m-%d %H:%M:%S'),)).fetchone()[0] or 0
+    aov_cur = round(ac[0] / ac[1], 1) if ac[1] else 0
+    percap_cur = round(ac[0] / ap, 1) if ap else 0
+
+    # ========== E. 智能预警雷达 ==========
+    alerts = []
+    merch = conn.execute("SELECT shop_id, COUNT(*) c, SUM(CASE WHEN rating<=3 THEN 1 ELSE 0 END) low FROM feedbacks WHERE created_at >= ? GROUP BY shop_id HAVING c>=2", (start_str,)).fetchall()
+    for r in merch:
+        nr = round((r['low'] or 0) / r['c'] * 100, 0)
+        if nr >= 50:
+            sid = r['shop_id'] or '未知商户'
+            alerts.append({'level': 'high', 'title': f'{sid} 差评率突增',
+                           'detail': f'近 {days} 天 {r["c"]} 条评价中 {r["low"]} 条差评（{nr:.0f}%）'})
+    comp_vals = [x['value'] for x in complaint_trend]
+    avg_comp = sum(comp_vals) / len(comp_vals) if comp_vals else 0
+    for x in complaint_trend:
+        if avg_comp > 0 and x['value'] >= 2 * avg_comp and x['value'] > 0:
+            alerts.append({'level': 'mid', 'title': f'{x["date"]} 投诉量异常',
+                           'detail': f'当日 {x["value"]} 起投诉，约为均值（{avg_comp:.1f}）的 {x["value"]/avg_comp:.1f} 倍'})
+    if claimed > 0 and redeem_rate < 5:
+        alerts.append({'level': 'mid', 'title': '券核销率偏低',
+                       'detail': f'近 {days} 天领取 {claimed} 张，核销率仅 {redeem_rate}%，需排查核销链路/引导'})
+    if silent_ratio >= 40:
+        alerts.append({'level': 'high' if silent_ratio >= 60 else 'mid', 'title': '沉默会员占比偏高',
+                       'detail': f'超 90 天未到店会员 {silent} 人，占 {silent_ratio}%，建议定向召回'})
+    if pending_total >= 5:
+        alerts.append({'level': 'mid', 'title': '知识库待补充积压',
+                       'detail': f'尚有 {pending_total} 条未命中问题待入库，影响 AI 应答准确率'})
+    alerts.sort(key=lambda a: 0 if a['level'] == 'high' else 1 if a['level'] == 'mid' else 2)
+
+    # ========== G. 可点选建议（跳转对应模块/动作） ==========
+    avg_low = round(sum(f['rating'] for f in low_feedback) / len(low_feedback), 1) if low_feedback else 0
     suggestions = []
     if top_complaints:
         top = top_complaints[0]
-        suggestions.append(f'高频投诉集中在「{top["category"]}」类（{top["count"]}次），建议优先优化该环节服务')
+        suggestions.append({'text': f'高频投诉集中在「{top["category"]}」类（{top["count"]}次），建议优先优化该环节服务', 'target': '/admin/intelligence', 'tab': '口碑运营'})
     if pending_total:
-        suggestions.append(f'知识库有 {pending_total} 条未命中问题待补充，建议运营尽快整理入库以提升 AI 应答准确率')
+        suggestions.append({'text': f'知识库有 {pending_total} 条未命中问题待补充，建议尽快整理入库提升 AI 准确率', 'action': 'scroll-kb'})
     if low_feedback:
-        avg_low = round(sum(f['rating'] for f in low_feedback) / len(low_feedback), 1)
-        suggestions.append(f'近期有 {len(low_feedback)} 条低分评价（均分 {avg_low}），建议复盘服务卡点')
+        suggestions.append({'text': f'近期有 {len(low_feedback)} 条低分评价（均分 {avg_low}），建议复盘服务卡点', 'target': '/admin/intelligence', 'tab': '口碑运营'})
+    if silent_ratio >= 40:
+        suggestions.append({'text': f'{silent} 位会员已超 90 天未到店，建议发起「回来看看」定向召回', 'target': '/admin/intelligence', 'tab': '会员运营'})
+    if claimed > 0 and redeem_rate < 20:
+        suggestions.append({'text': f'券核销率仅 {redeem_rate}%，建议优化核销引导或在「优惠券」中调整策略', 'target': '/admin/offers'})
+
+    conn.close()
     return jsonify(ok=True, data={
         'complaint_total': complaints,
         'top_complaints': top_complaints,
         'pending_total': pending_total,
         'top_pending': [{'question': p['question'], 'count': p['cnt']} for p in pending],
         'low_feedback_count': len(low_feedback),
-        'suggestions': suggestions
+        # A 投诉/评分趋势
+        'complaint_trend': complaint_trend,
+        'rating_trend': rating_trend,
+        'comp_cur': comp_cur, 'comp_prev': comp_prev,
+        'rating_cur': rating_cur, 'rating_prev': rating_prev,
+        'lowrate_cur': lowrate_cur, 'lowrate_prev': lowrate_prev,
+        # B 会员趋势
+        'member_trend': member_trend,
+        'silent_count': silent, 'silent_ratio': silent_ratio, 'silent_trend': silent_trend,
+        'member_total': silent_total,
+        # C 漏斗
+        'funnel': funnel,
+        # D KB 健康度
+        'kb_health': kb_health,
+        # F GMV
+        'gmv_trend': gmv_trend, 'aov_trend': aov_trend, 'percap_trend': percap_trend,
+        'gmv_cur': gmv_cur, 'gmv_prev': gmv_prev, 'aov_cur': aov_cur, 'percap_cur': percap_cur,
+        # E 预警
+        'alerts': alerts,
+        # G 可点建议
+        'suggestions': suggestions,
+        # H 时间范围
+        'days': days,
     })
 
 
