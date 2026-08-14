@@ -117,17 +117,50 @@ ds_client = OpenAI(api_key=DS_API_KEY, base_url='https://api.deepseek.com', http
 QWEN_API_KEY = os.environ.get('QWEN_API_KEY', '') or DS_API_KEY
 
 # ========== DB ==========
+import threading as _threading
+_thread_local = _threading.local()
+
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    # 多进程容灾：WAL 模式 + 忙等待，避免 gunicorn 多 worker 并发写锁库
-    try:
-        conn.execute('PRAGMA journal_mode=WAL')
-        conn.execute('PRAGMA busy_timeout=30000')
-        conn.execute('PRAGMA synchronous=NORMAL')
-    except Exception:
-        pass
+    # 按线程复用连接：gunicorn gthread 下线程常驻，避免每请求新建 SQLite 连接的开销；
+    # 若连接已被上层 handler 关闭(closed)则自动重建，安全无副作用。
+    conn = getattr(_thread_local, 'conn', None)
+    if conn is None or getattr(conn, 'closed', 1):
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        # 多进程容灾：WAL 模式 + 忙等待，避免 gunicorn 多 worker 并发写锁库
+        try:
+            conn.execute('PRAGMA journal_mode=WAL')
+            conn.execute('PRAGMA busy_timeout=30000')
+            conn.execute('PRAGMA synchronous=NORMAL')
+        except Exception:
+            pass
+        _thread_local.conn = conn
+    else:
+        # 复用前回滚任何残留事务，防止未提交事务长期持有写锁
+        try:
+            conn.rollback()
+        except Exception:
+            pass
     return conn
+
+
+# ========== 热点只读接口的简单内存 TTL 缓存 ==========
+# 目标：把商户/活动等高频只读接口的 DB 查询挡在内存里（默认 10s），
+# 峰值下大幅减少 SQLite 读压力与排队延迟。写操作 TTL 短，编辑最多 10s 后生效。
+import time as _cache_time
+_API_CACHE = {}
+
+def _cache_get(key):
+    v = _API_CACHE.get(key)
+    if v and v[0] > _cache_time.time():
+        return v[1]
+    return None
+
+def _cache_set(key, payload, ttl=10):
+    _API_CACHE[key] = (_cache_time.time() + ttl, payload)
+
+def _cache_clear():
+    _API_CACHE.clear()
 
 # ========== Auth ==========
 def login_required(f):
@@ -4249,6 +4282,10 @@ def api_activities():
     '''活动列表'''
     tid = request.args.get('tenant_id', 1)
     cat = request.args.get('cat', 'all')
+    cache_key = 'activities:%s' % cat
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
     conn = get_db()
     c = conn.cursor()
     now = datetime.now().strftime('%Y-%m-%d')
@@ -4263,7 +4300,9 @@ def api_activities():
     rows = c.fetchall()
     acts = [dict(zip(_ACT_COLS, r)) for r in rows]
     conn.close()
-    return jsonify(ok=True, data=acts)
+    payload = {'ok': True, 'data': acts}
+    _cache_set(cache_key, payload, ttl=10)
+    return jsonify(payload)
 
 @app.route('/api/activities/<int:aid>', methods=['GET'])
 def api_activity_detail(aid):
@@ -4717,6 +4756,17 @@ def _migrate_schema(conn):
         _col_add(conn, 'conversations', 'content', "TEXT DEFAULT ''")
         _col_add(conn, 'conversations', 'intent', "TEXT DEFAULT ''")
         _col_add(conn, 'conversations', 'answered', 'INTEGER DEFAULT 1')
+        # 性能：热点查询列建索引（活动按起止/状态、订单按状态、商户按楼层、会员按手机号）
+        for _idx in (
+            'CREATE INDEX IF NOT EXISTS idx_activities_start_status ON activities(start_date, status)',
+            'CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)',
+            'CREATE INDEX IF NOT EXISTS idx_shops_floor ON shops(floor)',
+            'CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)',
+        ):
+            try:
+                conn.execute(_idx)
+            except Exception:
+                pass
         conn.commit()
     except Exception as e:
         print(f'[MIGRATE ERROR] {e}')
@@ -5875,10 +5925,15 @@ def api_shops():
                  data.get('coupon_amount') or 0, (data.get('coupon_expire') or '').strip(),
                  data.get('features') or ''))
             conn.commit()
+            _cache_clear()
             return jsonify(ok=True, data={'id': sid})
         except Exception as e:
             conn.close()
             return jsonify(ok=False, error='保存失败：' + str(e))
+    cache_key = 'shops:list'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
     rows = conn.execute('SELECT * FROM shops ORDER BY CAST(floor AS INTEGER), zone, name').fetchall()
     conn.close()
     result = []
@@ -5888,7 +5943,9 @@ def api_shops():
         d['features'] = d['features'].split(',') if d.get('features') else []
         d['has_coupon'] = bool(d.get('has_coupon'))
         result.append(d)
-    return jsonify(ok=True, data=result)
+    payload = {'ok': True, 'data': result}
+    _cache_set(cache_key, payload, ttl=10)
+    return jsonify(payload)
 
 
 @app.route('/api/shops/<sid>', methods=['PUT', 'DELETE'])
