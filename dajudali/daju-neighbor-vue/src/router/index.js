@@ -21,6 +21,7 @@ const routes = [
   { path: '/redeem', name: 'redeem', component: () => import('@/views/c-end/RedeemPage.vue'), meta: { title: '积分商城 - 海江新天地' } },
   { path: '/redeem/:id', name: 'redeem-detail', component: () => import('@/views/c-end/RedeemDetail.vue'), meta: { title: '兑换详情 - 海江新天地' } },
   { path: '/member', name: 'member', component: () => import('@/views/c-end/MemberPortal.vue'), meta: { title: '会员中心 - 海江新天地' } },
+  { path: '/exclusive', name: 'exclusive', component: () => import('@/views/c-end/ExclusivePage.vue'), meta: { title: '会员专属 - 海江新天地' } },
   { path: '/community', name: 'community', component: () => import('@/views/c-end/CommunityFeed.vue'), meta: { title: '邻里圈 - 海江新天地' } },
   { path: '/group-buy', name: 'group-buy', component: () => import('@/views/c-end/GroupBuy.vue'), meta: { title: '邻里拼团 - 海江新天地' } },
   { path: '/interest-club', name: 'interest-club', component: () => import('@/views/c-end/InterestClub.vue'), meta: { title: '兴趣社 - 海江新天地' } },

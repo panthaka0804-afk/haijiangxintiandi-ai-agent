@@ -113,8 +113,17 @@
       <GrowthCenter />
     </div>
 
-    <!-- ── 会员专属内容（新品试吃 / 内测名额 / 专属体验） ── -->
-    <MemberExclusive />
+    <!-- ── 会员专属入口（独立界面：新品试吃 / 内测名额 / 专属体验） ── -->
+    <div class="excl-entry" @click="go('/exclusive')">
+      <div class="excl-entry-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l4 4 5-6 5 6 4-4v10H3z"/><path d="M3 17h18"/></svg>
+      </div>
+      <div class="excl-entry-text">
+        <div class="excl-entry-title">会员专属</div>
+        <div class="excl-entry-sub">新品试吃 · 内测名额 · 专属体验</div>
+      </div>
+      <div class="excl-entry-arrow">进入 ›</div>
+    </div>
 
 
     <!-- ── 功能快捷入口（9 宫格，每格一色，与首页统一） ── -->
@@ -156,7 +165,6 @@ import { useMemberStore } from '@/stores/member'
 import { showSuccessToast, showFailToast } from 'vant'
 import { getCheckinStatus, doCheckin } from '@/api'
 import GrowthCenter from '@/components/c-end/GrowthCenter.vue'
-import MemberExclusive from '@/components/c-end/MemberExclusive.vue'
 import mtnPu from '@/assets/mountain-pu.png'
 import mtnYin from '@/assets/mountain-yin.png'
 const emit = defineEmits(['switchTab'])
@@ -563,4 +571,35 @@ async function doSignCard() {
 .s-item :last-child { margin-left: auto; }
 
 .spacer { height: 24px; }
+
+/* ── 会员专属入口卡（跳转独立界面） ── */
+.excl-entry {
+  position: relative;
+  margin: 0 16px 18px;
+  background-color: #C9956C;
+  border: 3px solid #A87C48;
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex; align-items: center; gap: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
+}
+.excl-entry:active { transform: scale(0.985); }
+.excl-entry::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: inset 0 2px 3px rgba(255,255,255,0.30), inset 0 -3px 6px rgba(0,0,0,0.20);
+  background-image: linear-gradient(135deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.06) 24%, rgba(255,255,255,0) 48%, rgba(0,0,0,0.16) 100%);
+}
+.excl-entry-icon {
+  position: relative; z-index: 1;
+  width: 50px; height: 50px; border-radius: 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.16);
+  box-shadow: inset 1px 1px 2px rgba(255,255,255,0.30), inset -1px -1px 3px rgba(0,0,0,0.20);
+}
+.excl-entry-icon svg { stroke: #FFFFFF; filter: drop-shadow(0 0.4px 0.5px rgba(0,0,0,0.45)); }
+.excl-entry-text { position: relative; z-index: 1; flex: 1; min-width: 0; }
+.excl-entry-title { font-size: 17px; font-weight: 800; color: #fff; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.excl-entry-sub { font-size: 12px; color: #fff; margin-top: 3px; opacity: 0.95; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.2); }
+.excl-entry-arrow { position: relative; z-index: 1; flex-shrink: 0; font-size: 14px; font-weight: 700; color: #fff; text-shadow: 0 -1px 1px rgba(0,0,0,0.4); }
 </style>

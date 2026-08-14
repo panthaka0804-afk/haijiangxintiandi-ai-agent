@@ -1,6 +1,6 @@
 <template>
   <div class="member-exclusive">
-    <div class="section-label">
+    <div class="section-label" v-if="!hideHeader">
       <span class="section-en">Member Exclusive</span>
       <span class="section-cn">会员专属</span>
     </div>
@@ -46,6 +46,11 @@ import { useRouter } from 'vue-router'
 import { useMemberStore } from '@/stores/member'
 import { showSuccessToast, showFailToast } from 'vant'
 import { getMemberExclusives, claimExclusive } from '@/api'
+
+const props = defineProps({
+  // 在独立页面内使用时隐藏版块标题（标题由页面顶部导航栏承担）
+  hideHeader: { type: Boolean, default: false },
+})
 
 const router = useRouter()
 const memberStore = useMemberStore()
