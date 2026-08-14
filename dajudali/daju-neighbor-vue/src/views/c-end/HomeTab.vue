@@ -528,6 +528,10 @@ async function handleLogin() {
 async function wxQuickRegister() {
   if (!agreed.value) return alert('请先同意用户协议')
   if (!isWechat) return alert('请在微信中打开此页面使用一键注册')
+  // 微信网页授权不支持用 IP 作回调域名（会报 10003）；当前为 IP 访问时改为友好提示，避免必败跳转
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(window.location.hostname)) {
+    return alert('微信登录需通过已备案域名访问（微信不支持用 IP 作授权回调域名）。请使用绑定的域名打开本页，或先用手机号登录。')
+  }
   loading.value = true
   const redirectUri = encodeURIComponent(window.location.origin + '/vue/')
   const wxAuthUrl = 'https://open.weixin.qq.com/connect/oauth2/authorize?appid=' + WX_APPID + '&redirect_uri=' + redirectUri + '&response_type=code&scope=snsapi_userinfo&state=wxreg#wechat_redirect'
