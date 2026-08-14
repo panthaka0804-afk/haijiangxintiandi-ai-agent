@@ -321,6 +321,20 @@ export function createUser(data) {
   })
 }
 
+export function updateUser(id, data) {
+  return request('/api/users', {
+    method: 'PUT',
+    body: JSON.stringify({ ...data, id })
+  })
+}
+
+export function deleteUser(id) {
+  return request('/api/users', {
+    method: 'DELETE',
+    body: JSON.stringify({ id })
+  })
+}
+
 export function getTenants() {
   return request('/api/tenants')
 }

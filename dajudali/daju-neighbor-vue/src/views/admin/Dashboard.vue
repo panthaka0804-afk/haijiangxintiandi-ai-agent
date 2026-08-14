@@ -7,7 +7,7 @@
         <span class="logo-short" v-else>海江</span>
       </div>
       <nav class="sidebar-nav">
-        <a v-for="t in superTabs" :key="t.key" class="nav-item" :class="{ active: activeMenu === t.key }" :style="{ '--c': t.color }" :href="'/vue' + t.key" @click.prevent="router.push(t.key)">
+        <a v-for="t in visibleTabs" :key="t.key" class="nav-item" :class="{ active: activeMenu === t.key }" :style="{ '--c': t.color }" :href="'/vue' + t.key" @click.prevent="router.push(t.key)">
           <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <template v-if="t.key === '/admin/dashboard'">
               <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
@@ -126,8 +126,31 @@ const superTabs = [
   { key: '/admin/settings', label: '设置', color: '#C4923A' },
 ]
 
+// 菜单 → 所需权限域（无则所有员工可见）
+const TAB_PERM = {
+  '/admin/users': 'user.manage',
+  '/admin/settings': 'system.manage',
+  '/admin/activities': 'marketing.view',
+  '/admin/offers': 'marketing.view',
+  '/admin/redeem': 'marketing.view',
+  '/admin/shops': 'marketing.view',
+  '/admin/orders': 'order.view',
+  '/admin/human-chat': 'cs.workbench',
+  '/admin/notify': 'notify.view',
+  '/admin/kb': 'kb.view',
+  '/admin/feedback': 'feedback.view',
+  '/admin/insights': 'insights.view',
+  '/admin/members': 'member.view',
+  '/admin/dashboard': 'dashboard.view',
+  '/admin/intelligence': 'dashboard.view',
+}
+const visibleTabs = computed(() => {
+  const perms = userStore.user?.perms || []
+  return superTabs.filter(t => !TAB_PERM[t.key] || perms.includes(TAB_PERM[t.key]))
+})
+
 const currentTabLabel = computed(() => {
-  const t = superTabs.find(t => t.key === route.path)
+  const t = (visibleTabs.value.length ? visibleTabs.value : superTabs).find(t => t.key === route.path)
   return t ? t.label : '管理后台'
 })
 

@@ -143,7 +143,7 @@ def admin_required(f):
     def d(*a,**k):
         if not session.get('user_id'):
             return jsonify(ok=False, error='Please login'), 401
-        if session.get('role') not in ('tenant_admin','super_admin'):
+        if session.get('role') not in STAFF_ROLES:
             return jsonify(ok=False, error='Permission denied'), 403
         return f(*a,**k)
     return d
@@ -157,6 +157,169 @@ def super_admin_required(f):
             return jsonify(ok=False, error='Permission denied'), 403
         return f(*a,**k)
     return d
+
+# ========== RBAC：角色 → 权限域 ==========
+# 员工后台角色集合（C端会员 role='user' 不在此列，禁止进后台）
+STAFF_ROLES = {'super_admin', 'admin', 'tenant_admin', 'operator', 'cs'}
+
+# 权限域（后台功能粒度）
+PERM_DASHBOARD      = 'dashboard.view'   # 经营看板/数据只读
+PERM_MEMBER_VIEW    = 'member.view'      # 会员查询
+PERM_MEMBER_EDIT    = 'member.edit'      # 会员编辑/删除
+PERM_MEMBER_RECALL  = 'member.recall'    # 召回推送
+PERM_MARKETING_VIEW = 'marketing.view'   # 营销数据只读
+PERM_MARKETING_MG   = 'marketing.manage' # 优惠券/积分商城/活动 管理
+PERM_KB_VIEW        = 'kb.view'          # 知识库查看
+PERM_KB_MG          = 'kb.manage'        # 知识库编辑
+PERM_ORDER_VIEW     = 'order.view'       # 工单查看
+PERM_ORDER_MG       = 'order.manage'     # 工单处理
+PERM_NOTIFY_VIEW    = 'notify.view'      # 触达记录查看
+PERM_NOTIFY_MG      = 'notify.manage'    # 触达扫描/发送
+PERM_FEEDBACK_VIEW  = 'feedback.view'    # 满意度查看
+PERM_FEEDBACK_MG    = 'feedback.manage'  # 满意度跟进
+PERM_INSIGHTS_VIEW  = 'insights.view'    # 运营洞察查看
+PERM_INSIGHTS_MG    = 'insights.manage'  # 洞察处理
+PERM_CS_WORKBENCH   = 'cs.workbench'     # 人工客服工作台
+PERM_USER_MG        = 'user.manage'      # 用户(账号)管理
+PERM_SYSTEM_MG      = 'system.manage'    # 系统设置/租户/演示数据
+PERM_ADVISOR        = 'advisor'          # AI 经营顾问
+
+# 角色 → 权限域集合
+_ROLE_PERMS = {
+    'super_admin': 'ALL',
+    'admin': {
+        PERM_DASHBOARD, PERM_MEMBER_VIEW, PERM_MEMBER_EDIT, PERM_MEMBER_RECALL,
+        PERM_MARKETING_VIEW, PERM_MARKETING_MG, PERM_KB_VIEW, PERM_KB_MG,
+        PERM_ORDER_VIEW, PERM_ORDER_MG, PERM_NOTIFY_VIEW, PERM_NOTIFY_MG,
+        PERM_FEEDBACK_VIEW, PERM_FEEDBACK_MG, PERM_INSIGHTS_VIEW, PERM_INSIGHTS_MG,
+        PERM_CS_WORKBENCH, PERM_USER_MG, PERM_ADVISOR,
+    },
+    'tenant_admin': {  # 等价于管理员（租户视角），不含 system.manage
+        PERM_DASHBOARD, PERM_MEMBER_VIEW, PERM_MEMBER_EDIT, PERM_MEMBER_RECALL,
+        PERM_MARKETING_VIEW, PERM_MARKETING_MG, PERM_KB_VIEW, PERM_KB_MG,
+        PERM_ORDER_VIEW, PERM_ORDER_MG, PERM_NOTIFY_VIEW, PERM_NOTIFY_MG,
+        PERM_FEEDBACK_VIEW, PERM_FEEDBACK_MG, PERM_INSIGHTS_VIEW, PERM_INSIGHTS_MG,
+        PERM_CS_WORKBENCH, PERM_USER_MG, PERM_ADVISOR,
+    },
+    'operator': {  # 运营：运营向，不可管账号/系统
+        PERM_DASHBOARD, PERM_MEMBER_VIEW, PERM_MEMBER_EDIT, PERM_MEMBER_RECALL,
+        PERM_MARKETING_VIEW, PERM_MARKETING_MG, PERM_KB_VIEW, PERM_KB_MG,
+        PERM_ORDER_VIEW, PERM_ORDER_MG, PERM_NOTIFY_VIEW, PERM_NOTIFY_MG,
+        PERM_FEEDBACK_VIEW, PERM_FEEDBACK_MG, PERM_INSIGHTS_VIEW, PERM_INSIGHTS_MG,
+        PERM_CS_WORKBENCH, PERM_ADVISOR,
+    },
+    'cs': {  # 客服：仅客服工作台 + 只读
+        PERM_DASHBOARD, PERM_MEMBER_VIEW, PERM_MEMBER_RECALL,
+        PERM_NOTIFY_VIEW, PERM_FEEDBACK_VIEW, PERM_CS_WORKBENCH, PERM_KB_VIEW,
+    },
+}
+
+ROLE_LABELS = {
+    'super_admin': '超级管理员', 'admin': '管理员', 'tenant_admin': '租户管理员',
+    'operator': '运营', 'cs': '客服', 'user': '普通用户',
+}
+
+_ALL_PERMS = set()
+for _v in _ROLE_PERMS.values():
+    if _v == 'ALL':
+        continue
+    _ALL_PERMS |= _v
+
+def role_perms(role):
+    """返回某角色的权限域集合（超级管理员返回全部）"""
+    p = _ROLE_PERMS.get(role)
+    if p == 'ALL':
+        return _ALL_PERMS
+    return p or set()
+
+# 后台接口 → 所需权限域（全覆盖；未登记的接口由各自装饰器处理，C端接口一律不登记）
+_ENDPOINT_PERMS = [
+    ('/api/dashboard', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/orders', ('GET',), PERM_ORDER_VIEW),
+    ('/api/admin/orders/<int:order_id>', ('PUT',), PERM_ORDER_MG),
+    ('/api/admin/business-stats', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/members', ('GET',), PERM_MEMBER_VIEW),
+    ('/api/admin/member/<int:uid>', ('PUT', 'DELETE'), PERM_MEMBER_EDIT),
+    ('/api/admin/notify/scan', ('POST',), PERM_NOTIFY_MG),
+    ('/api/admin/notify/log', ('GET',), PERM_NOTIFY_VIEW),
+    ('/api/admin/seed-demo', ('POST',), PERM_SYSTEM_MG),
+    ('/api/admin/seed-clear', ('POST',), PERM_SYSTEM_MG),
+    ('/api/admin/recall-list', ('GET',), PERM_MEMBER_VIEW),
+    ('/api/admin/recall-candidates', ('GET',), PERM_MEMBER_VIEW),
+    ('/api/admin/recall-push', ('POST',), PERM_MEMBER_RECALL),
+    ('/api/admin/repurchase', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/high-value', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/tier-sprint', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/rfm', ('GET',), PERM_MEMBER_VIEW),
+    ('/api/admin/feedback/sentiment', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/daily-report', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/feedback', ('GET',), PERM_FEEDBACK_VIEW),
+    ('/api/admin/feedback/alerts', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/feedback/alerts/follow', ('POST',), PERM_FEEDBACK_MG),
+    ('/api/admin/feedback/painpoints', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/feedback/merchant-sentiment', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/feedback/trend', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/insights', ('GET',), PERM_INSIGHTS_VIEW),
+    ('/api/admin/insight-alert/handle', ('POST',), PERM_INSIGHTS_MG),
+    ('/api/admin/insight-suggestion/exec', ('POST',), PERM_INSIGHTS_MG),
+    ('/api/admin/kb-pending', ('GET',), PERM_KB_VIEW),
+    ('/api/admin/kb-pending/<int:pid>/import', ('POST',), PERM_KB_MG),
+    ('/api/admin/kb-pending/<int:pid>/dismiss', ('POST',), PERM_KB_MG),
+    ('/api/kb', ('GET', 'POST'), PERM_KB_MG),
+    ('/api/kb/<int:kid>', ('PUT', 'DELETE'), PERM_KB_MG),
+    ('/api/admin/human-chats', ('GET',), PERM_CS_WORKBENCH),
+    ('/api/admin/activities', ('POST',), PERM_MARKETING_MG),
+    ('/api/admin/activities/<int:aid>', ('PUT', 'DELETE'), PERM_MARKETING_MG),
+    ('/api/admin/registrations', ('GET',), PERM_MARKETING_VIEW),
+    ('/api/admin/redeem-goods', ('GET',), PERM_MARKETING_VIEW),
+    ('/api/admin/redeem-goods', ('POST',), PERM_MARKETING_MG),
+    ('/api/admin/redeem-goods/<gid>', ('PUT', 'POST', 'DELETE'), PERM_MARKETING_MG),
+    ('/api/admin/offers', ('GET',), PERM_MARKETING_VIEW),
+    ('/api/admin/offers', ('POST',), PERM_MARKETING_MG),
+    ('/api/admin/offers/<oid>', ('PUT', 'POST', 'DELETE'), PERM_MARKETING_MG),
+    ('/api/admin/merchant-tokens', ('GET',), PERM_SYSTEM_MG),
+    ('/api/tenants', ('GET',), PERM_SYSTEM_MG),
+    ('/api/tenants/<int:tid>', ('PUT',), PERM_SYSTEM_MG),
+    ('/api/users', ('GET', 'POST'), PERM_USER_MG),
+    ('/api/users/<id>', ('PUT', 'DELETE'), PERM_USER_MG),
+    ('/api/admin/kpi', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/kpi', ('POST',), PERM_INSIGHTS_MG),
+    ('/api/admin/anomaly', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/report-period', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/activity-roi', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/push-copy', ('POST',), PERM_MARKETING_MG),
+    ('/api/admin/advisor', ('POST',), PERM_ADVISOR),
+    ('/api/admin/leasing', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/marketing-calendar', ('GET',), PERM_DASHBOARD),
+    ('/api/admin/timeslot-heat', ('GET',), PERM_DASHBOARD),
+]
+
+@app.before_request
+def _rbac_guard():
+    """对登记的后台接口做权限域校验；未登记接口放行（由各自装饰器处理）。"""
+    if request.method == 'OPTIONS':
+        return
+    path = request.path
+    for rule_path, methods, scope in _ENDPOINT_PERMS:
+        if request.method not in methods:
+            continue
+        if '<' in rule_path:
+            prefix = rule_path.split('<')[0]
+            if path.startswith(prefix):
+                break
+        elif path == rule_path:
+            break
+    else:
+        return  # 未命中后台接口规则
+    role = session.get('role')
+    if not role or role not in STAFF_ROLES:
+        r = jsonify(ok=False, error='请先登录')
+        r.status_code = 401
+        return r
+    if scope not in role_perms(role):
+        r = jsonify(ok=False, error='权限不足')
+        r.status_code = 403
+        return r
 
 # ========== AI ==========
 SYSTEM_PROMPT = '''你是海江新天地社区商业中心的客服小江。自称小江。
@@ -743,7 +906,7 @@ def api_login():
     pw_hash = hashlib.sha256(password.encode()).hexdigest()
     if admin_flag:
         user = conn.execute(
-            "SELECT * FROM users WHERE username=? AND password_hash=? AND role IN ('tenant_admin','super_admin')",
+            "SELECT * FROM users WHERE username=? AND password_hash=? AND role IN ('tenant_admin','super_admin','admin','operator','cs')",
             (username, pw_hash)
         ).fetchone()
     else:
@@ -759,6 +922,12 @@ def api_login():
     session['role'] = user['role']
     session['display_name'] = user['display_name']
     session['phone'] = user['phone'] if user['phone'] else ''
+    try:
+        _c = get_db()
+        _c.execute("UPDATE users SET last_login=datetime('now','localtime') WHERE id=?", (user['id'],))
+        _c.commit(); _c.close()
+    except Exception:
+        pass
     return jsonify(ok=True, user=dict(user))
 
 @app.route('/logout', methods=['POST'])
@@ -794,10 +963,13 @@ def api_session():
         else:
             points = 0
             membership_level = '普卡'
+        _role = session.get('role')
         return jsonify(ok=True, user={
             'id': uid,
             'tenant_id': session['tenant_id'],
-            'role': session.get('role'),
+            'role': _role,
+            'role_zh': ROLE_LABELS.get(_role, _role),
+            'perms': sorted(role_perms(_role)),
             'display_name': session.get('display_name'),
             'phone': phone,
             'headimgurl': headimgurl,
@@ -1542,7 +1714,7 @@ def api_nav_floors():
 @app.route('/api/admin/orders')
 @login_required
 def api_admin_orders():
-    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     page = request.args.get('page', 1, type=int)
     limit = request.args.get('limit', 20, type=int)
@@ -1570,7 +1742,7 @@ def api_admin_orders():
 @login_required
 def api_admin_business_stats():
     """业务中心统计：各类型工单数量汇总"""
-    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     conn = get_db()
     _ensure_tables(conn)
@@ -1586,7 +1758,7 @@ def api_admin_business_stats():
 @app.route('/api/admin/orders/<int:order_id>', methods=['PUT'])
 @login_required
 def api_admin_update_order(order_id):
-    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     data = request.get_json()
     status = data.get('status', '')
@@ -1601,7 +1773,7 @@ def api_admin_update_order(order_id):
 @app.route('/api/admin/members')
 @login_required
 def api_admin_members():
-    if session.get('role') not in ('admin','super_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     search = request.args.get('search', '')
     level = request.args.get('level', '')
@@ -1636,7 +1808,7 @@ def api_admin_members():
 @app.route('/api/admin/member/<int:uid>', methods=['PUT'])
 @login_required
 def api_admin_member_update(uid):
-    if session.get('role') not in ('admin','super_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     data = request.get_json()
     conn = get_db()
@@ -1649,7 +1821,7 @@ def api_admin_member_update(uid):
 @app.route('/api/admin/member/<int:uid>', methods=['DELETE'])
 @login_required
 def api_admin_member_delete(uid):
-    if session.get('role') not in ('admin','super_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     conn = get_db()
     conn.execute("DELETE FROM users WHERE id=? AND tenant_id=? AND role='user'",(uid,session['tenant_id']))
@@ -3612,23 +3784,73 @@ def api_admin_recall_list():
     return jsonify(ok=True, total=len(out), list=out)
 
 
-@app.route('/api/users', methods=['GET','POST'])
+@app.route('/api/users', methods=['GET','POST','PUT','DELETE'])
 @admin_required
 def api_users():
     tid = session['tenant_id']
+    uid = session.get('user_id')
     conn = get_db()
-    if request.method == 'GET':
-        rows = conn.execute("SELECT id, username, display_name, role, created_at FROM users WHERE tenant_id=?", (tid,)).fetchall()
+    method = request.method
+    if method == 'GET':
+        rows = conn.execute(
+            "SELECT id, username, display_name, role, phone, status, remark, created_at, last_login "
+            "FROM users WHERE tenant_id=? AND role IN ('super_admin','admin','tenant_admin','operator','cs') ORDER BY id",
+            (tid,)).fetchall()
         conn.close()
         return jsonify([dict(r) for r in rows])
-    data = request.get_json()
-    conn.execute(
-        "INSERT INTO users (tenant_id, username, password_hash, display_name, role) VALUES (?,?,?,?,?)",
-        (tid, data['username'], hashlib.sha256(data.get('password','123456').encode()).hexdigest(),
-         data.get('display_name',''), data.get('role','user'))
-    )
-    conn.commit(); conn.close()
-    return jsonify(ok=True)
+    if method == 'POST':
+        data = request.get_json() or {}
+        username = (data.get('username') or '').strip()
+        if not username:
+            conn.close(); return jsonify(ok=False, error='缺少用户名')
+        role = data.get('role', 'operator')
+        if role not in STAFF_ROLES:
+            conn.close(); return jsonify(ok=False, error='非法角色')
+        exists = conn.execute("SELECT id FROM users WHERE tenant_id=? AND username=?", (tid, username)).fetchone()
+        if exists:
+            conn.close(); return jsonify(ok=False, error='用户名已存在')
+        pw = hashlib.sha256((data.get('password') or '123456').encode()).hexdigest()
+        conn.execute(
+            "INSERT INTO users (tenant_id, username, password_hash, display_name, role, phone, status, remark) VALUES (?,?,?,?,?,?,?,?)",
+            (tid, username, pw, data.get('display_name',''), role, data.get('phone',''), data.get('status','active'), data.get('remark','')))
+        conn.commit(); conn.close()
+        return jsonify(ok=True)
+    if method in ('PUT', 'DELETE'):
+        data = request.get_json() or {}
+        target_id = data.get('id')
+        if not target_id:
+            conn.close(); return jsonify(ok=False, error='缺少 id')
+        target = conn.execute("SELECT id, role, username FROM users WHERE id=? AND tenant_id=?", (int(target_id), tid)).fetchone()
+        if not target:
+            conn.close(); return jsonify(ok=False, error='账号不存在')
+        if method == 'DELETE':
+            if int(target_id) == int(uid):
+                conn.close(); return jsonify(ok=False, error='不能删除当前登录账号')
+            if target['role'] == 'super_admin':
+                conn.close(); return jsonify(ok=False, error='超级管理员账号不可删除')
+            conn.execute("DELETE FROM users WHERE id=? AND tenant_id=?", (int(target_id), tid))
+            conn.commit(); conn.close()
+            return jsonify(ok=True)
+        # PUT 更新
+        if int(target_id) == int(uid) and data.get('role') and data.get('role') != target['role']:
+            conn.close(); return jsonify(ok=False, error='不能修改自己的角色')
+        sets = []; vals = []
+        for f in ['display_name', 'phone', 'status', 'remark', 'role']:
+            if f in data and data[f] is not None:
+                if f == 'role' and data[f] not in STAFF_ROLES:
+                    conn.close(); return jsonify(ok=False, error='非法角色')
+                sets.append(f'{f}=?'); vals.append(data[f])
+        pw = (data.get('password') or '').strip()
+        if pw:
+            sets.append('password_hash=?'); vals.append(hashlib.sha256(pw.encode()).hexdigest())
+        if sets:
+            vals.append(int(target_id)); vals.append(tid)
+            conn.execute(f"UPDATE users SET {','.join(sets)} WHERE id=? AND tenant_id=?", vals)
+            conn.commit()
+        conn.close()
+        return jsonify(ok=True)
+    conn.close()
+    return jsonify(ok=False, error='method not allowed'), 405
 
 @app.route('/api/tenants', methods=['GET'])
 @super_admin_required
@@ -4393,16 +4615,22 @@ def _release_init_flock():
 def _col_add(conn, table, col, ddl):
     """幂等给表加列（仅当该列不存在时 ALTER）；遇锁库重试，避免冷启动多 worker 竞争时漏建列。"""
     import time as _t
-    for _ in range(6):
+    try:
+        conn.execute('PRAGMA busy_timeout=30000')
+    except Exception:
+        pass
+    for _ in range(120):  # 最多 ~60s，扛过 gunicorn 多 worker 冷启动的写锁竞争
         try:
             cols = [r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()]
             if col not in cols:
                 conn.execute(f'ALTER TABLE {table} ADD COLUMN {col} {ddl}')
+                conn.commit()
             return
         except Exception as e:
-            if 'locked' in str(e).lower():
+            if 'locked' in str(e).lower() or 'busy' in str(e).lower():
                 _t.sleep(0.5)
                 continue
+            print(f'[MIGRATE ERROR] ALTER {table} ADD {col}: {e}')
             return
 
 def _migrate_schema(conn):
@@ -4418,6 +4646,10 @@ def _migrate_schema(conn):
         _col_add(conn, 'users', 'birthday', "TEXT DEFAULT ''")          # MM-DD
         _col_add(conn, 'users', 'anniversary', "TEXT DEFAULT ''")       # MM-DD（入会纪念日）
         _col_add(conn, 'users', 'preferred_category', "TEXT DEFAULT ''") # 历史消费偏好
+        # 后台员工子账号管理：状态/手机号/备注/最后登录
+        _col_add(conn, 'users', 'status', "TEXT DEFAULT 'active'")      # active / disabled
+        _col_add(conn, 'users', 'remark', "TEXT DEFAULT ''")           # 账号备注
+        _col_add(conn, 'users', 'last_login', "TEXT DEFAULT ''")       # 最后登录时间(ISO)
         # 真实数据链路：评价→商户 / 活动绑券+核销
         _col_add(conn, 'feedbacks', 'shop_id', "TEXT DEFAULT ''")          # 关联真实商户(shops.id)
         _col_add(conn, 'activities', 'offer_ids', "TEXT DEFAULT ''")       # 绑定的券 offer_id 列表(逗号分隔)
@@ -4478,8 +4710,8 @@ def _migrate_schema(conn):
         _col_add(conn, 'conversations', 'intent', "TEXT DEFAULT ''")
         _col_add(conn, 'conversations', 'answered', 'INTEGER DEFAULT 1')
         conn.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f'[MIGRATE ERROR] {e}')
 
 def _push_message(conn, title, body, mtype='system', user_id=0, ref_type='', ref_id=0):
     """向站内消息表写入一条消息（user_id=0 表示全员广播）。失败静默。"""
@@ -7023,7 +7255,7 @@ def api_feedback():
 @login_required
 def api_admin_feedback():
     """后台查看评价汇总"""
-    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     conn = get_db()
     _ensure_tables(conn)
@@ -7046,7 +7278,7 @@ def api_admin_feedback():
 @login_required
 def api_admin_kb_pending():
     """知识库待优化问题列表"""
-    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     conn = get_db()
     _ensure_tables(conn)
@@ -7063,7 +7295,7 @@ def api_admin_kb_pending():
 @login_required
 def api_admin_kb_pending_import(pid):
     """一键补充入库：将待优化问题写入知识库"""
-    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     data = request.get_json()
     answer = data.get('answer', '').strip()
@@ -7091,7 +7323,7 @@ def api_admin_kb_pending_import(pid):
 @login_required
 def api_admin_kb_pending_dismiss(pid):
     """忽略待优化问题"""
-    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     conn = get_db()
     _ensure_tables(conn)
@@ -7148,7 +7380,7 @@ def _window_total(conn, table, date_col, days, agg='COUNT(*)', where=''):
 def api_admin_insights():
     """运营洞察（全量）：趋势/转化/预警/健康度 + 基础诊断，均基于真实表实时聚合。
     支持 ?days=7|30|90（默认 30）。"""
-    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     try:
         days = int(request.args.get('days', 30))
@@ -7512,7 +7744,7 @@ def _rfm_scores(last_visit, freq, monetary):
 @login_required
 def api_admin_rfm():
     """会员 RFM 智能分层 + 流失预警（复用 member_consumptions / users）"""
-    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     tid = session.get('tenant_id', 1)
     conn = get_db()
@@ -7585,7 +7817,7 @@ def _sentiment_heuristic(text, rating):
 @login_required
 def api_admin_feedback_sentiment():
     """评价情感分析：正面/负面/投诉分布 + 主题聚类（LLM 优先，无 key 用词典兜底）"""
-    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     conn = get_db()
     _ensure_tables(conn)
@@ -7640,7 +7872,7 @@ def api_admin_feedback_sentiment():
 @login_required
 def api_admin_daily_report():
     """AI 经营日报：聚合会员/券/活动/评价，LLM 生成人话日报（无 key 用模板）"""
-    if session.get('role') not in ('admin','super_admin','tenant_admin'):
+    if session.get('role') not in STAFF_ROLES:
         return jsonify(ok=False, error='权限不足')
     tid = session.get('tenant_id', 1)
     conn = get_db()
@@ -7699,7 +7931,7 @@ def api_admin_daily_report():
 
 # ========== 智能运营中心 · 衍生功能（RFM/情感/日报/跨模块，共 17 项） ==========
 def _admin_role_ok():
-    return session.get('role') in ('admin', 'super_admin', 'tenant_admin')
+    return session.get('role') in STAFF_ROLES
 
 _NEXT_POINTS = {'普卡': 2000, '银卡': 5000, '金卡': 20000, '铂金卡': 40000, '钻石卡': 80000, '黑钻卡': None}
 

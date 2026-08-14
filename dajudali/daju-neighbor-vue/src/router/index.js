@@ -85,8 +85,13 @@ router.beforeEach(async (to, from, next) => {
       const resp = await fetch('/api/session')
       const data = await resp.json()
       if (!data.ok) return next('/manage')
-      if (to.meta.requiresSuperAdmin && data.user.role !== 'super_admin') return next('/admin')
-      if (!data.user.role || !['tenant_admin', 'super_admin'].includes(data.user.role)) return next('/manage')
+      const role = data.user.role
+      const STAFF = ['tenant_admin', 'super_admin', 'admin', 'operator', 'cs']
+      if (!STAFF.includes(role)) return next('/manage')
+      if (to.meta.requiresSuperAdmin && role !== 'super_admin') return next('/admin')
+      const perms = data.user.perms || []
+      // 账号管理 / 系统设置 仅 user.manage 权限（超管/管理员）
+      if ((to.path === '/admin/users' || to.path === '/admin/settings') && !perms.includes('user.manage')) return next('/admin')
     } catch { return next('/manage') }
   }
   next()

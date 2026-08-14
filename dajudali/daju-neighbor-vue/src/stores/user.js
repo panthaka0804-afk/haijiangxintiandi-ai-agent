@@ -41,7 +41,7 @@ export const useUserStore = defineStore('user', () => {
   }
 
   const isAdmin = () => {
-    return user.value && ['tenant_admin', 'super_admin'].includes(user.value.role)
+    return user.value && ['tenant_admin', 'super_admin', 'admin', 'operator', 'cs'].includes(user.value.role)
   }
 
   const isSuperAdmin = () => {
