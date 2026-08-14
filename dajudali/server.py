@@ -282,6 +282,8 @@ _ENDPOINT_PERMS = [
     ('/api/tenants/<int:tid>', ('PUT',), PERM_SYSTEM_MG),
     ('/api/users', ('GET', 'POST'), PERM_USER_MG),
     ('/api/users/<id>', ('PUT', 'DELETE'), PERM_USER_MG),
+    ('/api/shops', ('POST',), PERM_MARKETING_MG),
+    ('/api/shops/<sid>', ('PUT', 'DELETE'), PERM_MARKETING_MG),
     ('/api/admin/kpi', ('GET',), PERM_DASHBOARD),
     ('/api/admin/kpi', ('POST',), PERM_INSIGHTS_MG),
     ('/api/admin/anomaly', ('GET',), PERM_DASHBOARD),
@@ -5846,10 +5848,37 @@ def _estimate_wait(shop_id, party_size, conn):
 
 
 # ========== API - Shops ==========
-@app.route('/api/shops')
+@app.route('/api/shops', methods=['GET', 'POST'])
 def api_shops():
     conn = get_db()
     _ensure_tables(conn)
+    if request.method == 'POST':
+        if not _admin_role_ok():
+            return jsonify(ok=False, error='权限不足')
+        data = request.get_json(force=True, silent=True) or {}
+        name = (data.get('name') or '').strip()
+        if not name:
+            return jsonify(ok=False, error='请填写商户名称')
+        sid = (data.get('id') or '').strip()
+        if not sid:
+            sid = 's' + datetime.now().strftime('%Y%m%d%H%M%S') + str(int(datetime.now().microsecond))[:3]
+        try:
+            conn.execute(
+                """INSERT OR REPLACE INTO shops
+                   (id,name,floor,zone,category,tags,color,hours,phone,description,
+                    has_coupon,coupon_condition,coupon_amount,coupon_expire,features)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (sid, name, (data.get('floor') or '').strip(), (data.get('zone') or '').strip(),
+                 (data.get('category') or '').strip(), data.get('tags') or '', (data.get('color') or '#C9956C').strip(),
+                 (data.get('hours') or '').strip(), (data.get('phone') or '').strip(), (data.get('description') or '').strip(),
+                 1 if data.get('has_coupon') else 0, data.get('coupon_condition') or 0,
+                 data.get('coupon_amount') or 0, (data.get('coupon_expire') or '').strip(),
+                 data.get('features') or ''))
+            conn.commit()
+            return jsonify(ok=True, data={'id': sid})
+        except Exception as e:
+            conn.close()
+            return jsonify(ok=False, error='保存失败：' + str(e))
     rows = conn.execute('SELECT * FROM shops ORDER BY CAST(floor AS INTEGER), zone, name').fetchall()
     conn.close()
     result = []
@@ -5860,6 +5889,32 @@ def api_shops():
         d['has_coupon'] = bool(d.get('has_coupon'))
         result.append(d)
     return jsonify(ok=True, data=result)
+
+
+@app.route('/api/shops/<sid>', methods=['PUT', 'DELETE'])
+def api_shop_detail(sid):
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db()
+    _ensure_tables(conn)
+    if request.method == 'DELETE':
+        conn.execute('DELETE FROM shops WHERE id=?', (sid,))
+        conn.commit(); conn.close()
+        return jsonify(ok=True)
+    data = request.get_json(force=True, silent=True) or {}
+    editable = ('name', 'floor', 'zone', 'category', 'tags', 'color', 'hours', 'phone',
+                'description', 'coupon_condition', 'coupon_amount', 'coupon_expire', 'features')
+    sets, vals = [], []
+    for f in editable:
+        if f in data:
+            sets.append(f + '=?'); vals.append(data[f])
+    if 'has_coupon' in data:
+        sets.append('has_coupon=?'); vals.append(1 if data['has_coupon'] else 0)
+    if sets:
+        vals.append(sid)
+        conn.execute('UPDATE shops SET ' + ', '.join(sets) + ' WHERE id=?', vals)
+    conn.commit(); conn.close()
+    return jsonify(ok=True)
 
 
 # ========== API - Offers ==========

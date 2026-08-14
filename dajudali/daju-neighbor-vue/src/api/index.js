@@ -362,6 +362,24 @@ export function getShopDetail(id) {
   return request('/api/shops/' + id)
 }
 
+export function createShop(data) {
+  return request('/api/shops', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+}
+
+export function updateShop(id, data) {
+  return request('/api/shops/' + id, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  })
+}
+
+export function deleteShop(id) {
+  return request('/api/shops/' + id, { method: 'DELETE' })
+}
+
 // ========== 优惠券 ==========
 export function getOffers() {
   return request('/api/offers')
