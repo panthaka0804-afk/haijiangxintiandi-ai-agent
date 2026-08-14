@@ -2,17 +2,19 @@
   <div class="admin-dashboard">
     <h3>数据看板</h3>
 
-    <!-- 统计卡片 -->
+    <!-- KPI 数字卡 -->
     <div class="stat-grid">
-      <div class="stat-card" v-for="card in statCards" :key="card.label" :style="{ '--card-color': card.color }">
+      <div class="stat-card" v-for="card in statCards" :key="card.key" :style="{ '--card-color': card.color }">
         <div class="stat-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" :stroke="card.color" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path v-if="card.key==='chats'" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
             <template v-else-if="card.key==='members'"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0112 0v1"/></template>
             <template v-else-if="card.key==='orders'"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></template>
-            <template v-else-if="card.key==='rate'"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></template>
-            <template v-else-if="card.key==='activities'"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></template>
-            <template v-else-if="card.key==='regs'"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></template>
+            <template v-else-if="card.key==='gmv'"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></template>
+            <template v-else-if="card.key==='redeem'"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></template>
+            <template v-else-if="card.key==='newmem'"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></template>
+            <template v-else-if="card.key==='points'"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10h4a2 2 0 010 4H8"/></template>
+            <template v-else-if="card.key==='shops'"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11a1 1 0 001 1h14a1 1 0 001-1V9"/><path d="M9 21V12h6v9"/></template>
           </svg>
         </div>
         <div class="stat-info">
@@ -24,54 +26,179 @@
 
     <!-- 数据区域 -->
     <div class="chart-grid">
+
+      <!-- 核心指标 7 日趋势 -->
       <div class="db-card">
         <div class="db-card-h">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          服务效率
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4A90D9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+          核心指标 · 近 7 日趋势
         </div>
-        <div class="kpi-list">
-          <div class="kpi-item"><span>咨询总量</span><strong>{{ stats?.today_chats || 0 }}</strong></div>
-          <div class="kpi-item"><span>AI 解决率</span><strong>{{ stats?.ai_rate || '82%' }}</strong></div>
-          <div class="kpi-item"><span>工单办结率</span><strong>{{ stats?.order_done_rate || '91%' }}</strong></div>
-          <div class="kpi-item"><span>待处理工单</span><strong>{{ stats?.pending_orders || 0 }}</strong></div>
-          <div class="kpi-item"><span>用户满意度</span><strong>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            {{ stats?.satisfaction || '4.8' }}
-          </strong></div>
+        <div class="spark-list">
+          <div class="spark-item" v-for="s in sparkMetrics" :key="s.key">
+            <div class="spark-meta">
+              <span class="spark-label">{{ s.label }}</span>
+              <span class="spark-val" :style="{ color: s.color }">{{ s.last }}<small v-if="s.suffix">{{ s.suffix }}</small></span>
+            </div>
+            <svg class="spark-svg" viewBox="0 0 120 36" preserveAspectRatio="none">
+              <polyline :points="s.points" fill="none" :stroke="s.color" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+            </svg>
+          </div>
         </div>
       </div>
 
+      <!-- 服务效率 -->
       <div class="db-card">
+        <div class="db-card-h">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M17.66 18l-3.55-6.53a1 1 0 00-1.73.01L8.83 18"/><polyline points="6 11 10.59 3 15.18 11"/><line x1="2" y1="22" x2="22" y2="22"/></svg>
+          服务效率
+        </div>
+        <div class="kpi-list">
+          <div class="kpi-item"><span>AI 自助解决率</span><strong>{{ fmtPct(stats?.ai_rate) }}</strong></div>
+          <div class="kpi-item"><span>工单办结率</span><strong>{{ fmtPct(stats?.order_done_rate) }}</strong></div>
+          <div class="kpi-item"><span>用户满意度</span><strong>{{ stats?.satisfaction ?? '—' }}</strong></div>
+          <div class="kpi-item"><span>待处理工单</span><strong :class="{ danger: (stats?.pending_orders||0) > 0 }">{{ stats?.pending_orders || 0 }}</strong></div>
+          <div class="kpi-item"><span>知识库待优化</span><strong :class="{ danger: (stats?.pending_kb||0) > 0 }">{{ stats?.pending_kb || 0 }}</strong></div>
+        </div>
+      </div>
+
+      <!-- 营销转化漏斗 -->
+      <div class="db-card">
+        <div class="db-card-h">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4923A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          营销转化漏斗（券）
+        </div>
+        <div class="funnel" v-if="stats?.funnel">
+          <div class="funnel-row">
+            <span class="funnel-label">发放</span>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:100%;background:#C4923A">{{ stats.funnel.issued }}</div></div>
+          </div>
+          <div class="funnel-row">
+            <span class="funnel-label">领取</span>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" :style="{ width: Math.max(stats.funnel.claim_rate,4)+'%', background:'#D4A59A' }">{{ stats.funnel.claimed }}</div></div>
+            <span class="funnel-rate">领券率 {{ stats.funnel.claim_rate }}%</span>
+          </div>
+          <div class="funnel-row">
+            <span class="funnel-label">核销</span>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" :style="{ width: Math.max(stats.funnel.redeem_rate,4)+'%', background:'#3E8E41' }">{{ stats.funnel.redeemed }}</div></div>
+            <span class="funnel-rate">核销率 {{ stats.funnel.redeem_rate }}%</span>
+          </div>
+        </div>
+        <div v-else class="hot-empty">暂无数据</div>
+      </div>
+
+      <!-- 会员结构 -->
+      <div class="db-card">
+        <div class="db-card-h">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B7BD4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          会员结构
+        </div>
+        <div class="lv-bars" v-if="stats?.member_levels?.length">
+          <div class="lv-row" v-for="lv in stats.member_levels" :key="lv.level">
+            <span class="lv-name">{{ lv.level }}</span>
+            <div class="lv-bar-wrap"><div class="lv-bar" :style="{ width: lvPct(lv.count)+'%' }"></div></div>
+            <span class="lv-count">{{ lv.count }}</span>
+          </div>
+        </div>
+        <div class="seg-row" v-if="stats?.member_segments">
+          <div class="seg"><span class="seg-num">{{ stats.member_segments.new_30 }}</span><span class="seg-lab">近30天新增</span></div>
+          <div class="seg"><span class="seg-num">{{ stats.member_segments.active_30 }}</span><span class="seg-lab">活跃(30天)</span></div>
+          <div class="seg"><span class="seg-num danger">{{ stats.member_segments.silent }}</span><span class="seg-lab">沉默会员</span></div>
+        </div>
+      </div>
+
+      <!-- 运营预警 + 待办 -->
+      <div class="db-card">
+        <div class="db-card-h">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E85D04" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          运营预警 · 待办
+        </div>
+        <div class="alert-list" v-if="stats?.alerts?.length">
+          <div class="alert-item" v-for="a in stats.alerts" :key="a.key">
+            <span class="alert-dot" :class="a.level"></span>
+            <span class="alert-text">{{ a.text }}</span>
+          </div>
+        </div>
+        <div v-else class="alert-ok">✓ 暂无预警</div>
+        <div class="todo-row">
+          <router-link class="todo-btn" :to="{ name: 'admin-orders' }">待处理工单 {{ stats?.pending_orders || 0 }} →</router-link>
+          <router-link class="todo-btn" :to="{ name: 'admin-kb' }">待优化知识库 {{ stats?.pending_kb || 0 }} →</router-link>
+        </div>
+      </div>
+
+      <!-- 热门活动 TOP5 -->
+      <div class="db-card db-card-wide">
         <div class="db-card-h">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M17.66 18l-3.55-6.53a1 1 0 00-1.73.01L8.83 18"/><polyline points="6 11 10.59 3 15.18 11"/><line x1="2" y1="22" x2="22" y2="22"/></svg>
           热门活动 TOP5
         </div>
         <div class="hot-list" v-if="stats?.hot_activities?.length">
           <div v-for="(a, i) in stats.hot_activities" :key="a.id" class="hot-item">
-            <span class="hot-rank" :style="i === 0 ? 'background:#1A1A1A;color:#fff' : ''">{{ i + 1 }}</span>
+            <span class="hot-rank" :style="i === 0 ? 'background:#E85D04;color:#fff' : ''">{{ i + 1 }}</span>
             <span class="hot-text">{{ a.title }}</span>
             <span class="hot-count">{{ a.enrolled || 0 }}人</span>
           </div>
         </div>
         <div v-else class="hot-empty">暂无活动数据</div>
       </div>
+
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 
 const stats = ref(null)
 
 const statCards = reactive([
-  { key: 'chats', label: '今日咨询', value: '--', color: '#BBBBBB' },
-  { key: 'members', label: '活跃会员', value: '--', color: '#979797' },
-  { key: 'orders', label: '工单总数', value: '--', color: '#ABABAB' },
-  { key: 'rate', label: '好评率', value: '--', color: '#BBBBBB' },
-  { key: 'activities', label: '活动总数', value: '--', color: '#999999' },
-  { key: 'regs', label: '活动报名', value: '--', color: '#BBBBBB' },
+  { key: 'chats', label: '今日咨询', value: '--', color: '#4A90D9' },
+  { key: 'members', label: '会员总数', value: '--', color: '#E85D04' },
+  { key: 'orders', label: '工单总数', value: '--', color: '#9B7BD4' },
+  { key: 'gmv', label: '今日 GMV', value: '--', color: '#C4923A' },
+  { key: 'redeem', label: '今日核销', value: '--', color: '#3E8E41' },
+  { key: 'newmem', label: '今日新增会员', value: '--', color: '#E8809E' },
+  { key: 'points', label: '积分发放(今日)', value: '--', color: '#D4A59A' },
+  { key: 'shops', label: '商户总数', value: '--', color: '#6B6E64' },
 ])
+
+function sparkPoints(series) {
+  if (!series || !series.length) return ''
+  const vals = series.map(s => Number(s.value) || 0)
+  const max = Math.max(...vals, 1)
+  const min = Math.min(...vals)
+  const range = max - min || 1
+  const w = 120, h = 36, pad = 3
+  const n = vals.length
+  return vals.map((v, i) => {
+    const x = pad + (w - 2 * pad) * (i / (n - 1))
+    const y = h - pad - (h - 2 * pad) * ((v - min) / range)
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+}
+
+const sparkMetrics = computed(() => {
+  const s = stats.value
+  if (!s) return []
+  const mk = (key, label, color, suffix, series) => {
+    const arr = series || []
+    const last = arr.length ? (Number(arr[arr.length - 1].value) || 0) : 0
+    return { key, label, color, suffix: suffix || '', last, points: sparkPoints(arr) }
+  }
+  return [
+    mk('chats', '咨询量', '#4A90D9', '', s.series_chats),
+    mk('gmv', 'GMV', '#C4923A', '', s.series_gmv),
+    mk('active', '活跃会员', '#9B7BD4', '', s.series_active),
+  ]
+})
+
+function fmtPct(v) {
+  if (typeof v === 'number') return v + '%'
+  return v ?? '—'
+}
+function lvPct(count) {
+  const total = (stats.value?.member_levels || []).reduce((a, b) => a + b.count, 0) || 1
+  return Math.round(count / total * 100)
+}
 
 onMounted(async () => {
   try {
@@ -79,12 +206,14 @@ onMounted(async () => {
     const d = await res.json()
     if (d.ok) {
       stats.value = d
-      statCards[0].value = d.today_chats || '--'
-      statCards[1].value = d.active_members || '--'
-      statCards[2].value = d.total_orders || '--'
-      statCards[3].value = d.satisfaction || '--'
-      statCards[4].value = d.activity_count || '--'
-      statCards[5].value = d.reg_count || '--'
+      statCards[0].value = d.today_chats ?? '--'
+      statCards[1].value = d.active_members ?? '--'
+      statCards[2].value = d.total_orders ?? '--'
+      statCards[3].value = d.gmv_today ?? '--'
+      statCards[4].value = d.redeemed_today ?? '--'
+      statCards[5].value = d.new_members_today ?? '--'
+      statCards[6].value = d.points_issued_today ?? '--'
+      statCards[7].value = d.shops_total ?? '--'
     }
   } catch {}
 })
@@ -105,28 +234,76 @@ onMounted(async () => {
 .stat-value { font-size: 22px; font-weight: 800; color: #F0F0F0; line-height: 1.2; }
 .stat-label { font-size: 12px; color: #999; margin-top: 2px; }
 
-.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.db-card { background: #1A1A1A; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.db-card-wide { grid-column: 1 / -1; }
+.db-card-h { padding: 14px 16px; font-weight: 600; color: #F0F0F0; font-size: 15px; border-bottom: 1px solid #2a2a2a; }
+
+/* sparkline */
+.spark-list { padding: 8px 4px; }
+.spark-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; }
+.spark-meta { width: 120px; display: flex; flex-direction: column; flex-shrink: 0; }
+.spark-label { font-size: 12px; color: #999; }
+.spark-val { font-size: 18px; font-weight: 800; color: #F0F0F0; }
+.spark-val small { font-size: 11px; font-weight: 500; margin-left: 1px; }
+.spark-svg { flex: 1; height: 36px; }
+
+/* kpi list */
+.kpi-list { padding: 4px 0; }
+.kpi-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #2a2a2a; font-size: 14px; color: #BBBBBB; }
+.kpi-item:last-child { border-bottom: none; }
+.kpi-item strong { color: #F0F0F0; font-size: 16px; }
+.kpi-item strong.danger { color: #E8503A; }
+
+/* funnel */
+.funnel { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.funnel-row { display: flex; align-items: center; gap: 10px; }
+.funnel-label { width: 32px; font-size: 13px; color: #BBBBBB; flex-shrink: 0; }
+.funnel-bar-wrap { flex: 1; background: #262626; border-radius: 8px; height: 28px; overflow: hidden; }
+.funnel-bar { height: 100%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: #fff; font-size: 13px; font-weight: 700; min-width: 28px; transition: width .4s; }
+.funnel-rate { width: 92px; font-size: 12px; color: #999; text-align: right; flex-shrink: 0; }
+
+/* member structure */
+.lv-bars { padding: 14px 16px 6px; display: flex; flex-direction: column; gap: 10px; }
+.lv-row { display: flex; align-items: center; gap: 10px; }
+.lv-name { width: 56px; font-size: 13px; color: #BBBBBB; flex-shrink: 0; }
+.lv-bar-wrap { flex: 1; background: #262626; border-radius: 6px; height: 18px; overflow: hidden; }
+.lv-bar { height: 100%; background: linear-gradient(90deg,#9B7BD4,#C4923A); border-radius: 6px; transition: width .4s; }
+.lv-count { width: 32px; text-align: right; font-size: 13px; color: #F0F0F0; font-weight: 700; }
+.seg-row { display: flex; border-top: 1px solid #2a2a2a; margin-top: 6px; }
+.seg { flex: 1; padding: 12px 8px; text-align: center; border-right: 1px solid #2a2a2a; }
+.seg:last-child { border-right: none; }
+.seg-num { display: block; font-size: 20px; font-weight: 800; color: #F0F0F0; }
+.seg-num.danger { color: #E8503A; }
+.seg-lab { font-size: 11px; color: #999; }
+
+/* alerts */
+.alert-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.alert-item { display: flex; align-items: center; gap: 10px; }
+.alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.alert-dot.warn { background: #E8A33D; box-shadow: 0 0 0 3px rgba(232,163,61,.18); }
+.alert-dot.danger { background: #E8503A; box-shadow: 0 0 0 3px rgba(232,80,58,.18); }
+.alert-text { font-size: 14px; color: #F0F0F0; }
+.alert-ok { padding: 16px; text-align: center; color: #3E8E41; font-size: 14px; }
+.todo-row { display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid #2a2a2a; flex-wrap: wrap; }
+.todo-btn { flex: 1; min-width: 130px; text-align: center; padding: 10px; border-radius: 10px; background: #262626; color: #E8C9A0; font-size: 13px; font-weight: 600; text-decoration: none; }
+.todo-btn:hover { background: #303030; }
+
+/* hot list */
+.hot-list { padding: 4px 0; }
+.hot-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #2a2a2a; font-size: 14px; }
+.hot-item:last-child { border-bottom: none; }
+.hot-rank { width: 22px; height: 22px; border-radius: 6px; background: #262626; color: #999; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.hot-text { flex: 1; color: #F0F0F0; }
+.hot-count { color: #999; font-size: 12px; }
+.hot-empty { padding: 20px; text-align: center; color: #999; font-size: 13px; }
+
 @media (max-width: 767px) {
   .chart-grid { grid-template-columns: 1fr; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .stat-card { padding: 12px; }
   .stat-value { font-size: 18px; }
   .stat-icon { width: 34px; height: 34px; }
+  .spark-meta { width: 84px; }
 }
-
-.db-card { background: #1A1A1A; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.db-card-h { padding: 14px 16px; font-weight: 600; color: #F0F0F0; font-size: 15px; border-bottom: 1px solid #eee; }
-.hot-empty { padding: 20px; text-align: center; color: #999; font-size: 13px; }
-
-.kpi-list { padding: 4px 0; }
-.kpi-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 14px; color: #BBBBBB; }
-.kpi-item:last-child { border-bottom: none; }
-.kpi-item strong { color: #F0F0F0; font-size: 16px; }
-
-.hot-list { padding: 4px 0; }
-.hot-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 14px; }
-.hot-item:last-child { border-bottom: none; }
-.hot-rank { width: 22px; height: 22px; border-radius: 6px; background: #1A1A1A; color: #999; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.hot-text { flex: 1; color: #F0F0F0; }
-.hot-count { color: #999; font-size: 12px; }
 </style>

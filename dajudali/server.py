@@ -3217,25 +3217,113 @@ def api_consumption_record():
 def api_dashboard():
     tid = session['tenant_id']
     conn = get_db()
+    now = datetime.now()
+    today = now.strftime('%Y-%m-%d')
+    today_start = today + ' 00:00:00'
+
+    # ---- 基础计数 ----
     today_chats = conn.execute("SELECT COUNT(*) FROM conversations WHERE tenant_id=? AND created_at >= date('now','localtime')", (tid,)).fetchone()[0] or 0
     active_members = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user'", (tid,)).fetchone()[0] or 0
     total_orders = conn.execute("SELECT COUNT(*) FROM work_orders WHERE tenant_id=?", (tid,)).fetchone()[0] or 0
     pending_orders = conn.execute("SELECT COUNT(*) FROM work_orders WHERE tenant_id=? AND status='pending'", (tid,)).fetchone()[0] or 0
     activity_count = conn.execute("SELECT COUNT(*) FROM activities", ()).fetchone()[0] or 0
     reg_count = conn.execute("SELECT COUNT(*) FROM registrations", ()).fetchone()[0] or 0
+
+    # ---- 真实满意度 / 办结率 / AI 自助率 ----
+    sat = conn.execute("SELECT AVG(rating) FROM feedbacks").fetchone()[0]
+    satisfaction = round(sat, 1) if sat else '—'
+    order_done_rate = round((total_orders - pending_orders) / total_orders * 100, 1) if total_orders else '—'
+    escalated_today = conn.execute("SELECT COUNT(*) FROM human_chat_messages WHERE work_order_id IS NOT NULL AND created_at >= ?", (today_start,)).fetchone()[0] or 0
+    ai_rate = round((today_chats - escalated_today) / today_chats * 100, 1) if today_chats else '—'
+
+    # ---- GMV / 核销 / 积分 ----
+    gmv_today = conn.execute("SELECT COALESCE(SUM(amount),0) FROM member_consumptions WHERE created_at >= ?", (today_start,)).fetchone()[0] or 0
+    gmv_total = conn.execute("SELECT COALESCE(SUM(amount),0) FROM member_consumptions").fetchone()[0] or 0
+    redeemed_today = conn.execute("SELECT COUNT(*) FROM coupon_claims WHERE redeemed=1 AND redeem_at LIKE ?", (today + '%',)).fetchone()[0] or 0
+    redeemed_total = conn.execute("SELECT COUNT(*) FROM coupon_claims WHERE redeemed=1").fetchone()[0] or 0
+    pi = conn.execute("SELECT COALESCE(SUM(points),0) FROM points_log WHERE points>0 AND created_at >= ?", (today_start,)).fetchone()[0] or 0
+    pu = conn.execute("SELECT COALESCE(SUM(points),0) FROM points_log WHERE points<0 AND created_at >= ?", (today_start,)).fetchone()[0] or 0
+    points_issued_today = pi or 0
+    points_used_today = abs(pu) or 0
+
+    # ---- 会员结构 ----
+    new_members_today = conn.execute("SELECT COUNT(*) FROM users WHERE role='user' AND created_at >= ?", (today_start,)).fetchone()[0] or 0
+    members = conn.execute("SELECT phone, last_visit, created_at FROM users WHERE role='user'").fetchall()
+    silent = 0
+    active_30 = 0
+    new_30 = 0
+    thr30 = now - timedelta(days=30)
+    for m in members:
+        lv = _parse_dt(m['last_visit']) or _parse_dt(m['created_at'])
+        crt = _parse_dt(m['created_at'])
+        if lv and (now - lv).days > 90:
+            silent += 1
+        if lv and lv >= thr30:
+            active_30 += 1
+        if crt and crt >= thr30:
+            new_30 += 1
+    silent_members = silent
+    silent_ratio = round(silent / len(members) * 100, 1) if members else 0
+    member_segments = {'total': len(members), 'new_30': new_30, 'active_30': active_30, 'silent': silent}
+    level_rows = conn.execute("SELECT COALESCE(NULLIF(membership_level,''),'普卡') level, COUNT(*) c FROM users WHERE role='user' GROUP BY level").fetchall()
+    member_levels = [{'level': r['level'], 'count': r['c']} for r in level_rows]
+
+    shops_total = conn.execute("SELECT COUNT(*) FROM shops").fetchone()[0] or 0
+    pending_kb = conn.execute("SELECT COUNT(*) FROM kb_pending WHERE status='pending'").fetchone()[0] or 0
+    pending_activities = conn.execute("SELECT COUNT(*) FROM activities WHERE status='pending'").fetchone()[0] or 0
+
+    # ---- 7 日序列（sparkline）----
+    dates = [(now - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(6, -1, -1)]
+    series_chats = [{'date': d, 'value': conn.execute("SELECT COUNT(*) FROM conversations WHERE tenant_id=? AND date(created_at)=?", (tid, d)).fetchone()[0] or 0} for d in dates]
+    series_gmv = [{'date': d, 'value': round(conn.execute("SELECT COALESCE(SUM(amount),0) FROM member_consumptions WHERE date(created_at)=?", (d,)).fetchone()[0] or 0, 2)} for d in dates]
+    active_map = {}
+    for table, col, pcol in [('sign_in_records', 'sign_date', 'user_phone'), ('daily_checkins', 'checkin_date', 'phone'), ('member_consumptions', 'created_at', 'phone')]:
+        if table == 'member_consumptions':
+            rows = conn.execute("SELECT date(created_at) d, phone FROM member_consumptions").fetchall()
+        else:
+            rows = conn.execute(f"SELECT {col} d, {pcol} FROM {table}").fetchall()
+        for r in rows:
+            d0 = (r['d'] or '')[:10]
+            if d0:
+                active_map.setdefault(d0, set()).add(r[pcol])
+    series_active = [{'date': d, 'value': len(active_map.get(d, set()))} for d in dates]
+
+    # ---- 营销转化漏斗 ----
+    issued = conn.execute("SELECT COUNT(*) FROM offers WHERE status='active'").fetchone()[0] or 0
+    claimed = conn.execute("SELECT COUNT(*) FROM coupon_claims").fetchone()[0] or 0
+    redeemed = redeemed_total
+    claim_rate = round(claimed / issued * 100, 1) if issued else 0
+    redeem_rate = round(redeemed / claimed * 100, 1) if claimed else 0
+    funnel = {'issued': issued, 'claimed': claimed, 'redeemed': redeemed, 'claim_rate': claim_rate, 'redeem_rate': redeem_rate}
+
+    # ---- 运营预警 ----
+    alerts = []
+    if pending_orders > 0:
+        alerts.append({'level': 'danger' if pending_orders >= 10 else 'warn', 'text': f'待处理工单 {pending_orders} 单', 'key': 'orders'})
+    if pending_kb > 0:
+        alerts.append({'level': 'danger' if pending_kb >= 10 else 'warn', 'text': f'知识库待优化 {pending_kb} 条', 'key': 'kb'})
+    if silent_ratio >= 40:
+        alerts.append({'level': 'danger', 'text': f'沉默会员占比 {silent_ratio}%', 'key': 'silent'})
+    if issued > 0 and redeem_rate < 5:
+        alerts.append({'level': 'warn', 'text': f'券核销率偏低 {redeem_rate}%', 'key': 'redeem'})
+    neg_today = conn.execute("SELECT COUNT(*) FROM feedbacks WHERE rating<=3 AND created_at >= ?", (today_start,)).fetchone()[0] or 0
+    if neg_today > 0:
+        alerts.append({'level': 'warn', 'text': f'今日差评/投诉 {neg_today} 条', 'key': 'neg'})
+
     acts = conn.execute("SELECT id,title,enrolled FROM activities WHERE status='open' ORDER BY enrolled DESC LIMIT 5").fetchall()
     conn.close()
     return jsonify(ok=True,
-        today_chats=today_chats,
-        active_members=active_members,
-        total_orders=total_orders,
-        pending_orders=pending_orders,
-        activity_count=activity_count,
-        reg_count=reg_count,
-        satisfaction='4.8',
-        ai_rate='82%',
-        order_done_rate='91%',
-        hot_activities=[dict(r) for r in acts]
+        today_chats=today_chats, active_members=active_members, total_orders=total_orders,
+        pending_orders=pending_orders, activity_count=activity_count, reg_count=reg_count,
+        satisfaction=satisfaction, ai_rate=ai_rate, order_done_rate=order_done_rate,
+        gmv_today=round(gmv_today, 2), gmv_total=round(gmv_total, 2),
+        redeemed_today=redeemed_today, redeemed_total=redeemed_total,
+        points_issued_today=points_issued_today, points_used_today=points_used_today,
+        new_members_today=new_members_today, silent_members=silent_members, shops_total=shops_total,
+        pending_kb=pending_kb, pending_activities=pending_activities, silent_ratio=silent_ratio,
+        series_chats=series_chats, series_gmv=series_gmv, series_active=series_active,
+        funnel=funnel, member_levels=member_levels, member_segments=member_segments,
+        alerts=alerts, hot_activities=[dict(r) for r in acts]
     )
 
 @app.route('/api/users', methods=['GET','POST'])
