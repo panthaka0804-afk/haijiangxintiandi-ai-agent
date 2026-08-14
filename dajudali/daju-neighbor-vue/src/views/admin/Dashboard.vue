@@ -41,6 +41,21 @@
             <template v-else-if="t.key === '/admin/settings'">
               <circle cx="12" cy="12" r="2.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
             </template>
+            <template v-else-if="t.key === '/admin/shops'">
+              <path d="M3 9l1.5-4.5A2 2 0 016.4 3h11.2a2 2 0 011.9 1.5L21 9"/>
+              <path d="M3 9v10a1 1 0 001 1h16a1 1 0 001-1V9"/>
+              <path d="M3 9h18"/><path d="M9 20v-6h6v6"/>
+            </template>
+            <template v-else-if="t.key === '/admin/offers'">
+              <path d="M4 7h16a1 1 0 011 1v2a2 2 0 000 4v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2a2 2 0 000-4V8a1 1 0 011-1z"/>
+              <line x1="13" y1="7" x2="13" y2="17" stroke-dasharray="2 2"/>
+            </template>
+            <template v-else-if="t.key === '/admin/redeem'">
+              <rect x="3" y="8" width="18" height="13" rx="1.5"/>
+              <path d="M3 12h18"/><path d="M12 8v13"/>
+              <path d="M12 8C12 8 10 4 7.5 5.5 5 7 12 8 12 8z"/>
+              <path d="M12 8C12 8 14 4 16.5 5.5 19 7 12 8 12 8z"/>
+            </template>
             <template v-else-if="t.key === '/admin/intelligence'">
               <rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 3v2M15 3v2M9 19v2M15 19v2M3 9h2M3 15h2M19 9h2M19 15h2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/>
             </template>
@@ -91,6 +106,7 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile))
 const activeMenu = computed(() => route.path)
 
 const superTabs = [
+  { key: '/admin/intelligence', label: '智能中心', color: '#FF7B2C' },
   { key: '/admin/dashboard', label: '看板', color: '#C4923A' },
   { key: '/admin/orders', label: '工单', color: '#D4A59A' },
   { key: '/admin/human-chat', label: '人工客服', color: '#9B4A3E' },
@@ -104,7 +120,6 @@ const superTabs = [
   { key: '/admin/redeem', label: '积分商城', color: '#8B8B90' },
   { key: '/admin/users', label: '用户', color: '#6B6E64' },
   { key: '/admin/settings', label: '设置', color: '#C4923A' },
-  { key: '/admin/intelligence', label: '智能中心', color: '#FF7B2C' },
 ]
 
 const currentTabLabel = computed(() => {
