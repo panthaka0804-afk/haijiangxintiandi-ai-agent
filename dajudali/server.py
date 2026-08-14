@@ -123,7 +123,7 @@ def get_db():
     # 多进程容灾：WAL 模式 + 忙等待，避免 gunicorn 多 worker 并发写锁库
     try:
         conn.execute('PRAGMA journal_mode=WAL')
-        conn.execute('PRAGMA busy_timeout=5000')
+        conn.execute('PRAGMA busy_timeout=30000')
         conn.execute('PRAGMA synchronous=NORMAL')
     except Exception:
         pass
@@ -814,7 +814,9 @@ def api_chat():
     user_input = data.get('message', '').strip()
     tid = session['tenant_id']
     uid = session['user_id']
-    return _do_chat(tid, uid, user_input)
+    resp = _do_chat(tid, uid, user_input)
+    _persist_chat_if_ok(tid, uid, user_input, resp)
+    return resp
 
 @app.route('/api/public/chat', methods=['POST'])
 def api_public_chat():
@@ -827,7 +829,9 @@ def api_public_chat():
     sid = request.cookies.get('session', 'anonymous')
     # tenant 固定为 1
     large_font = data.get('large_font', False)
-    return _do_chat(1, sid, user_input, large_font=large_font)
+    resp = _do_chat(1, sid, user_input, large_font=large_font)
+    _persist_chat_if_ok(1, sid, user_input, resp)
+    return resp
 
 @app.route('/api/public/chat/stream', methods=['POST'])
 def api_public_chat_stream():
@@ -3240,7 +3244,7 @@ def api_dashboard():
     today_start = today + ' 00:00:00'
 
     # ---- 基础计数 ----
-    today_chats = conn.execute("SELECT COUNT(*) FROM conversations WHERE tenant_id=? AND created_at >= date('now','localtime')", (tid,)).fetchone()[0] or 0
+    today_chats = conn.execute("SELECT COUNT(*) FROM conversations WHERE tenant_id=? AND role='user' AND created_at >= date('now','localtime')", (tid,)).fetchone()[0] or 0
     active_members = conn.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role='user'", (tid,)).fetchone()[0] or 0
     total_orders = conn.execute("SELECT COUNT(*) FROM work_orders WHERE tenant_id=?", (tid,)).fetchone()[0] or 0
     pending_orders = conn.execute("SELECT COUNT(*) FROM work_orders WHERE tenant_id=? AND status='pending'", (tid,)).fetchone()[0] or 0
@@ -3328,6 +3332,42 @@ def api_dashboard():
     if neg_today > 0:
         alerts.append({'level': 'warn', 'text': f'今日差评/投诉 {neg_today} 条', 'key': 'neg'})
 
+    # ---- KPI 环比(昨日)/同比(上周) + 本周亮点风险 ----
+    y_start = (now - timedelta(days=1)).strftime('%Y-%m-%d') + ' 00:00:00'
+    w_start = (now - timedelta(days=7)).strftime('%Y-%m-%d') + ' 00:00:00'
+    p7_start = (now - timedelta(days=14)).strftime('%Y-%m-%d') + ' 00:00:00'
+    def _day_gmv(s, e):
+        return conn.execute("SELECT COALESCE(SUM(amount),0) FROM member_consumptions WHERE created_at >= ? AND created_at < ?", (s, e)).fetchone()[0] or 0
+    def _day_redeem(s, e):
+        return conn.execute("SELECT COUNT(*) FROM coupon_claims WHERE redeemed=1 AND redeem_at >= ? AND redeem_at < ?", (s, e)).fetchone()[0] or 0
+    def _day_chats(s, e):
+        return conn.execute("SELECT COUNT(*) FROM conversations WHERE role='user' AND created_at >= ? AND created_at < ?", (s, e)).fetchone()[0] or 0
+    def _day_pts(s, e):
+        return conn.execute("SELECT COALESCE(SUM(points),0) FROM points_log WHERE points>0 AND created_at >= ? AND created_at < ?", (s, e)).fetchone()[0] or 0
+    def _chg(cur, base):
+        return round((cur - base)/base*100, 1) if base else None
+    gmv_dod = _chg(gmv_today, _day_gmv(y_start, today_start))
+    gmv_wow = _chg(gmv_today, _day_gmv(w_start, y_start))
+    redeemed_dod = _chg(redeemed_today, _day_redeem(y_start, today_start))
+    redeemed_wow = _chg(redeemed_today, _day_redeem(w_start, y_start))
+    chats_dod = _chg(today_chats, _day_chats(y_start, today_start))
+    chats_wow = _chg(today_chats, _day_chats(w_start, y_start))
+    pts_dod = _chg(points_issued_today, _day_pts(y_start, today_start))
+    pts_wow = _chg(points_issued_today, _day_pts(w_start, y_start))
+    this7_gmv = _day_gmv(w_start, today_start); prev7_gmv = _day_gmv(p7_start, w_start)
+    this7_chats = _day_chats(w_start, today_start); prev7_chats = _day_chats(p7_start, w_start)
+    this7_redeem = _day_redeem(w_start, today_start); prev7_redeem = _day_redeem(p7_start, w_start)
+    cands = [('GMV', _chg(this7_gmv, prev7_gmv)), ('咨询量', _chg(this7_chats, prev7_chats)), ('核销量', _chg(this7_redeem, prev7_redeem))]
+    pos = sorted([c for c in cands if c[1] is not None and c[1] > 0], key=lambda x: x[1], reverse=True)
+    neg = sorted([c for c in cands if c[1] is not None and c[1] < 0], key=lambda x: x[1])
+    weekly_headline = ''
+    if pos:
+        weekly_headline += f"本周亮点：{pos[0][0]}环比+{pos[0][1]}%"
+    if neg:
+        weekly_headline += ('；' if weekly_headline else '') + f"最大风险：{neg[0][0]}环比{neg[0][1]}%"
+    if not weekly_headline:
+        weekly_headline = '本周各项指标平稳，暂无显著波动'
+
     acts = conn.execute("SELECT id,title,enrolled FROM activities WHERE status='open' ORDER BY enrolled DESC LIMIT 5").fetchall()
     payload = dict(
         today_chats=today_chats, active_members=active_members, total_orders=total_orders,
@@ -3340,7 +3380,10 @@ def api_dashboard():
         pending_kb=pending_kb, pending_activities=pending_activities, silent_ratio=silent_ratio,
         series_chats=series_chats, series_gmv=series_gmv, series_active=series_active,
         funnel=funnel, member_levels=member_levels, member_segments=member_segments,
-        alerts=alerts, hot_activities=[dict(r) for r in acts]
+        alerts=alerts, hot_activities=[dict(r) for r in acts],
+        gmv_dod=gmv_dod, gmv_wow=gmv_wow, redeemed_dod=redeemed_dod, redeemed_wow=redeemed_wow,
+        chats_dod=chats_dod, chats_wow=chats_wow, points_dod=pts_dod, points_wow=pts_wow,
+        weekly_headline=weekly_headline
     )
     _DASHBOARD_CACHE['data'] = payload
     _DASHBOARD_CACHE['ts'] = time.time()
@@ -3390,6 +3433,166 @@ def api_admin_notify_log():
         "SELECT phone, kind, content, status, created_at FROM notification_log ORDER BY id DESC LIMIT 50").fetchall()
     conn.close()
     return jsonify(ok=True, logs=[dict(r) for r in rows])
+
+
+# ========== 演示数据：种入近 90 天仿真历史（让看板/洞察"有故事"，可一键清空） ==========
+_SEED_QA = [
+    ('停车怎么收费', '停车前2小时免费，之后5元/小时，会员每日赠1张2小时停车券，可在「我的-优惠券」查看。'),
+    ('哪里有充电桩', 'B1停车场设有新能源充电桩，扫码即可使用，收费标准见场内指示牌。'),
+    ('积分怎么兑换', '进入「会员中心-积分商城」可用积分兑换停车券、餐饮券、电影票等好礼。'),
+    ('优惠券在哪领', '首页「每日特惠」和「会员权益」定期发券，关注推送别错过哦。'),
+    ('营业时间', '海江新天地营业时间 10:00-22:00，餐饮部分商户延至 22:30。'),
+    ('有没有亲子活动', '每周末泡泡米儿童、小荧星艺校有亲子活动，详见「活动」页报名。'),
+    ('瑞幸在哪', '瑞幸咖啡位于1区1F，靠近主入口，营业 07:00-22:00。'),
+    ('怎么注册会员', '在「我的」页点击开通会员，注册即送500积分，享专属折扣。'),
+    ('会员等级', '会员分普卡/银卡/金卡/钻石卡，消费累积升级，等级越高折扣越多。'),
+    ('发票怎么开', '消费后可在服务台或「我的-开票」申请电子发票。'),
+    ('卫生间在哪', '每层两端均设卫生间，3区另有无障碍卫生间。'),
+    ('最近有什么活动', '本周有夏日消费季，满200减30，还有抽奖，详见活动页。'),
+    ('停车券怎么用', '出场前在「我的-优惠券」点击停车券核销，或出示券码给岗亭。'),
+    ('招商电话', '招商热线 021-8888-0001，欢迎品牌入驻海江新天地。'),
+    ('失物招领', '遗失物品请到1F服务台登记，或拨打021-8888-0001。'),
+    ('wifi密码', '全场覆盖海江免费WiFi，连接后微信一键登录即可。'),
+    ('宠物能带吗', '公共区域可牵绳携带宠物，餐饮店内请依规。'),
+    ('生日礼遇', '会员生日月双倍积分+专属生日礼，记得完善生日信息哦。'),
+]
+_SEED_UNANSWERED = ['你们那有盲人引导吗', '能不能外摆', '会员卡能借人用吗', '周末停车排队久吗', '有母婴室吗']
+
+
+@app.route('/api/admin/seed-demo', methods=['POST'])
+@admin_required
+def api_admin_seed_demo():
+    """种入近 90 天仿真历史（GMV/核销/咨询/积分/评价），全部标记 demo=1，可一键清空。
+    幂等：已种过则提示，force=1 强制重种（先清后种）。"""
+    conn = get_db(); _ensure_tables(conn)
+    force = (request.get_json() or {}).get('force', 0)
+    seeded = conn.execute("SELECT COUNT(*) FROM member_consumptions WHERE demo=1").fetchone()[0] or 0
+    if seeded and not force:
+        conn.close()
+        return jsonify(ok=True, already_seeded=True, count=seeded,
+                       msg='演示数据已存在，无需重复种入（可用 force=1 重种或 seed-clear 清空）')
+    if force:
+        _seed_clear(conn)
+    phones = [r[0] for r in conn.execute("SELECT phone FROM users WHERE role='user' AND phone<>''").fetchall()]
+    if not phones:
+        phones = ['13800000001', '13800000002', '13800000003']
+    offers = [r[0] for r in conn.execute("SELECT id FROM offers WHERE status='active'").fetchall()]
+    if not offers:
+        offers = [r[0] for r in conn.execute("SELECT id FROM offers LIMIT 30").fetchall()]
+    shops = [r[0] for r in conn.execute("SELECT id FROM shops LIMIT 40").fetchall()]
+    now = datetime.now()
+    cnt_cons = cnt_claim = cnt_redeem = cnt_pt = cnt_conv = cnt_fb = 0
+    # 预生成全局唯一的 (phone,offer) 对，避免 UNIQUE(user_phone,offer_id) 冲突
+    pairs = [(p, o) for p in phones for o in offers]
+    random.shuffle(pairs)
+    # 90 天里挑 ~45% 的天数发放券，每天 1-4 张
+    claim_plan = []
+    day_iter = 0
+    for _ in range(min(len(pairs), 90 * 3)):
+        d = now - timedelta(days=random.randint(0, 89))
+        claim_plan.append((pairs.pop() if pairs else (random.choice(phones), random.choice(offers)), d))
+    for idx in range(90):
+        d = now - timedelta(days=89 - idx)
+        day_base = d.strftime('%Y-%m-%d')
+        # GMV：5-15 笔消费
+        for _ in range(random.randint(5, 15)):
+            amt = round(random.uniform(38, 1980), 2)
+            ts = day_base + ' ' + f'{random.randint(10,21):02d}:{random.randint(0,59):02d}:{random.randint(0,59):02d}'
+            conn.execute("INSERT INTO member_consumptions (phone,amount,source,awarded_first_order,created_at,demo) VALUES (?,?,?,0,?,1)",
+                         (random.choice(phones), amt, random.choice(['餐饮','零售','亲子','娱乐','生活服务']), ts))
+            cnt_cons += 1
+        # 积分发放：6-18 条
+        for _ in range(random.randint(6, 18)):
+            ts = day_base + ' ' + f'{random.randint(10,21):02d}:{random.randint(0,59):02d}:{random.randint(0,59):02d}'
+            conn.execute("INSERT INTO points_log (user_phone,action,points,remark,created_at,demo) VALUES (?,?,?,?,?,1)",
+                         (random.choice(phones), '消费赠分', random.randint(5, 200), '模拟消费奖励', ts))
+            cnt_pt += 1
+        # 券领取：当天分配的 claim_plan
+        for (p, o), _ in [c for c in claim_plan if c[1].strftime('%Y-%m-%d') == day_base]:
+            ts = day_base + ' ' + f'{random.randint(10,21):02d}:{random.randint(0,59):02d}:{random.randint(0,59):02d}'
+            is_redeem = random.random() < 0.45
+            red_at = ts if is_redeem else ''
+            red_amt = round(random.uniform(5, 50), 2) if is_redeem else 0
+            try:
+                conn.execute("INSERT INTO coupon_claims (user_phone,offer_id,claimed_at,redeemed,redeem_amount,redeem_at,demo) VALUES (?,?,?,?,?,?,1)",
+                             (p, o, ts, 1 if is_redeem else 0, red_amt, red_at))
+                cnt_claim += 1
+                if is_redeem:
+                    cnt_redeem += 1
+            except Exception:
+                pass
+        # 对话：10-28 轮（user+assistant），约 12% 未命中
+        for _ in range(random.randint(10, 28)):
+            ts = day_base + ' ' + f'{random.randint(10,21):02d}:{random.randint(0,59):02d}:{random.randint(0,59):02d}'
+            uid = random.choice(phones)
+            if random.random() < 0.12:
+                q = random.choice(_SEED_UNANSWERED)
+                a = '哎呀，小江暂时没找到相关信息，你可以换个问法试试~'
+                ans = 0
+            else:
+                q, a = random.choice(_SEED_QA)
+                ans = 1
+            conn.execute("INSERT INTO conversations (tenant_id,uid,role,content,intent,answered,created_at,demo) VALUES (1,?,?,?,?,?,?,1)",
+                         (str(uid), 'user', q[:2000], q[:40], 1, ts))
+            conn.execute("INSERT INTO conversations (tenant_id,uid,role,content,intent,answered,created_at,demo) VALUES (1,?,?,?,?,?,?,1)",
+                         (str(uid), 'assistant', a[:2000], '', ans, ts))
+            cnt_conv += 1
+        # 评价：约每 3 天 1-3 条
+        if idx % 3 == 0 and shops:
+            for _ in range(random.randint(1, 3)):
+                ts = day_base + ' ' + f'{random.randint(10,21):02d}:{random.randint(0,59):02d}:{random.randint(0,59):02d}'
+                conn.execute("INSERT INTO feedbacks (user_phone,feedback_type,biz_type,shop_id,rating,feedback_text,created_at,demo) VALUES (?,?,?,?,?,?,?,1)",
+                             (random.choice(phones), '商铺评价', 'shop', random.choice(shops), random.randint(3, 5), '体验不错，会继续来。', ts))
+                cnt_fb += 1
+        conn.commit()
+    conn.close()
+    return jsonify(ok=True, already_seeded=False,
+                   count={'consumptions': cnt_cons, 'coupon_claims': cnt_claim, 'redeemed': cnt_redeem,
+                          'points': cnt_pt, 'conversations': cnt_conv, 'feedbacks': cnt_fb},
+                   msg='演示数据已种入近90天历史')
+
+
+def _seed_clear(conn):
+    """清空所有 demo=1 的演示数据。"""
+    n = {}
+    for t in ('member_consumptions', 'coupon_claims', 'points_log', 'conversations', 'feedbacks'):
+        try:
+            c = conn.execute(f"DELETE FROM {t} WHERE demo=1").rowcount
+            n[t] = c
+        except Exception:
+            n[t] = 0
+    conn.commit()
+    return n
+
+
+@app.route('/api/admin/seed-clear', methods=['POST'])
+@admin_required
+def api_admin_seed_clear():
+    """一键清空演示数据（只删 demo=1 行，不影响真实数据）。"""
+    conn = get_db(); _ensure_tables(conn)
+    n = _seed_clear(conn)
+    conn.close()
+    return jsonify(ok=True, removed=n, msg='演示数据已清空')
+
+
+@app.route('/api/admin/recall-list', methods=['GET'])
+@admin_required
+def api_admin_recall_list():
+    """沉默会员召回名单（超 90 天未到店），供智能中心/触达/导出使用。"""
+    conn = get_db(); _ensure_tables(conn)
+    now = datetime.now()
+    rows = conn.execute(
+        "SELECT phone, display_name, membership_level, last_visit, created_at FROM users WHERE role='user' AND phone<>''").fetchall()
+    out = []
+    for m in rows:
+        lv = _parse_dt(m['last_visit']) or _parse_dt(m['created_at'])
+        d = (now - lv).days if lv else 9999
+        if d > 90:
+            out.append({'phone': m['phone'], 'name': m['display_name'] or '', 'level': m['membership_level'] or '',
+                       'last_visit': (lv.strftime('%Y-%m-%d') if lv else ''), 'silent_days': d})
+    conn.close()
+    return jsonify(ok=True, total=len(out), list=out)
+
 
 @app.route('/api/users', methods=['GET','POST'])
 @admin_required
@@ -4170,13 +4373,19 @@ def _release_init_flock():
             pass
 
 def _col_add(conn, table, col, ddl):
-    """幂等给表加列（仅当该列不存在时 ALTER）。"""
-    try:
-        cols = [r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()]
-        if col not in cols:
-            conn.execute(f'ALTER TABLE {table} ADD COLUMN {col} {ddl}')
-    except Exception:
-        pass
+    """幂等给表加列（仅当该列不存在时 ALTER）；遇锁库重试，避免冷启动多 worker 竞争时漏建列。"""
+    import time as _t
+    for _ in range(6):
+        try:
+            cols = [r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()]
+            if col not in cols:
+                conn.execute(f'ALTER TABLE {table} ADD COLUMN {col} {ddl}')
+            return
+        except Exception as e:
+            if 'locked' in str(e).lower():
+                _t.sleep(0.5)
+                continue
+            return
 
 def _migrate_schema(conn):
     """幂等 DDL 迁移：无论 _init_done 如何，每个进程都确保表结构到位（防 gunicorn 多 worker 初始化竞态漏建）。"""
@@ -4232,6 +4441,24 @@ def _migrate_schema(conn):
             channel TEXT DEFAULT 'sms', kind TEXT DEFAULT '', content TEXT DEFAULT '',
             status TEXT DEFAULT '', provider_resp TEXT DEFAULT '', cycle TEXT DEFAULT '',
             created_at TEXT DEFAULT '')''')
+        # 客服对话落库（让"今日咨询/AI自助率"计数真实，且支撑 AI 对话洞察反哺）
+        conn.execute('''CREATE TABLE IF NOT EXISTS conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, tenant_id INTEGER DEFAULT 1,
+            uid TEXT DEFAULT '', role TEXT DEFAULT 'user',
+            content TEXT DEFAULT '', intent TEXT DEFAULT '',
+            answered INTEGER DEFAULT 1, created_at TEXT DEFAULT '')''')
+        # 演示数据标记列（seed-demo 写入，可一键清空，不影响真实数据）
+        _col_add(conn, 'member_consumptions', 'demo', 'INTEGER DEFAULT 0')
+        _col_add(conn, 'coupon_claims', 'demo', 'INTEGER DEFAULT 0')
+        _col_add(conn, 'points_log', 'demo', 'INTEGER DEFAULT 0')
+        _col_add(conn, 'conversations', 'demo', 'INTEGER DEFAULT 0')
+        _col_add(conn, 'feedbacks', 'demo', 'INTEGER DEFAULT 0')
+        # 客服对话落库：补齐历史表可能缺失的列（老库 conversations 仅有 id/tenant_id/created_at/demo）
+        _col_add(conn, 'conversations', 'uid', "TEXT DEFAULT ''")
+        _col_add(conn, 'conversations', 'role', "TEXT DEFAULT 'user'")
+        _col_add(conn, 'conversations', 'content', "TEXT DEFAULT ''")
+        _col_add(conn, 'conversations', 'intent', "TEXT DEFAULT ''")
+        _col_add(conn, 'conversations', 'answered', 'INTEGER DEFAULT 1')
         conn.commit()
     except Exception:
         pass
@@ -4316,6 +4543,34 @@ def _push_sms(phone, kind, content, cycle=''):
     res = send_sms(phone, content)
     _log_notification(phone, 'sms', kind, content, res.get('status', 'sandbox'), res.get('resp', ''), cycle)
     return True
+
+def _persist_conversation(tid, uid, user_msg, ai_reply):
+    """把一轮客服对话落库到 conversations 表（user + assistant 两条）。
+    失败静默；AI 未命中(含降级/无答案特征)标记为 answered=0，供知识库缺口分析。"""
+    try:
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        fail_markers = ('转不过来', '没找到相关信息', '换个问法', '小江暂时没找到', '脑子有点转不过来')
+        answered_ai = 0 if any(m in (ai_reply or '')) else 1
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO conversations (tenant_id,uid,role,content,intent,answered,created_at) VALUES (?,?,?,?,?,?,?)",
+            (tid, str(uid), 'user', (user_msg or '')[:2000], (user_msg or '')[:40], 1, now))
+        conn.execute(
+            "INSERT INTO conversations (tenant_id,uid,role,content,intent,answered,created_at) VALUES (?,?,?,?,?,?,?)",
+            (tid, str(uid), 'assistant', (ai_reply or '')[:2000], '', answered_ai, now))
+        conn.commit()
+    except Exception:
+        pass
+
+def _persist_chat_if_ok(tid, uid, user_input, resp):
+    """从 _do_chat 的响应里取出回复并落库（不影响原响应返回）。"""
+    try:
+        j = resp.get_json()
+        reply = j.get('reply', '')
+        if user_input and reply:
+            _persist_conversation(tid, uid, user_input, reply)
+    except Exception:
+        pass
 
 def _ensure_tables(conn):
     """确保数据表存在并填充初始数据。表结构(DDL)并发安全；初始数据写入每个进程只跑一次，避免 gunicorn 多 worker 并发竞争 SQLite 锁。"""
@@ -7081,6 +7336,17 @@ def api_admin_insights():
     if claimed > 0 and redeem_rate < 20:
         suggestions.append({'text': f'券核销率仅 {redeem_rate}%，建议群发「核销提醒」定向券拉动到店', 'action': 'send-coupon', 'key': 'redeem_boost'})
 
+    # ========== H. AI 对话洞察反哺（客服小江到底在答什么/哪些没答上） ==========
+    chat_rows = conn.execute(
+        "SELECT content, COUNT(*) c FROM conversations WHERE role='user' AND created_at >= ? GROUP BY content ORDER BY c DESC LIMIT 10",
+        (start_str,)).fetchall()
+    chat_topics = [{'question': r['content'], 'count': r['c']} for r in chat_rows]
+    unanswered_count = conn.execute(
+        "SELECT COUNT(*) FROM conversations WHERE role='assistant' AND answered=0 AND created_at >= ?", (start_str,)).fetchone()[0] or 0
+    kb_pending_sample = conn.execute(
+        "SELECT id, question FROM kb_pending WHERE status='pending' ORDER BY id DESC LIMIT 10").fetchall()
+    unanswered_sample = [{'id': r['id'], 'question': r['question']} for r in kb_pending_sample]
+
     handled_rows = conn.execute("SELECT ref_key FROM insight_actions WHERE action_type='alert'").fetchall()
     handled_alerts = [r['ref_key'] for r in handled_rows]
     exec_rows = conn.execute("SELECT ref_key FROM insight_actions WHERE action_type='suggestion'").fetchall()
@@ -7113,6 +7379,10 @@ def api_admin_insights():
         'alerts': alerts,
         # G 可点建议
         'suggestions': suggestions,
+        # H AI 对话洞察反哺
+        'chat_topics': chat_topics,
+        'unanswered_count': unanswered_count,
+        'unanswered_sample': unanswered_sample,
         # H 时间范围
         'days': days,
         # 处置留痕（预警一键已处理 / 建议已执行）
@@ -7142,14 +7412,42 @@ def api_admin_insight_alert_handle():
 def api_admin_insight_suggestion_exec():
     if not _admin_role_ok():
         return jsonify(ok=False, error='权限不足')
-    key = (request.get_json() or {}).get('key') or ''
+    data = request.get_json() or {}
+    key = data.get('key') or ''
     if not key:
         return jsonify(ok=False, error='缺少 key')
     conn = get_db(); _ensure_tables(conn)
+    today = datetime.now().strftime('%Y-%m-%d')
+    pushed = 0
+    target = '/admin/notify'
+    if key == 'silent_recall':
+        # 沉默召回：超 90 天未到店会员，真实推送召回券
+        members = conn.execute("SELECT phone, display_name, last_visit, created_at FROM users WHERE role='user' AND phone<>''").fetchall()
+        now = datetime.now()
+        for m in members:
+            lv = _parse_dt(m['last_visit']) or _parse_dt(m['created_at'])
+            ds = (now - lv).days if lv else 9999
+            if ds > 90 and m['phone']:
+                name = m['display_name'] or '会员'
+                content = f'【海江新天地】{name}，好久不见！专属回归礼：满100减30券已为您备好，到店出示手机号即可用~退订回T'
+                if _push_sms(m['phone'], 'silent_recall', content, cycle=today):
+                    pushed += 1
+    elif key == 'redeem_boost':
+        # 核销拉动：有未核销券的会员，提醒核销
+        rows = conn.execute("SELECT DISTINCT user_phone FROM coupon_claims WHERE redeemed=0 AND user_phone<>''").fetchall()
+        for r in rows:
+            phone = r['user_phone']
+            if not phone:
+                continue
+            content = '【海江新天地】您有一张券还未核销，快来门店使用享专属优惠，逾期作废哦~退订回T'
+            if _push_sms(phone, 'redeem_boost', content, cycle=today):
+                pushed += 1
+    # 记录已执行（防重复处置）
     conn.execute("INSERT INTO insight_actions (action_type, ref_key, created_at) VALUES ('suggestion',?,?)",
                  (key, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     conn.commit(); conn.close()
-    return jsonify(ok=True)
+    return jsonify(ok=True, pushed=pushed, target=target, key=key)
+
 
 
 # ========== 会员智能分层（RFM）+ 流失预警 ==========

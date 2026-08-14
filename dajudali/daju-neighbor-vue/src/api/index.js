@@ -52,6 +52,17 @@ export function getNotifyLog() {
   return request('/api/admin/notify/log')
 }
 
+// ========== 演示数据（种入近 90 天仿真历史 / 清空） ==========
+export function seedDemo(force = 0) {
+  return request('/api/admin/seed-demo', { method: 'POST', body: JSON.stringify({ force }) })
+}
+export function seedClear() {
+  return request('/api/admin/seed-clear', { method: 'POST', body: '{}' })
+}
+export function getRecallList() {
+  return request('/api/admin/recall-list')
+}
+
 // ========== 后台智能运营中心 · 衍生功能（17 项） ==========
 export function getRecallCandidates() {
   return request('/api/admin/recall-candidates')

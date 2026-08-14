@@ -2,6 +2,20 @@
   <div class="admin-dashboard">
     <h3>数据看板</h3>
 
+    <!-- 工具栏：演示数据 + 导出 -->
+    <div class="db-toolbar">
+      <button class="tb-btn" :disabled="seeding" @click="runSeed">{{ seeding ? '种入中…' : '种入演示数据' }}</button>
+      <button class="tb-btn tb-ghost" :disabled="clearing" @click="runClear">{{ clearing ? '清空中…' : '清空演示数据' }}</button>
+      <span class="tb-sep"></span>
+      <button class="tb-btn tb-ghost" @click="exportBoard">导出看板 CSV</button>
+      <button class="tb-btn tb-ghost" @click="printBoard">打印日报 PDF</button>
+    </div>
+
+    <!-- 周报一句话（亮点 / 最大风险） -->
+    <div class="weekly-headline" v-if="weeklyHeadline">
+      <span class="wh-ico">📌</span><span>{{ weeklyHeadline }}</span>
+    </div>
+
     <!-- KPI 数字卡 -->
     <div class="stat-grid">
       <div class="stat-card" v-for="card in statCards" :key="card.key" :style="{ '--card-color': card.color }">
@@ -20,6 +34,14 @@
         <div class="stat-info">
           <span class="stat-value">{{ card.value }}</span>
           <span class="stat-label">{{ card.label }}</span>
+          <div class="stat-delta" v-if="deltaOf(card.key).dod !== null || deltaOf(card.key).wow !== null">
+            <span class="d-chip" :class="deltaCls(card.key, 'dod')" v-if="deltaOf(card.key).dod !== null">
+              日 {{ deltaArrow(deltaOf(card.key).dod) }}{{ Math.abs(deltaOf(card.key).dod) }}%
+            </span>
+            <span class="d-chip" :class="deltaCls(card.key, 'wow')" v-if="deltaOf(card.key).wow !== null">
+              周 {{ deltaArrow(deltaOf(card.key).wow) }}{{ Math.abs(deltaOf(card.key).wow) }}%
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -147,19 +169,53 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { seedDemo, seedClear } from '@/api'
+import { exportCsv, printReport } from '@/utils/export'
 
 const stats = ref(null)
+const deltas = ref({})
+const weeklyHeadline = ref('')
+const seeding = ref(false)
+const clearing = ref(false)
 
 const statCards = reactive([
-  { key: 'chats', label: '今日咨询', value: '--', color: '#4A90D9' },
+  { key: 'chats', label: '今日咨询', value: '--', color: '#4A90D9', goodUp: true },
   { key: 'members', label: '会员总数', value: '--', color: '#E85D04' },
   { key: 'orders', label: '工单总数', value: '--', color: '#9B7BD4' },
-  { key: 'gmv', label: '今日 GMV', value: '--', color: '#C4923A' },
-  { key: 'redeem', label: '今日核销', value: '--', color: '#3E8E41' },
+  { key: 'gmv', label: '今日 GMV', value: '--', color: '#C4923A', goodUp: true },
+  { key: 'redeem', label: '今日核销', value: '--', color: '#3E8E41', goodUp: true },
   { key: 'newmem', label: '今日新增会员', value: '--', color: '#E8809E' },
-  { key: 'points', label: '积分发放(今日)', value: '--', color: '#D4A59A' },
+  { key: 'points', label: '积分发放(今日)', value: '--', color: '#D4A59A', goodUp: true },
   { key: 'shops', label: '商户总数', value: '--', color: '#6B6E64' },
 ])
+
+// 看板返回的环比/周同比字段映射（仅这 4 项有对比基准）
+const DELTA_MAP = {
+  chats: ['chats_dod', 'chats_wow'],
+  gmv: ['gmv_dod', 'gmv_wow'],
+  redeem: ['redeemed_dod', 'redeemed_wow'],
+  points: ['points_dod', 'points_wow'],
+}
+function deltaOf(key) {
+  const m = DELTA_MAP[key]
+  if (!m) return { dod: null, wow: null }
+  return { dod: deltas.value[m[0]], wow: deltas.value[m[1]] }
+}
+function deltaArrow(v) { return v >= 0 ? '▲' : '▼' }
+function deltaCls(key, which) {
+  const v = deltaOf(key)[which]
+  if (v == null) return ''
+  const goodUp = statCards.find(c => c.key === key)?.goodUp
+  const up = v >= 0
+  const good = goodUp ? up : !up
+  return good ? 'good' : 'bad'
+}
+function dateStr() {
+  const d = new Date()
+  const p = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`
+}
 
 function sparkPoints(series) {
   if (!series || !series.length) return ''
@@ -200,7 +256,7 @@ function lvPct(count) {
   return Math.round(count / total * 100)
 }
 
-onMounted(async () => {
+async function loadDashboard() {
   try {
     const res = await fetch('/api/dashboard')
     const d = await res.json()
@@ -214,14 +270,77 @@ onMounted(async () => {
       statCards[5].value = d.new_members_today ?? '--'
       statCards[6].value = d.points_issued_today ?? '--'
       statCards[7].value = d.shops_total ?? '--'
+      deltas.value = {
+        chats_dod: d.chats_dod, chats_wow: d.chats_wow,
+        gmv_dod: d.gmv_dod, gmv_wow: d.gmv_wow,
+        redeemed_dod: d.redeemed_dod, redeemed_wow: d.redeemed_wow,
+        points_dod: d.points_dod, points_wow: d.points_wow,
+      }
+      weeklyHeadline.value = d.weekly_headline || ''
     }
   } catch {}
-})
+}
+
+async function runSeed() {
+  if (!window.confirm('将种入近 90 天仿真历史数据（全部标记 demo，可一键清空，不影响真实数据）。是否继续？')) return
+  seeding.value = true
+  try {
+    const d = await seedDemo(0)
+    if (d.ok) {
+      if (d.already_seeded) ElMessage.info('演示数据已存在，无需重复种入')
+      else ElMessage.success('演示数据已种入，刷新后看板即为真实数字')
+      loadDashboard()
+    } else ElMessage.error(d.error || '种入失败')
+  } catch { ElMessage.error('操作失败') }
+  seeding.value = false
+}
+
+async function runClear() {
+  if (!window.confirm('将清空全部演示数据（仅删 demo 标记行），真实数据不受影响。是否继续？')) return
+  clearing.value = true
+  try {
+    const d = await seedClear()
+    if (d.ok) { ElMessage.success('演示数据已清空'); loadDashboard() }
+    else ElMessage.error(d.error || '清空失败')
+  } catch { ElMessage.error('操作失败') }
+  clearing.value = false
+}
+
+function exportBoard() {
+  const rows = statCards.map(c => ({ 指标: c.label, 数值: c.value }))
+  const ok = exportCsv(rows, `看板数据_${dateStr()}.csv`, [{ key: '指标', title: '指标' }, { key: '数值', title: '数值' }])
+  if (!ok) ElMessage.warning('暂无可导出数据')
+}
+
+function printBoard() {
+  printReport('海江新天地 · 运营看板日报', [
+    {
+      title: '核心指标',
+      columns: [{ key: 'label', title: '指标' }, { key: 'value', title: '数值' }],
+      rows: statCards.map(c => ({ label: c.label, value: c.value }))
+    }
+  ])
+}
+
+onMounted(loadDashboard)
 </script>
 
 <style scoped>
 .admin-dashboard { padding: 0; background: transparent; }
-.admin-dashboard h3 { margin: 0 0 16px; color: #F0F0F0; font-size: 18px; }
+.admin-dashboard h3 { margin: 0 0 12px; color: #F0F0F0; font-size: 18px; }
+
+/* 工具栏 */
+.db-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.tb-btn { padding: 7px 14px; border-radius: 9px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; background: linear-gradient(135deg,#FF7B2C,#E85D04); color: #fff; transition: .15s; }
+.tb-btn:disabled { opacity: .6; cursor: not-allowed; }
+.tb-btn:not(:disabled):hover { box-shadow: 0 4px 12px rgba(232,93,4,.3); }
+.tb-ghost { background: #262626; color: #cfcfcf; }
+.tb-ghost:hover { background: #333; }
+.tb-sep { width: 1px; height: 22px; background: #2a2a2a; margin: 0 2px; }
+
+/* 周报一句话 */
+.weekly-headline { display: flex; align-items: center; gap: 8px; background: linear-gradient(90deg, rgba(255,123,44,.14), rgba(255,123,44,0)); border: 1px solid rgba(255,123,44,.3); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; color: #f0e6dd; }
+.wh-ico { font-size: 15px; }
 
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .stat-card {
@@ -233,6 +352,10 @@ onMounted(async () => {
 .stat-info { display: flex; flex-direction: column; }
 .stat-value { font-size: 22px; font-weight: 800; color: #F0F0F0; line-height: 1.2; }
 .stat-label { font-size: 12px; color: #999; margin-top: 2px; }
+.stat-delta { display: flex; gap: 6px; margin-top: 6px; }
+.d-chip { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 6px; line-height: 1.3; }
+.d-chip.good { color: #FF6A4D; background: rgba(255,106,77,.15); }
+.d-chip.bad { color: #4CAF50; background: rgba(76,175,80,.16); }
 
 .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 .db-card { background: #1A1A1A; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }

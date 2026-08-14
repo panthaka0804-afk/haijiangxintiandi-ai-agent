@@ -14,6 +14,11 @@
 
     <div class="hint-bar">数据来源：会员 / 评价 / 投诉 / 券核销 / 消费 / 知识库等真实业务表，按所选时间窗实时聚合</div>
 
+    <!-- 执行闭环结果横幅：点选建议执行后展示，跳转触达日志 -->
+    <div class="exec-banner" v-if="lastExec" @click="goNotify">
+      ✅ 已推送 <b>{{ lastExec.pushed }}</b> 条「{{ execLabel(lastExec.key) }}」短信 · 点击前往触达中心查看日志 →
+    </div>
+
     <!-- E. 智能预警雷达 -->
     <section class="mc-card mc-card-red panel">
       <div class="panel-head">
@@ -47,6 +52,36 @@
             <span v-else>群发定向券 →</span>
           </div>
           <div class="suggest-act" v-else>{{ s.target ? '前往处理 →' : '在此补充 ↓' }}</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- H. AI 对话洞察反哺（客服小江到底在答什么 / 哪些没答上） -->
+    <section class="mc-card mc-card-blue panel">
+      <div class="panel-head">
+        <h2><span class="dot" style="background:#4A90D9"></span>AI 对话洞察（客服小江在答什么）</h2>
+        <span class="engine" v-if="chatTotal">样本 {{ chatTotal }} 条</span>
+        <span class="engine" v-else>暂无</span>
+      </div>
+      <div v-if="!chatTotal" class="empty">暂无对话数据（可在看板「种入演示数据」后查看真实分布）</div>
+      <div v-else class="chat-top">
+        <div class="chat-col">
+          <div class="chat-col-h">🔥 高频提问 Top10</div>
+          <div class="topic-list">
+            <div class="topic-item" v-for="(t, i) in (insights.chat_topics || []).slice(0, 10)" :key="i">
+              <span class="topic-rank">{{ i + 1 }}</span>
+              <span class="topic-q" :title="t.question">{{ t.question }}</span>
+              <span class="topic-cnt">{{ t.count }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="chat-col">
+          <div class="chat-col-h">🩺 AI 答不上的</div>
+          <div class="unans-box" :class="{ clickable: (insights.unanswered_count || 0) > 0 }" @click="goKb">
+            <div class="unans-num">{{ insights.unanswered_count || 0 }}</div>
+            <div class="unans-lab">待优化问题（点击去知识库补充）</div>
+          </div>
+          <button class="recall-btn" @click="exportRecall">导出沉默召回名单 CSV</button>
         </div>
       </div>
     </section>
@@ -195,6 +230,7 @@
     <section class="mc-card mc-card-pink panel">
       <div class="panel-head">
         <h2><span class="dot" style="background:#D4A59A"></span>商户情感榜（差评风险排序）</h2>
+        <button class="export-mini" @click="exportSentiment">导出 CSV</button>
         <span class="engine ok" v-if="merchantSentiment.real">真实数据</span>
         <span class="engine" v-else>暂无</span>
       </div>
@@ -290,7 +326,8 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getMerchantSentiment, getActivityRoi, handleInsightAlert, execInsightSuggestion, createOffer } from '@/api'
+import { getMerchantSentiment, getActivityRoi, handleInsightAlert, execInsightSuggestion, createOffer, getRecallList } from '@/api'
+import { exportCsv } from '@/utils/export'
 
 const router = useRouter()
 const days = ref(30)
@@ -315,6 +352,37 @@ const showCouponDialog = ref(false)
 const couponKey = ref('')
 const couponForm = reactive({ label: '', amount: 30, expire: '2026-12-31', target_level: '' })
 const submittingCoupon = ref(false)
+const lastExec = ref(null)
+
+function goKb() { router.push({ name: 'admin-kb' }) }
+function goNotify() { router.push({ name: 'admin-notify' }) }
+function execLabel(k) { return ({ silent_recall: '沉默召回', redeem_boost: '核销提醒' })[k] || '定向' }
+function dateStr() {
+  const d = new Date()
+  const p = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`
+}
+const chatTotal = computed(() => (insights.chat_topics || []).reduce((a, t) => a + (t.count || 0), 0))
+
+async function exportRecall() {
+  try {
+    const d = await getRecallList()
+    if (d.ok && d.list && d.list.length) {
+      const rows = d.list.map(m => ({ 手机号: m.phone, 姓名: m.name, 等级: m.level, 最后到店: m.last_visit, 沉默天数: m.silent_days }))
+      if (!exportCsv(rows, `沉默召回名单_${dateStr()}.csv`,
+        [{ key: '手机号', title: '手机号' }, { key: '姓名', title: '姓名' }, { key: '等级', title: '等级' }, { key: '最后到店', title: '最后到店' }, { key: '沉默天数', title: '沉默天数' }])) {
+        ElMessage.warning('暂无沉默会员')
+      }
+    } else ElMessage.warning('暂无沉默会员')
+  } catch { ElMessage.error('导出失败') }
+}
+function exportSentiment() {
+  const rows = merchantSentiment.list.map(m => ({ 商户: m.shop_name, 分类: m.category || '', 评价数: m.cnt, 差评率: m.neg_rate + '%', 均分: m.avg_rating }))
+  if (!exportCsv(rows, `商户情感榜_${dateStr()}.csv`,
+    [{ key: '商户', title: '商户' }, { key: '分类', title: '分类' }, { key: '评价数', title: '评价数' }, { key: '差评率', title: '差评率' }, { key: '均分', title: '均分' }])) {
+    ElMessage.warning('暂无评价数据')
+  }
+}
 
 const pending = ref([])
 const pendingTotal = ref(0)
@@ -452,10 +520,14 @@ async function submitCoupon() {
       target_level: couponForm.target_level
     })
     if (d.ok) {
-      ElMessage.success('定向券已创建并上架，已推送会员')
+      ElMessage.success('定向券已创建并上架')
       if (couponKey.value) {
         const ex = await execInsightSuggestion(couponKey.value)
-        if (ex.ok) executedSuggestions.value.push(couponKey.value)
+        if (ex.ok) {
+          executedSuggestions.value.push(couponKey.value)
+          lastExec.value = { key: couponKey.value, pushed: ex.pushed || 0, target: ex.target || '/admin/notify' }
+          ElMessage.success(`已推送 ${ex.pushed || 0} 条，前往触达中心查看日志`)
+        }
       }
       showCouponDialog.value = false
     } else ElMessage.error(d.error || '创建失败')
@@ -531,6 +603,7 @@ onMounted(loadAll)
 .mc-card-gold::before { --mc-bar: #C4923A; }
 .mc-card-pink::before { --mc-bar: #D4A59A; }
 .mc-card-red::before { --mc-bar: #9B4A3E; }
+.mc-card-blue::before { --mc-bar: #4A90D9; }
 
 .panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .panel-head h2 { margin: 0; font-size: 15px; color: #f0f0f0; font-weight: 600; display: flex; align-items: center; gap: 8px; }
@@ -539,6 +612,32 @@ onMounted(loadAll)
 .engine.ok { color: #A9BBA0; background: rgba(107,110,100,0.2); }
 .engine.warn { color: #E3BB6A; background: rgba(196,146,58,0.18); }
 .empty { color: #777; font-size: 13px; padding: 16px 0; text-align: center; }
+
+/* 执行闭环结果横幅 */
+.exec-banner { background: linear-gradient(90deg, rgba(62,142,65,0.18), rgba(62,142,65,0)); border: 1px solid rgba(62,142,65,0.4); color: #C9E6CB; border-radius: 10px; padding: 11px 14px; font-size: 13px; margin-bottom: 14px; cursor: pointer; transition: .15s; }
+.exec-banner:hover { background: rgba(62,142,65,0.22); }
+.exec-banner b { color: #A9E0AC; font-size: 15px; }
+
+/* 导出小按钮（面板头内） */
+.export-mini { margin-left: 10px; padding: 4px 12px; border: 1px solid #3a3a3a; border-radius: 14px; font-size: 12px; font-weight: 600; color: #E3BB6A; background: #202020; cursor: pointer; transition: .15s; }
+.export-mini:hover { border-color: #E3BB6A; }
+
+/* AI 对话洞察 */
+.chat-top { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.chat-col-h { font-size: 13px; color: #cdd8e6; margin-bottom: 8px; font-weight: 600; }
+.topic-list { display: flex; flex-direction: column; gap: 6px; }
+.topic-item { display: flex; align-items: center; gap: 8px; background: #1d1d1d; border-radius: 8px; padding: 7px 10px; }
+.topic-rank { width: 20px; height: 20px; border-radius: 5px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; background: #4A90D9; }
+.topic-q { flex: 1; min-width: 0; font-size: 12px; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topic-cnt { flex: none; font-size: 12px; font-weight: 700; color: #9ec5ec; background: rgba(74,144,217,0.18); border-radius: 10px; padding: 1px 8px; }
+.unans-box { background: #1d1d1d; border: 1px dashed #444; border-radius: 10px; padding: 16px; text-align: center; cursor: default; }
+.unans-box.clickable { border-color: #C9956C; cursor: pointer; }
+.unans-box.clickable:hover { background: #24211d; }
+.unans-num { font-size: 28px; font-weight: 800; color: #DD8E7C; }
+.unans-lab { font-size: 12px; color: #aaa; margin-top: 4px; }
+.recall-btn { margin-top: 12px; width: 100%; padding: 9px; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; color: #fff; background: linear-gradient(135deg,#FF7B2C,#E85D04); cursor: pointer; transition: .15s; }
+.recall-btn:hover { box-shadow: 0 4px 12px rgba(232,93,4,.3); }
+@media (max-width: 767px) { .chat-top { grid-template-columns: 1fr; } }
 
 /* 预警 */
 .alert-list { display: flex; flex-direction: column; gap: 8px; }
