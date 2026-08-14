@@ -50,14 +50,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useMemberStore } from '@/stores/member'
 import { showSuccessToast, showFailToast } from 'vant'
 import { getMemberDayStatus, claimMemberDay } from '@/api'
 
+const router = useRouter()
 const memberStore = useMemberStore()
-
-const phone = ref('')
+// 登录态实时响应：首页登录 / 跨页同步后，本组件立即跟随，不再卡在「请先登录会员」框
+const phone = computed(() => (memberStore.member && memberStore.member.phone) || '')
 const logs = ref([])
 const logsOpen = ref(false)
 
@@ -102,12 +104,11 @@ function goLogin() {
 }
 
 onMounted(() => {
-  const m = memberStore.member
-  if (m && m.phone) {
-    phone.value = m.phone
-    load()
-  }
+  memberStore.restore()
+  if (phone.value) load()
 })
+// 全局 store 单例响应式：首页登录、或其它页同步后回到本页，自动跟随最新登录态
+watch(phone, (p) => { if (p) load() })
 </script>
 
 <style scoped>
