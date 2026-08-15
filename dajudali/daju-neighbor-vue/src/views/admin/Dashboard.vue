@@ -55,9 +55,6 @@
             <template v-else-if="t.key === '/admin/notify'">
               <path d="M3 11l16-7c1 0 1.5.8 1 1.7l-3.2 11.3c-.4 1.3-1.7 1.3-2.2.2L12 13l-3 3 1 4M3 11l4 1"/>
             </template>
-            <template v-else-if="t.key === '/admin/subsidy'">
-              <path d="M12 2l2.4 7.4H22l-6 4.3 2.3 7.3L12 16.7 5.7 21l2.3-7.3-6-4.3h7.6z"/>
-            </template>
           </svg>
           <span class="nav-label" v-show="!collapsed">{{ t.label }}</span>
         </a>
@@ -106,7 +103,6 @@ const activeMenu = computed(() => route.path)
 
 const superTabs = [
   { key: '/admin/intelligence', label: '智能运营中心', color: '#FF7B2C' },
-  { key: '/admin/subsidy', label: '商户扶持', color: '#FF7B2C' },
   { key: '/admin/members', label: '会员', color: '#C4923A' },
   { key: '/admin/users', label: '用户', color: '#6B6E64' },
   { key: '/admin/feedback', label: '评价', color: '#C9956C' },
@@ -138,7 +134,6 @@ const TAB_PERM = {
   '/admin/members': 'member.view',
   '/admin/dashboard': 'dashboard.view',
   '/admin/intelligence': 'dashboard.view',
-  '/admin/subsidy': 'marketing.view',
 }
 const visibleTabs = computed(() => {
   const perms = userStore.user?.perms || []
