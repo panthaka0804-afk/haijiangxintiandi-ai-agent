@@ -66,6 +66,7 @@ const routes = [
       { path: 'feedback', name: 'admin-feedback', component: () => import('@/views/admin/FeedbackAdmin.vue'), meta: { title: '满意度评价' } },
       { path: 'insights', name: 'admin-insights', component: () => import('@/views/admin/InsightsAdmin.vue'), meta: { title: '运营洞察' } },
       { path: 'intelligence', name: 'admin-intelligence', component: () => import('@/views/admin/AdminIntelligence.vue'), meta: { title: '智能运营中心' } },
+      { path: 'subsidy', name: 'admin-subsidy', component: () => import('@/views/admin/AdminSubsidy.vue'), meta: { title: '商户扶持' } },
       { path: 'notify', name: 'admin-notify', component: () => import('@/views/admin/NotifyAdmin.vue'), meta: { title: '触达中心' } },
       // 后台未知子路径兜底：避免「点进去白屏」，统一暗色 404
       { path: ':pathMatch(.*)*', name: 'admin-not-found', component: () => import('@/views/admin/AdminNotFound.vue'), meta: { title: '页面不存在' } },

@@ -369,6 +369,36 @@
     <div v-if="tab === 'insight'">
       <InsightsAdmin />
     </div>
+
+    <!-- ============ 平台补贴 ROI（投资人视角：花出去的每分补贴都能算回报） ============ -->
+    <div v-if="tab === 'subsidy'">
+      <section class="panel">
+        <div class="panel-head">
+          <h2><span class="dot" style="background:#FF7B2C"></span>平台补贴 ROI 看板</h2>
+          <span v-if="subsidyRoi.demo" class="engine">演示口径</span>
+          <button class="refresh" @click="loadSubsidy">刷新</button>
+        </div>
+        <div class="stat-row wrap">
+          <div class="stat"><b>¥{{ fmtMoney(subsidyRoi.subsidy_total) }}</b><span>补贴总额</span></div>
+          <div class="stat" style="--c:#FF7B2C"><b>{{ fmtNum(subsidyRoi.foot_traffic) }}</b><span>带来到店</span></div>
+          <div class="stat" style="--c:#C4923A"><b>¥{{ fmtMoney(subsidyRoi.gmv) }}</b><span>带动 GMV</span></div>
+          <div class="stat" style="--c:#67C23A"><b>{{ (subsidyRoi.ratio * 100).toFixed(2) }}%</b><span>补贴/GMV 比值</span></div>
+        </div>
+        <p class="hint">补贴效率 = 补贴总额 ÷ 带动 GMV（比值越低，单位补贴撬动的生意越多）。{{ subsidyRoi.demo ? '当前为演示种子数据，接真实核销后自动切换为实算口径。' : '实算口径：券核销金额与到店行为真实统计。' }}</p>
+
+        <h3 class="sub">按商户拆解（补贴去向）</h3>
+        <div class="tbl">
+          <div class="tr th"><span>商户</span><span>补贴额</span><span>占比</span><span>领取/核销</span></div>
+          <div class="tr" v-for="m in subsidyRoi.by_merchant" :key="m.merchant">
+            <span class="cell-member">{{ m.merchant }}</span>
+            <span class="money">¥{{ fmtMoney(m.subsidy) }}</span>
+            <span>{{ subsidyRoi.subsidy_total ? ((m.subsidy / subsidyRoi.subsidy_total) * 100).toFixed(1) + '%' : '—' }}</span>
+            <span>{{ fmtNum(m.claims) }}</span>
+          </div>
+          <div v-if="!subsidyRoi.by_merchant || !subsidyRoi.by_merchant.length" class="empty">暂无补贴数据</div>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -380,7 +410,8 @@ import {
   getRecallCandidates, getRepurchase, getHighValue, getTierSprint, pushRecall,
   getFeedbackAlerts, followFeedbackAlert, getFeedbackPainpoints, getMerchantSentiment, getFeedbackTrend,
   getReportPeriod, getAnomaly, getKpi, updateKpi, getActivityRoi,
-  getPushCopy, getAdvisor, getLeasing, getMarketingCalendar, getTimeslotHeat
+  getPushCopy, getAdvisor, getLeasing, getMarketingCalendar, getTimeslotHeat,
+  getSubsidyRoi
 } from '@/api'
 import AdminDashboard from '@/views/admin/AdminDashboard.vue'
 import InsightsAdmin from '@/views/admin/InsightsAdmin.vue'
@@ -392,6 +423,7 @@ const tabs = [
   { key: 'reput', label: '口碑运营', color: '#C9956C' },
   { key: 'biz', label: '经营分析', color: '#C4923A' },
   { key: 'assist', label: '智能助手', color: '#8B8B90' },
+  { key: 'subsidy', label: '补贴ROI', color: '#FF7B2C' },
   { key: 'insight', label: '运营洞察', color: '#8B8B90' }
 ]
 const loading = ref(true)
@@ -418,6 +450,8 @@ const activityRoi = ref({ list: [] })
 const leasing = ref({ suggestions: [], shop_category_dist: {}, topic_demand: {} })
 const calendar = ref({ events: [] })
 const heat = ref({ heat: [], peak_hour: -1 })
+// 平台补贴 ROI 看板
+const subsidyRoi = ref({ subsidy_total: 0, claims: 0, foot_traffic: 0, gmv: 0, ratio: 0, by_merchant: [], demo: false })
 
 // 助手
 const pc = reactive({ segment: '流失风险会员', theme: '回来看看专属券', channel: '短信' })
@@ -429,13 +463,14 @@ const advisorAns = ref('')
 async function loadAll() {
   loading.value = true
   const [
-    a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r
+    a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s
   ] = await Promise.all([
     getAdminRfm(), getFeedbackSentiment(), getDailyReport(),
     getRecallCandidates(), getRepurchase(), getHighValue(), getTierSprint(),
     getFeedbackAlerts(), getFeedbackPainpoints(), getMerchantSentiment(), getFeedbackTrend(),
     getReportPeriod(period.value), getAnomaly(), getKpi(), getActivityRoi(),
-    getLeasing(), getMarketingCalendar(), getTimeslotHeat()
+    getLeasing(), getMarketingCalendar(), getTimeslotHeat(),
+    getSubsidyRoi()
   ])
   if (a.ok) rfm.value = a.data
   if (b.ok) sent.value = b.data
@@ -455,7 +490,14 @@ async function loadAll() {
   if (p.ok) leasing.value = p.data
   if (q.ok) calendar.value = q.data
   if (r.ok) heat.value = r.data
+  if (s.ok) subsidyRoi.value = { ...s.data, demo: !!s.demo }
   loading.value = false
+}
+
+async function loadSubsidy() {
+  const d = await getSubsidyRoi()
+  if (d.ok) subsidyRoi.value = { ...d.data, demo: !!d.demo }
+  else ElMessage.error(d.error || '补贴数据加载失败')
 }
 
 async function switchPeriod(p) {
@@ -544,6 +586,8 @@ function metricLabel(k) {
   }[k] || k
 }
 function fmtDate(s) { if (!s) return ''; return String(s).slice(0, 16) }
+function fmtMoney(n) { if (n === null || n === undefined || isNaN(n)) return '0'; return Number(n).toLocaleString('zh-CN') }
+function fmtNum(n) { if (n === null || n === undefined || isNaN(n)) return '0'; return Number(n).toLocaleString('zh-CN') }
 </script>
 
 <style scoped>

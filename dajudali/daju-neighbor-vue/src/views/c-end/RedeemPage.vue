@@ -56,7 +56,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getRedeemGoods, getMemberCoupons } from '@/api'
+import { getRedeemCatalog, getMemberCoupons } from '@/api'
 import { useMemberStore } from '@/stores/member'
 
 const activeCat = ref('全部')
@@ -92,28 +92,41 @@ const theme = computed(() => {
   return memberStore.levelTheme(lv || '普卡')
 })
 
-// 本地兜底（后台异常时也能展示）— 真实招商落位商户
+// 本地兜底（后台异常时也能展示）— 与 /api/redeem/catalog 同源的 9 项
 const FALLBACK_GOODS = [
-  { id: 'g1', name: 'SFC上影影城 电影票', points: 2000, category: '娱乐', gradient: 'linear-gradient(135deg, #9B7BD4, #C9B6E8)' },
-  { id: 'g2', name: '朱光玉火锅 50元代金券', points: 3000, category: '餐饮', gradient: 'linear-gradient(135deg, #9B4A3E, #C97A6E)' },
-  { id: 'g3', name: '华为授权店 30元券', points: 2500, category: '购物', gradient: 'linear-gradient(135deg, #4A90D9, #7DB8F0)' },
-  { id: 'g4', name: '海江新天地 停车券10元', points: 500, category: '停车', gradient: 'linear-gradient(135deg, #6B6E64, #9AA39A)' },
-  { id: 'g5', name: '康友四季 足浴券', points: 2500, category: '生活服务', gradient: 'linear-gradient(135deg, #3E8E41, #6FBF73)' },
-  { id: 'g6', name: '泡泡米儿童 体验课', points: 2000, category: '亲子', gradient: 'linear-gradient(135deg, #E8809E, #F0AAC0)' },
-  { id: 'g7', name: '瑞幸咖啡 中杯券', points: 1000, category: '餐饮', gradient: 'linear-gradient(135deg, #0051A8, #3E7FD0)' },
-  { id: 'g8', name: '哇咔健身 体验周卡', points: 4000, category: '娱乐', gradient: 'linear-gradient(135deg, #3E8E41, #6FBF73)' },
+  { id: 1, name: '停车券', points: 500, category: '停车', gradient: 'linear-gradient(135deg, #6B6E64, #9AA39A)' },
+  { id: 2, name: '海江食集满50减10券', points: 800, category: '餐饮', gradient: 'linear-gradient(135deg, #C4923A, #E0B288)' },
+  { id: 3, name: '瑞幸咖啡饮品券', points: 1000, category: '餐饮', gradient: 'linear-gradient(135deg, #0051A8, #3E7FD0)' },
+  { id: 4, name: 'SFC上影电影票', points: 2000, category: '娱乐', gradient: 'linear-gradient(135deg, #9B7BD4, #C9B6E8)' },
+  { id: 5, name: '朱光玉火锅50元券', points: 3000, category: '餐饮', gradient: 'linear-gradient(135deg, #9B4A3E, #C97A6E)' },
+  { id: 6, name: '泡泡米儿童体验课', points: 5000, category: '亲子', gradient: 'linear-gradient(135deg, #E8809E, #F0AAC0)' },
+  { id: 7, name: '华为授权店30元券', points: 8000, category: '购物', gradient: 'linear-gradient(135deg, #4A90D9, #7DB8F0)' },
+  { id: 8, name: '200元购物卡', points: 10000, category: '购物', gradient: 'linear-gradient(135deg, #8B8B90, #A9A9AE)' },
+  { id: 9, name: '哇咔健身周卡', points: 15000, category: '娱乐', gradient: 'linear-gradient(135deg, #3E8E41, #6FBF73)' },
 ]
+
+// 平台统一目录不含 category，按名称推导分类以保留前端分类筛选
+function deriveCategory(name) {
+  if (!name) return '好礼'
+  if (name.includes('停车')) return '停车'
+  if (name.includes('食集') || name.includes('朱光玉') || name.includes('瑞幸') || name.includes('火锅')) return '餐饮'
+  if (name.includes('SFC') || name.includes('电影') || name.includes('健身')) return '娱乐'
+  if (name.includes('泡泡米') || name.includes('儿童')) return '亲子'
+  if (name.includes('华为') || name.includes('购物卡')) return '购物'
+  return '生活服务'
+}
 
 onMounted(async () => {
   try {
-    const resp = await getRedeemGoods()
+    const resp = await getRedeemCatalog()
     if (resp.ok && resp.data && resp.data.length) {
-      goods.value = resp.data
+      // 统一目录 {id,name,cost,desc} → 前端 {id,name,points,category}
+      goods.value = resp.data.map(g => ({ ...g, points: g.cost, category: deriveCategory(g.name) }))
     } else {
       goods.value = FALLBACK_GOODS
     }
   } catch (e) {
-    console.error('Failed to load redeem goods:', e)
+    console.error('Failed to load redeem catalog:', e)
     goods.value = FALLBACK_GOODS
   } finally {
     loading.value = false

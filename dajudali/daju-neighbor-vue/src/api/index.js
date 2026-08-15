@@ -405,6 +405,14 @@ export function deleteOffer(id) {
 export function getRedeemGoods() {
   return request('/api/redeem')
 }
+// 统一兑换目录（9 项，与 /api/member/redeem 共用，避免"看得到兑不了"）
+export function getRedeemCatalog() {
+  return request('/api/redeem/catalog')
+}
+// 平台补贴 ROI 看板（后台，真实数据缺失时回退演示数据）
+export function getSubsidyRoi() {
+  return request('/api/admin/subsidy-roi')
+}
 
 // ========== 停车 ==========
 export function queryParking(data) {

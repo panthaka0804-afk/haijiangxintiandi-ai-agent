@@ -14,7 +14,7 @@
       <div class="rd-card">
         <div class="rd-row">
           <span>当前积分</span>
-          <span class="rd-row-val">22,000</span>
+          <span class="rd-row-val">{{ currentPoints }}</span>
         </div>
         <div class="rd-row">
           <span>兑换消耗</span>
@@ -22,7 +22,7 @@
         </div>
         <div class="rd-row">
           <span>兑换后剩余</span>
-          <span class="rd-row-val">17,000</span>
+          <span class="rd-row-val" :class="{ 'rd-lack': afterPoints < 0 }">{{ afterPoints < 0 ? '积分不足' : afterPoints }}</span>
         </div>
       </div>
       <div class="rd-desc-card">
@@ -33,27 +33,75 @@
 
     <div class="rd-actions">
       <button class="rd-cancel" @click="$router.back()">取消</button>
-      <button class="rd-confirm">确认兑换</button>
+      <button class="rd-confirm"
+        :disabled="redeeming || redeemed || afterPoints < 0"
+        @click="doRedeem">
+        {{ redeemed ? '已兑换 ✓' : (afterPoints < 0 ? '积分不足' : (redeeming ? '兑换中…' : '确认兑换')) }}
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { getRedeemCatalog, redeemPoints } from '@/api'
+import { useMemberStore } from '@/stores/member'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
-const goodsMap = {
-  'g1': { name: 'SFC上影影城 电影票', points: 2000, gradient: 'linear-gradient(135deg, #9B7BD4, #C9B6E8)' },
-  'g2': { name: '朱光玉火锅 50元代金券', points: 3000, gradient: 'linear-gradient(135deg, #9B4A3E, #C97A6E)' },
-  'g3': { name: '华为授权店 30元券', points: 2500, gradient: 'linear-gradient(135deg, #4A90D9, #7DB8F0)' },
-  'g4': { name: '海江新天地 停车券10元', points: 500, gradient: 'linear-gradient(135deg, #6B6E64, #9AA39A)' },
-  'g5': { name: '康友四季 足浴券', points: 2500, gradient: 'linear-gradient(135deg, #3E8E41, #6FBF73)' },
-  'g6': { name: '泡泡米儿童 体验课', points: 2000, gradient: 'linear-gradient(135deg, #E8809E, #F0AAC0)' },
-  'g7': { name: '瑞幸咖啡 中杯券', points: 1000, gradient: 'linear-gradient(135deg, #0051A8, #3E7FD0)' },
-  'g8': { name: '哇咔健身 体验周卡', points: 4000, gradient: 'linear-gradient(135deg, #3E8E41, #6FBF73)' },
+const memberStore = useMemberStore()
+
+const goods = ref({ name: '兑换商品', points: 0, id: null })
+const redeeming = ref(false)
+const redeemed = ref(false)
+
+onMounted(async () => {
+  memberStore.restore()
+  const id = Number(route.params.id)
+  try {
+    const resp = await getRedeemCatalog()
+    if (resp.ok && resp.data) {
+      const item = resp.data.find(g => Number(g.id) === id)
+      if (item) goods.value = { ...item, points: item.cost, id: Number(item.id) }
+    }
+  } catch (e) { /* 用兜底展示 */ }
+})
+
+// 真实当前积分（来自会员 store，未登录为 0）
+const currentPoints = computed(() => (memberStore.member && memberStore.member.points) || 0)
+const afterPoints = computed(() => currentPoints.value - (goods.value.points || 0))
+
+async function doRedeem() {
+  const phone = memberStore.member && memberStore.member.phone
+  if (!phone) {
+    ElMessage.warning('请先登录 / 绑定手机号后再兑换')
+    return
+  }
+  if (redeeming.value || redeemed.value) return
+  if (afterPoints.value < 0) {
+    ElMessage.warning('积分不足，无法兑换')
+    return
+  }
+  redeeming.value = true
+  try {
+    const d = await redeemPoints(phone, goods.value.id)
+    if (d.ok) {
+      redeemed.value = true
+      const after = d.redemption && d.redemption.after_points
+      if (after !== undefined && after !== null && memberStore.member) {
+        memberStore.setMember({ ...memberStore.member, points: after })
+      }
+      ElMessage.success('兑换成功，券已发放至「我的优惠券」')
+    } else {
+      ElMessage.error(d.error || '兑换失败')
+    }
+  } catch (e) {
+    ElMessage.error('网络错误，请稍后重试')
+  } finally {
+    redeeming.value = false
+  }
 }
-const goods = ref(goodsMap[route.params.id] || { name: '兑换商品', points: 0, gradient: '#999' })
 </script>
 
 <style scoped>
@@ -74,6 +122,7 @@ const goods = ref(goodsMap[route.params.id] || { name: '兑换商品', points: 0
 .rd-row:not(:last-child) { border-bottom: 0.5px solid rgba(255,255,255,0.18); }
 .rd-row-val { color: #FFFFFF; font-weight: 500; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
 .rd-cost { color: #FFFFFF; font-weight: 700; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.rd-lack { color: #F56C6C !important; font-weight: 700; }
 
 .rd-desc-card { margin-top: 12px; background-color: #8B8B90; border: 3px solid #6A6A6E; border-radius: 14px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); }
 .rd-desc-title { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.9); margin-bottom: 8px; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
@@ -83,5 +132,6 @@ const goods = ref(goodsMap[route.params.id] || { name: '兑换商品', points: 0
 .rd-cancel, .rd-confirm { flex: 1; padding: 14px; border: 3px solid #4E5049; border-radius: 20px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; color: #fff; }
 .rd-cancel { background-color: #4E5049; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(107,110,100,0.45); filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4)); }
 .rd-confirm { background-color: #9A7425; border-color: #9A7425; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.45), inset -2px -2px 5px rgba(196,146,58,0.45); filter: drop-shadow(0 0.6px 1px rgba(0,0,0,0.4)); }
-.rd-cancel:active, .rd-confirm:active { opacity: 0.82; }
+.rd-cancel:active, .rd-confirm:active:not(:disabled) { opacity: 0.82; }
+.rd-confirm:disabled { background-color: #4E5049; border-color: #4E5049; color: #BBB; box-shadow: inset 3px 3px 7px rgba(0,0,0,0.5); filter: none; cursor: not-allowed; }
 </style>

@@ -146,6 +146,24 @@
       </div>
     </div>
 
+    <!-- 平台补贴专区入口（投资人视角：平台真金白银请客） -->
+    <div class="plat-deal" @click="$router.push('/offers?cat=plat')">
+      <svg class="pd-illus" viewBox="0 0 120 80" fill="none" preserveAspectRatio="xMidYMid slice"><path d="M78 14 l6 14 15 2 -11 10 3 15 -13 -8 -13 8 3 -15 -11 -10 15 -2 z"/></svg>
+      <div class="pd-icon-box">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/><path d="M12 8v13"/><path d="M12 8C12 8 9 4 6.5 5.5 4 7 12 8 12 8zM12 8C12 8 15 4 17.5 5.5 20 7 12 8 12 8z"/>
+        </svg>
+      </div>
+      <div class="pd-left">
+        <span class="pd-badge">平台补贴</span>
+        <div class="pd-title">平台请你吃喝玩乐</div>
+        <div class="pd-desc">平台真金白银买单 · 每张券导流到店</div>
+      </div>
+      <div class="pd-right">
+        <span class="pd-btn">立即领取</span>
+      </div>
+    </div>
+
     <div class="section-label">
       <span class="section-en">service</span>
       <span class="section-cn">服务</span>
@@ -827,6 +845,18 @@ function go(route) {
 /* 每日特惠 — 金黄 */
 .daily-deal { display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background-color: #C4923A; border: 3px solid #9A7425; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .dd-btn { display: inline-block; padding: 8px 20px; background-color: #9A7425; border: 3px solid #9A7425; border-radius: 20px; box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(196,146,58,0.45); color: #FFFFFF; font-size: var(--fs-aux); font-weight: 600; white-space: nowrap; filter: drop-shadow(0 0.6px 1px rgba(0, 0, 0, 0.4)); }
+
+/* 平台补贴专区入口 — 品牌橙，强调"平台真金白银请客" */
+.plat-deal { position: relative; display: flex; align-items: center; gap: 12px; margin: 0 16px 20px; padding: 14px 16px; background: linear-gradient(135deg, #FF7B2C, #E85D04); border: 3px solid #E85D04; border-radius: 18px; box-shadow: 0 4px 14px rgba(232,93,4,0.4), inset 0 1px 0 rgba(255,255,255,0.25); cursor: pointer; -webkit-tap-highlight-color: transparent; overflow: hidden; }
+.plat-deal:active { opacity: 0.85; }
+.pd-illus { position: absolute; right: -8px; bottom: -16px; width: 96px; height: 72px; opacity: 0.22; }
+.pd-icon-box { width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #FFFFFF; background: rgba(0,0,0,0.18); box-shadow: inset 2px 2px 5px rgba(0,0,0,0.3), inset -1px -1px 3px rgba(255,255,255,0.2); }
+.pd-left { flex: 1; min-width: 0; }
+.pd-badge { display: inline-block; font-size: 11px; font-weight: 700; color: #E85D04; background: #FFFFFF; padding: 1px 8px; border-radius: 999px; margin-bottom: 4px; }
+.pd-title { font-size: 16px; font-weight: 800; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
+.pd-desc { font-size: 12px; color: #FFFFFF; opacity: 0.92; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-right { flex-shrink: 0; }
+.pd-btn { display: inline-block; padding: 7px 14px; border-radius: 999px; background: #FFFFFF; color: #E85D04; font-size: 13px; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
 
 /* 社区聚乐部 — 浅粉棕 */
 .biz-hero { position: relative; border-radius: 18px; overflow: hidden; height: 170px; cursor: pointer; margin-bottom: 10px; box-sizing: border-box; background-color: #D4A59A; border: 3px solid #A67D72; box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20); }

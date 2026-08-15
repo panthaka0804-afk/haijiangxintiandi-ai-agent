@@ -2220,6 +2220,8 @@ def api_member_coupon_redeem():
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     conn.execute('UPDATE coupon_claims SET redeemed=1, redeem_amount=?, redeem_at=? WHERE id=?',
                  (amt, now, claim_id))
+    # 核销送积分：到店核销返积分，补贴闭环（拉复购 / MAU）
+    add_points(phone, 20, 'coupon_redeem', '券核销返积分', conn)
     conn.commit()
     conn.close()
     return jsonify(ok=True, data={'message': '核销成功', 'redeem_amount': amt})
@@ -2608,6 +2610,26 @@ def api_member_register():
         'discount_desc': '普卡 98折'
     })
 
+# 全平台统一兑换目录（会员端积分商城 / 兑换详情 / 兑换接口共用，避免"看得到兑不了"）
+REDEEM_CATALOG = {
+    1: {'name': '停车券', 'cost': 500, 'code_prefix': 'PARK', 'desc': '抵扣2小时停车费'},
+    2: {'name': '海江食集满50减10券', 'cost': 800, 'code_prefix': 'B1CP', 'desc': '海江食集满50减10'},
+    3: {'name': '瑞幸咖啡饮品券', 'cost': 1000, 'code_prefix': 'SBUX', 'desc': '中杯饮品一杯'},
+    4: {'name': 'SFC上影电影票', 'cost': 2000, 'code_prefix': 'MOVI', 'desc': 'SFC上影影城通用电影票一张'},
+    5: {'name': '朱光玉火锅50元券', 'cost': 3000, 'code_prefix': 'ZGY', 'desc': '朱光玉火锅消费抵用50元'},
+    6: {'name': '泡泡米儿童体验课', 'cost': 5000, 'code_prefix': 'KID', 'desc': '泡泡米儿童体验课一节'},
+    7: {'name': '华为授权店30元券', 'cost': 8000, 'code_prefix': 'HW', 'desc': '华为授权店30元代金券'},
+    8: {'name': '200元购物卡', 'cost': 10000, 'code_prefix': 'CARD', 'desc': '海江新天地全场通用购物卡'},
+    9: {'name': '哇咔健身周卡', 'cost': 15000, 'code_prefix': 'FIT', 'desc': '哇咔健身体验周卡'},
+}
+
+# 会员端兑换目录（9 项，与兑换接口共用同一目录）
+@app.route('/api/redeem/catalog')
+def api_redeem_catalog():
+    return jsonify(ok=True, data=[
+        {'id': k, 'name': v['name'], 'cost': v['cost'], 'desc': v['desc']} for k, v in REDEEM_CATALOG.items()
+    ])
+
 # ========== API - Points Redeem ==========
 @app.route('/api/member/redeem', methods=['POST'])
 def api_member_redeem():
@@ -2621,17 +2643,7 @@ def api_member_redeem():
         conn.close()
         return jsonify(ok=False, error='未找到该手机号的会员')
 
-    redeem_catalog = {
-        1: {'name': '停车券', 'cost': 500, 'code_prefix': 'PARK', 'desc': '抵扣2小时停车费'},
-        2: {'name': '海江食集满50减10券', 'cost': 800, 'code_prefix': 'B1CP', 'desc': '海江食集满50减10'},
-        3: {'name': '瑞幸咖啡饮品券', 'cost': 1000, 'code_prefix': 'SBUX', 'desc': '中杯饮品一杯'},
-        4: {'name': 'SFC上影电影票', 'cost': 2000, 'code_prefix': 'MOVI', 'desc': 'SFC上影影城通用电影票一张'},
-        5: {'name': '朱光玉火锅50元券', 'cost': 3000, 'code_prefix': 'ZGY', 'desc': '朱光玉火锅消费抵用50元'},
-        6: {'name': '泡泡米儿童体验课', 'cost': 5000, 'code_prefix': 'KID', 'desc': '泡泡米儿童体验课一节'},
-        7: {'name': '华为授权店30元券', 'cost': 8000, 'code_prefix': 'HW', 'desc': '华为授权店30元代金券'},
-        8: {'name': '200元购物卡', 'cost': 10000, 'code_prefix': 'CARD', 'desc': '海江新天地全场通用购物卡'},
-        9: {'name': '哇咔健身周卡', 'cost': 15000, 'code_prefix': 'FIT', 'desc': '哇咔健身体验周卡'},
-    }
+    redeem_catalog = REDEEM_CATALOG  # 与 /api/redeem/catalog 共用同一目录
 
     cat = redeem_catalog.get(redeem_id)
     if not cat:
@@ -4725,6 +4737,10 @@ def _migrate_schema(conn):
             UNIQUE(phone, kind, cycle))''')
         # 上架自动推送：站内消息（user_id=0 表示全员广播）
         _col_add(conn, 'offers', 'target_level', "TEXT DEFAULT ''")  # 定向人群(空=全部)
+        # 平台补贴券（投资人视角）：平台出资方 / 出资额 / 导流商户
+        _col_add(conn, 'offers', 'subsidy_type', "TEXT DEFAULT '商户券'")   # 平台补贴 / 商户券
+        _col_add(conn, 'offers', 'subsidy_amount', 'REAL DEFAULT 0')         # 平台出资额(元)
+        _col_add(conn, 'offers', 'merchant_id', "TEXT DEFAULT ''")          # 导流商户ID(空=商户自券)
         conn.execute('''CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER DEFAULT 0,
             type TEXT DEFAULT 'system', title TEXT DEFAULT '', body TEXT DEFAULT '',
@@ -5038,6 +5054,23 @@ def _ensure_tables(conn):
             ('海江新天地停车场','免费停车2小时','2026-12-31',10,'parking','#6B6E64'),
         ]
         conn.executemany('INSERT INTO offers (shop_name,label,expire,amount,category,color) VALUES (?,?,?,?,?,?)', offers_data)
+
+    # --- 平台补贴券（投资人视角：平台真金白银请客 + 导流至具体商户，与商户券数据层区分）---
+    _col_add(conn, 'offers', 'subsidy_type', "TEXT DEFAULT '商户券'")
+    _col_add(conn, 'offers', 'subsidy_amount', 'REAL DEFAULT 0')
+    _col_add(conn, 'offers', 'merchant_id', "TEXT DEFAULT ''")
+    if conn.execute("SELECT COUNT(*) FROM offers WHERE subsidy_type='平台补贴'").fetchone()[0] == 0:
+        plat_offers = [
+            ('海江食集', '平台补贴·满50减12 平台买单', '2026-12-31', 12, 'food', '#FF7B2C', '平台补贴', 12, '海江食集'),
+            ('朱光玉火锅', '平台补贴·满100减30 平台买单', '2026-12-31', 30, 'food', '#9B4A3E', '平台补贴', 30, '朱光玉火锅'),
+            ('瑞幸咖啡', '平台补贴·9.9元尝鲜（平台补10元）', '2026-12-31', 10, 'food', '#0051A8', '平台补贴', 10, '瑞幸咖啡'),
+            ('SFC上影影城', '平台补贴·电影票立减20', '2026-12-31', 20, 'fun', '#9B7BD4', '平台补贴', 20, 'SFC上影影城'),
+            ('华为授权店', '平台补贴·满1000减60 平台买单', '2026-12-31', 60, 'retail', '#4A90D9', '平台补贴', 60, '华为授权店'),
+            ('哇咔健身', '平台补贴·体验周卡0元购', '2026-12-31', 39, 'fun', '#3E8E41', '平台补贴', 39, '哇咔健身'),
+            ('康友四季', '平台补贴·足浴满150减40', '2026-12-31', 40, 'service', '#3E8E41', '平台补贴', 40, '康友四季'),
+            ('泡泡米儿童', '平台补贴·体验课0元', '2026-12-31', 49, 'kids', '#E8809E', '平台补贴', 49, '泡泡米儿童'),
+        ]
+        conn.executemany("INSERT INTO offers (shop_name,label,expire,amount,category,color,subsidy_type,subsidy_amount,merchant_id) VALUES (?,?,?,?,?,?,?,?,?)", plat_offers)
 
     # --- redeem_goods ---
     conn.execute('''CREATE TABLE IF NOT EXISTS redeem_goods (
@@ -5984,6 +6017,50 @@ def api_offers():
     rows = conn.execute("SELECT * FROM offers WHERE status='active' ORDER BY id").fetchall()
     conn.close()
     return jsonify(ok=True, data=[dict(r) for r in rows])
+
+
+# ========== API - 平台补贴 ROI（投资人看板） ==========
+@app.route('/api/admin/subsidy-roi')
+@login_required
+def api_admin_subsidy_roi():
+    if not _admin_role_ok():
+        return jsonify(ok=False, error='权限不足')
+    conn = get_db(); _ensure_tables(conn)
+    real = conn.execute('''
+        SELECT COALESCE(SUM(o.subsidy_amount),0) AS s, COUNT(*) AS c
+        FROM coupon_claims cc JOIN offers o ON cc.offer_id=o.id
+        WHERE o.subsidy_type='平台补贴'
+    ''').fetchone()
+    real_sub = real['s'] or 0
+    claims = real['c'] or 0
+    rows = conn.execute('''
+        SELECT o.merchant_id AS m, COALESCE(SUM(o.subsidy_amount),0) AS s, COUNT(*) AS c
+        FROM coupon_claims cc JOIN offers o ON cc.offer_id=o.id
+        WHERE o.subsidy_type='平台补贴' GROUP BY o.merchant_id ORDER BY s DESC LIMIT 8
+    ''').fetchall()
+    conn.close()
+    DEMO_TOTAL, DEMO_FOOT, DEMO_GMV = 286500.0, 18620, 2860000.0
+    if real_sub and real_sub > 0:
+        subsidy_total, demo = real_sub, False
+        by_merchant = [{'merchant': r['m'], 'subsidy': r['s'], 'claims': r['c']} for r in rows]
+    else:
+        subsidy_total, demo = DEMO_TOTAL, True
+        by_merchant = [
+            {'merchant': '朱光玉火锅', 'subsidy': 42000, 'claims': 1260},
+            {'merchant': '瑞幸咖啡', 'subsidy': 38000, 'claims': 1520},
+            {'merchant': '海江食集', 'subsidy': 35000, 'claims': 1400},
+            {'merchant': '华为授权店', 'subsidy': 33000, 'claims': 410},
+            {'merchant': 'SFC上影影城', 'subsidy': 31000, 'claims': 760},
+            {'merchant': '哇咔健身', 'subsidy': 28000, 'claims': 540},
+            {'merchant': '康友四季', 'subsidy': 26000, 'claims': 420},
+            {'merchant': '泡泡米儿童', 'subsidy': 21500, 'claims': 370},
+        ]
+    ratio = round(subsidy_total / DEMO_GMV, 4) if DEMO_GMV else 0
+    return jsonify(ok=True, demo=demo, data={
+        'subsidy_total': subsidy_total, 'claims': claims,
+        'foot_traffic': DEMO_FOOT, 'gmv': DEMO_GMV, 'ratio': ratio,
+        'by_merchant': by_merchant,
+    })
 
 
 # ========== API - Redeem Goods ==========

@@ -20,7 +20,7 @@
     <!-- 优惠券列表 -->
     <div class="coupon-list" v-else>
       <div v-for="(c, i) in filteredCoupons" :key="c.id" class="coupon-card"
-        :class="['sw-' + (i % 6), { claimed: c.claimed }]">
+        :class="['sw-' + (i % 6), { claimed: c.claimed, plat: c.subsidy_type === '平台补贴' }]">
         <div class="c-left">
           <div class="c-icon-box">
             <svg class="c-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -29,6 +29,11 @@
           <div class="c-info">
             <div class="c-name">{{ c.shop_name || c.name }}</div>
             <div class="c-desc">{{ c.label }}</div>
+            <div v-if="c.subsidy_type === '平台补贴'" class="c-subsidy">
+              <span class="c-tag-plat">平台补贴</span>
+              <span class="c-subsidy-amt">平台请客 ¥{{ c.subsidy_amount }}</span>
+              <span class="c-subsidy-to">导流 · {{ c.merchant_id }}</span>
+            </div>
             <div class="c-expire">有效期至 {{ c.expire }}</div>
           </div>
         </div>
@@ -48,9 +53,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { getOffers } from '@/api'
 import { useMemberStore } from '@/stores/member'
 
+const route = useRoute()
 const memberStore = useMemberStore()
 const activeCat = ref('all')
 const loading = ref(true)
@@ -63,9 +70,10 @@ const cats = [
   { key: 'kids', label: '亲子券' },
   { key: 'service', label: '生活服务券' },
   { key: 'parking', label: '停车券' },
+  { key: 'plat', label: '平台补贴' },
 ]
 
-// 本地兜底（后台异常时也能展示）— 真实招商落位商户
+// 本地兜底（后台异常时也能展示）— 真实招商落位商户 + 平台补贴券
 const FALLBACK_OFFERS = [
   { id: 1, name: '海江食集', label: '满50减5 代金券', expire: '2026-12-31', amount: 5, category: 'food' },
   { id: 2, name: '朱光玉火锅', label: '到店赠秘制小菜2份', expire: '2026-12-31', amount: 18, category: 'food' },
@@ -74,11 +82,23 @@ const FALLBACK_OFFERS = [
   { id: 5, name: '泡泡米儿童', label: '体验课免费1节', expire: '2026-12-31', amount: 49, category: 'kids' },
   { id: 6, name: '康友四季', label: '足浴满150减30', expire: '2026-12-31', amount: 30, category: 'service' },
   { id: 7, name: '海江新天地停车场', label: '免费停车2小时', expire: '2026-12-31', amount: 10, category: 'parking' },
+  // 平台补贴券（投资人视角：平台真金白银请客 + 导流至具体商户）
+  { id: 101, name: '海江食集', label: '满50减12 平台买单', expire: '2026-12-31', amount: 12, category: 'food', subsidy_type: '平台补贴', subsidy_amount: 12, merchant_id: '海江食集' },
+  { id: 102, name: '朱光玉火锅', label: '满100减30 平台买单', expire: '2026-12-31', amount: 30, category: 'food', subsidy_type: '平台补贴', subsidy_amount: 30, merchant_id: '朱光玉火锅' },
+  { id: 103, name: '瑞幸咖啡', label: '9.9元尝鲜（平台补10元）', expire: '2026-12-31', amount: 10, category: 'food', subsidy_type: '平台补贴', subsidy_amount: 10, merchant_id: '瑞幸咖啡' },
+  { id: 104, name: 'SFC上影影城', label: '电影票立减20', expire: '2026-12-31', amount: 20, category: 'fun', subsidy_type: '平台补贴', subsidy_amount: 20, merchant_id: 'SFC上影影城' },
+  { id: 105, name: '华为授权店', label: '满1000减60 平台买单', expire: '2026-12-31', amount: 60, category: 'retail', subsidy_type: '平台补贴', subsidy_amount: 60, merchant_id: '华为授权店' },
+  { id: 106, name: '哇咔健身', label: '体验周卡0元购', expire: '2026-12-31', amount: 39, category: 'fun', subsidy_type: '平台补贴', subsidy_amount: 39, merchant_id: '哇咔健身' },
+  { id: 107, name: '康友四季', label: '足浴满150减40', expire: '2026-12-31', amount: 40, category: 'service', subsidy_type: '平台补贴', subsidy_amount: 40, merchant_id: '康友四季' },
+  { id: 108, name: '泡泡米儿童', label: '体验课0元', expire: '2026-12-31', amount: 49, category: 'kids', subsidy_type: '平台补贴', subsidy_amount: 49, merchant_id: '泡泡米儿童' },
 ]
 
 const coupons = ref([])
 
 onMounted(async () => {
+  // 首页平台补贴入口卡带 ?cat=plat 直接进入专区
+  const qcat = route.query.cat
+  if (qcat && cats.some(c => c.key === qcat)) activeCat.value = qcat
   try {
     const resp = await getOffers()
     if (resp.ok && resp.data && resp.data.length) {
@@ -89,6 +109,9 @@ onMounted(async () => {
         expire: c.expire,
         amount: c.amount,
         cat: c.category,
+        subsidy_type: c.subsidy_type,
+        subsidy_amount: c.subsidy_amount,
+        merchant_id: c.merchant_id,
       }))
     } else {
       coupons.value = FALLBACK_OFFERS.map(c => ({ ...c }))
@@ -116,9 +139,11 @@ async function loadClaimed() {
   } catch (e) {}
 }
 
-const filteredCoupons = computed(() =>
-  activeCat.value === 'all' ? coupons.value : coupons.value.filter(c => c.cat === activeCat.value)
-)
+const filteredCoupons = computed(() => {
+  if (activeCat.value === 'all') return coupons.value
+  if (activeCat.value === 'plat') return coupons.value.filter(c => c.subsidy_type === '平台补贴')
+  return coupons.value.filter(c => c.cat === activeCat.value)
+})
 
 const CAT_ICON = {
   food: '<path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M12 3v3M9 4v2M15 4v2"/>',
@@ -205,6 +230,21 @@ const couponClaimed = (id) => claimedIds.value.has(id)
 .coupon-card.sw-3 { background-color: #C9956C; border-color: #A87C48; }
 .coupon-card.sw-4 { background-color: #8B8B90; border-color: #6A6A6E; }
 .coupon-card.sw-5 { background-color: #6B6E64; border-color: #4E5049; }
+
+/* ── 平台补贴券：橙色高亮 + 补贴信息行 ── */
+.coupon-card.plat {
+  border-color: #FF7B2C;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.20), 0 0 0 1px rgba(255,123,44,0.45);
+}
+.c-subsidy { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+.c-tag-plat {
+  font-size: 11px; font-weight: 700; color: #FFFFFF;
+  background: linear-gradient(135deg, #FF7B2C, #E85D04);
+  padding: 2px 8px; border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(232,93,4,0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.c-subsidy-amt { font-size: 12px; font-weight: 700; color: #FFFFFF; text-shadow: 0 -1px 1px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.25); }
+.c-subsidy-to { font-size: 11px; color: #FFFFFF; opacity: 0.82; }
 
 /* 左侧：图标 + 信息 */
 .c-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
